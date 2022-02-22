@@ -528,7 +528,7 @@ if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
     parser.add_argument('--output-mode', help='Spark data source output mode for the result (default: overwrite)', default="overwrite")
     parser.add_argument('--input-prefix', help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data/"; the default is empty)', default="")
-    parser.add_argument('--input-suffix', help='text to append to every input filename (e.g., ".dat", which is the default)', default=".dat")
+    parser.add_argument('--input-suffix', help='text to append to every input filename (e.g., ".dat"; the default is empty)', default="")
     parser.add_argument('--output-prefix', help='text to prepend to every output file (e.g., "hdfs:///ds-parquet/"; the default is empty)', default="")
     parser.add_argument('--report-file', help='location in which to store a performance report', default='report.txt')
     parser.add_argument('--log-level', help='set log level (default: OFF)', default="OFF")

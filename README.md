@@ -30,7 +30,7 @@ Checkout to the parent folder of the repo.
 ```
 python nds.py \
 --generate data \
---dir /PATH_FOR_DATA \
+--data-dir /PATH_FOR_DATA \
 --scale 100 \
 --parallel 100
 ```
@@ -45,7 +45,6 @@ python nds.py \
 --generate convert \
 --spark-submit-template convert_submit.template \
 --input-prefix hdfs://data/nds_raw \
--input-suffix .dat \
 --output-prefix hdfs://data/nds_parquet
 ```
 
@@ -54,7 +53,7 @@ The modified query templates for Spark SQL are in `query_templates_nds` folder.
 
 To make NDS queries runnable in Spark, we applied the following changes to original templates released in TPC-DS v3.2.0:
 
-- convert `+` synctax for `date interval add` to [date_add()](https://spark.apache.org/docs/latest/api/sql/index.html#date_add) function supported in Spark SQL.
+- convert `+` syntax for `date interval add` to [date_add()](https://spark.apache.org/docs/latest/api/sql/index.html#date_add) function supported in Spark SQL.
 
 - convert `"` mark to `` ` `` mark for syntax compatibility in Spark SQL.
 
