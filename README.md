@@ -24,7 +24,8 @@ Then two jars will be built at:
 
 Note: please make sure you have `Hadoop binary` locally.
 
-Checkout to the parent folder of the repo(We assume the working directly is always the parent folder in the following sections).
+Checkout to the parent folder of the repo.
+(We assume the working directory is always the parent folder in the following sections)
 
 ```
 python nds.py \
