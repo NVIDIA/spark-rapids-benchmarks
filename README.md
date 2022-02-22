@@ -35,7 +35,19 @@ python nds.py \
 --parallel 100
 ```
 
+### Convert CSV to Parquet
 
+User need to submit another independent Spark job to finish the data conversion. User should put necessary Spark configs into pre-defined template file.
+
+Sample command to convert the data:
+```
+python nds.py \
+--generate convert \
+--spark-submit-template convert_submit.template \
+--input-prefix hdfs://data/nds_raw \
+-input-suffix .dat \
+--output-prefix hdfs://data/nds_parquet
+```
 
 ## Query Generation
 The modified query templates for Spark SQL are in `query_templates_nds` folder. 
