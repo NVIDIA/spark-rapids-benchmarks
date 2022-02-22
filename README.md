@@ -23,17 +23,53 @@ Then two jars will be built at:
 ### Generate data in Hadoop cluster
 
 Note: please make sure you have `Hadoop binary` locally.
-checkout to the parent folder of the repo
+
+Checkout to the parent folder of the repo(We assume the working directly is always the parent folder in the following sections).
 
 ```
-python nds.py --generate data --dir /PATH_OF_DATA --scale 100 --parallel 100
+python nds.py \
+--generate data \
+--dir /PATH_FOR_DATA \
+--scale 100 \
+--parallel 100
 ```
 
 
 
 ## Query Generation
-(TODO)
+The modified query templates for Spark SQL are in `query_templates_nds` folder. 
 
+To make NDS queries runnable in Spark, we applied the following changes to original templates released in TPC-DS v3.2.0:
+
+- convert `+` synctax for `date interval add` to [date_add()](https://spark.apache.org/docs/latest/api/sql/index.html#date_add) function supported in Spark SQL.
+
+- convert `"` mark to `` ` `` mark for syntax compatibility in Spark SQL.
+
+
+### Generate Specific Query
+
+Sample command to generate query1 from template for NDS:
+```
+python nds.py \
+--generate query \
+--template query1.tpl \
+--template-dir ./query_templates_nds \
+--scale 100 \
+--query-output-dir ./nds_queries
+
+```
+
+### Generate Query Streams
+
+Sample command to generate query streams used for Power Run and Throughput Run.
+```
+python nds.py \
+--generate streams \
+--template-dir ./query_templates_nds \
+--scale 100 \
+--query-output-dir ./nds_query_streams \
+--streams 10
+```
 
 ## Benchmark Runner
 

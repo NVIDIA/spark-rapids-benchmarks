@@ -14,7 +14,7 @@ target/tools/dsdgen: target/tpc-ds-tool.zip
 	test -d target/tools/ || (cd target; unzip tpc-ds-tool.zip)
 	test -d target/tools/ || (cd target; mv */tools tools)
 	cd target/tools; cat ../../patches/*.patch | patch -p0
-	cd target/tools; make clean; make dsdgen
+	cd target/tools; make clean; make
 
 clean:
 	mvn clean
