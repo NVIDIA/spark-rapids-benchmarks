@@ -1,3 +1,5 @@
+import argparse
+import timeit
 import pyspark
 
 from pyspark.sql.types import *
@@ -521,3 +523,40 @@ def load(filename, schema, delimiter="|", header="false", prefix=""):
 
 def store(df, filename, prefix=""):
     df.write.mode("overwrite").parquet(f"{prefix}{filename}")
+
+if __name__ == "__main__":
+    parser = parser = argparse.ArgumentParser()
+    parser.add_argument('--output-mode', help='Spark data source output mode for the result (default: overwrite)', default="overwrite")
+    parser.add_argument('--input-prefix', help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data/"; the default is empty)', default="")
+    parser.add_argument('--input-suffix', help='text to append to every input filename (e.g., ".dat", which is the default)', default=".dat")
+    parser.add_argument('--output-prefix', help='text to prepend to every output file (e.g., "hdfs:///ds-parquet/"; the default is empty)', default="")
+    parser.add_argument('--report-file', help='location in which to store a performance report', default='report.txt')
+    parser.add_argument('--log-level', help='set log level (default: OFF)', default="OFF")
+    #    parser.add_argument('--coalesce-output', help='coalesce output to NUM partitions', default=0, type=int)
+
+    args = parser.parse_args()
+
+    session = pyspark.sql.SparkSession.builder \
+        .appName("ds-convert") \
+        .getOrCreate()
+
+    session.sparkContext.setLogLevel(args.log_level)
+
+    results = {}
+
+    for fn, schema in SCHEMAS.items():
+        results[fn] = timeit.timeit(lambda: store(load(f"{fn}{args.input_suffix}", schema, prefix=args.input_prefix), f"{fn}.parquet", args.output_prefix), number=1)
+    
+    report_text = "Total conversion time for %d tables was %.02fs\n" % (len(results.values()), sum(results.values()))
+    for table, duration in results.items():
+        report_text += "Time to convert '%s' was %.04fs\n" % (table, duration)
+
+    report_text += "\n\n\nSpark configuration follows:\n\n"
+
+    with open(args.report_file, "w") as report:
+        report.write(report_text)
+        print(report_text)
+
+        for conf in session.sparkContext.getConf().getAll():
+            report.write(str(conf) + "\n")
+            print(conf)
