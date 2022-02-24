@@ -23,7 +23,7 @@ def generate_data(args):
     # Submit hadoop MR job to generate data
     os.chdir('tpcds-gen')
     subprocess.run(['hadoop', 'jar', 'target/tpcds-gen-1.0-SNAPSHOT.jar',
-                    '-d', args.dir, '-p', args.parallel, '-s', args.scale], check=True)
+                    '-d', args.data_dir, '-p', args.parallel, '-s', args.scale], check=True)
 
 
 def generate_query(args):
@@ -66,13 +66,14 @@ def convert_csv_to_parquet(args):
 
     cmd = []
     cmd.append("--input-prefix " + args.input_prefix)
-    cmd.append("--input-suffix " + args.input_suffix)
+    if args.input_suffix != "":
+        cmd.append("--input-suffix " + args.input_suffix)
     cmd.append("--output-prefix " + args.output_prefix)
     cmd.append("--report-file " + args.report_file)
     cmd.append("--log-level " + args.log_level)
 
     # run spark-submit
-    cmd = template.strip() + "\n  ds_convert.py" + " ".join(cmd).strip()
+    cmd = template.strip() + "\n  ds_convert.py " + " ".join(cmd).strip()
     print(cmd)
     os.system(cmd)
 
@@ -103,7 +104,7 @@ def main():
     parser.add_argument(
         '--input-prefix', help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data/"; the default is empty)', default="")
     parser.add_argument(
-        '--input-suffix', help='text to append to every input filename (e.g., ".dat", which is the default)', default=".dat")
+        '--input-suffix', help='text to append to every input filename (e.g., ".dat"; the default is empty)', default="")
     parser.add_argument(
         '--output-prefix', help='text to prepend to every output file (e.g., "hdfs:///ds-parquet/"; the default is empty)', default="")
     parser.add_argument(
