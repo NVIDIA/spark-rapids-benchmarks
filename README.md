@@ -37,7 +37,7 @@ python nds.py \
 
 ### Convert CSV to Parquet
 
-User need to submit another independent Spark job to finish the data conversion. User should put necessary Spark configs into pre-defined template file.
+The NDS python script will submit a Spark job to finish the data conversion. User should put necessary Spark configs into pre-defined template file.
 
 Sample command to convert the data:
 ```
@@ -47,6 +47,14 @@ python nds.py \
 --input-prefix hdfs://data/nds_raw \
 --output-prefix hdfs://data/nds_parquet
 ```
+
+We provide two basic templates for GPU run(convert_submit_gpu.template) and CPU run(convert_submit_cpu.template).
+To enable GPU run, user need to download two jars in advance to use spark-rapids plugin.
+
+- cuDF jar: https://repo1.maven.org/maven2/ai/rapids/cudf/22.02.0/cudf-22.02.0.jar
+- spark-rapids jar: https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.02.0/rapids-4-spark_2.12-22.02.0.jar
+
+The jar path will be used as a environment variable in the templates.
 
 ## Query Generation
 The modified query templates for Spark SQL are in `query_templates_nds` folder. 
