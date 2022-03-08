@@ -1,0 +1,9 @@
+$SPARK_HOME/bin/spark-submit \
+  --master yarn \
+  --deploy-mode cluster \
+  --driver-memory 10G \
+  --num-executors 8 \
+  --executor-memory 40G \
+  --executor-cores 12 \
+  --conf spark.task.cpus=1 \
+
