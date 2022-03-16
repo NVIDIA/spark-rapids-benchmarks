@@ -1,3 +1,20 @@
+## Disclaimer
+
+NDS is derived from the TPC-DS benchmarks and as such any results obtained using NDS are not
+comparable to published TPC-DS benchmark results, as the results obtained from using NDS do not
+comply with the TPC-DS benchmark.
+
+## License
+
+NDS is licensed under Apache License, Version 2.0.
+
+Additionally, certain files in NDS are licensed subject to the accompanying [TPC EULA](TPC%20EULA.txt) (also 
+available at http://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp).  Files subject to the TPC 
+EULA are identified as such within the files.
+
+You may not use NDS except in compliance with the Apache License, Version 2.0 and the TPC EULA.
+
+
 MapReduce TPC-DS Generator
 ==========================
 
