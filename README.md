@@ -1,12 +1,27 @@
 # NDS v2.0 Automation
+## Disclaimer
 
+NDS is derived from the TPC-DS Benchmarks and as such any results obtained using NDS are not
+comparable to published TPC-DS Benchmark results, as the results obtained from using NDS do not
+comply with the TPC-DS Benchmarks.
 
+## License
+
+NDS is licensed under Apache License, Version 2.0.
+
+Additionally, certain files in NDS are licensed subject to the accompanying [TPC EULA](TPC%20EULA.txt) (also 
+available at http://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp).  Files subject to the TPC 
+EULA are identified as such within the files.
+
+You may not use NDS except in compliance with the Apache License, Version 2.0 and the TPC EULA.
 ## Data Generation
 
 ### prerequisites:
 
+python > 3.6
 ```
-sudo apt install openjdk-8-jdk-headless gcc make flex bison byacc
+sudo apt install openjdk-8-jdk-headless gcc make flex bison byacc maven
+pip3 install pyspark
 ```
 
 ### build the jar for data generation:
@@ -20,7 +35,9 @@ Then two jars will be built at:
 ./target/lib/dsdgen.jar
 ```
 
-### Generate data in Hadoop cluster
+### Generate data
+
+#### For HDFS
 
 Note: please make sure you have `Hadoop binary` locally.
 
@@ -30,6 +47,18 @@ Checkout to the parent folder of the repo.
 ```
 python nds.py \
 --generate data \
+--type hdfs \
+--data-dir /PATH_FOR_DATA \
+--scale 100 \
+--parallel 100
+```
+
+Please note: HDFS data generation doesn't allow scale=1 or parallel=1.
+#### For local FS
+```
+python nds.py \
+--generate data \
+--type local \
 --data-dir /PATH_FOR_DATA \
 --scale 100 \
 --parallel 100
@@ -44,9 +73,11 @@ Sample command to convert the data:
 python nds.py \
 --generate convert \
 --spark-submit-template convert_submit.template \
---input-prefix hdfs://data/nds_raw \
---output-prefix hdfs://data/nds_parquet
+--input-prefix hdfs:///data/nds_raw/ \
+--output-prefix hdfs:///data/nds_parquet/
 ```
+
+Note: the `/` at the end of `input-prefix` path is required.
 
 We provide two basic templates for GPU run(convert_submit_gpu.template) and CPU run(convert_submit_cpu.template).
 To enable GPU run, user need to download two jars in advance to use spark-rapids plugin.
@@ -54,7 +85,21 @@ To enable GPU run, user need to download two jars in advance to use spark-rapids
 - cuDF jar: https://repo1.maven.org/maven2/ai/rapids/cudf/22.02.0/cudf-22.02.0.jar
 - spark-rapids jar: https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.02.0/rapids-4-spark_2.12-22.02.0.jar
 
-The jar path will be used as a environment variable in the templates.
+After that, please set environment variable `CUDF_JAR` and `SPARK_RAPIDS_PLUGIN_JAR` to the path where the jars are downloaded to in spark submit templates.
+
+### Data partitioning
+
+when converting CSV to Parquet data, the script will add data partitioning to some tables:
+
+| Table              | Partition Column    |
+| -----------        | -----------         |
+| catalog_sales      | cs_sold_date_sk     |
+| catalog_returns    | cr_returned_date_sk |
+| inventory          | inv_date_sk         |
+| store_sales        | ss_sold_date_sk     |
+| store_returns      | sr_returned_date_sk |
+| web_sales          | ws_sold_date_sk     |
+| web_returns        | wr_returned_date_sk |
 
 ## Query Generation
 The modified query templates for Spark SQL are in `query_templates_nds` folder. 
@@ -94,6 +139,41 @@ python nds.py \
 ## Benchmark Runner
 
 ### Power Run
-(TODO)
+
+_After_ user generates query streams, Power Run can be executed using one of the streams.
+
+Sample command for Power Run:
+```
+python nds.py \
+--run power \
+--query-stream ./nds_query_streams/query_0.sql \
+--input-prefix hdfs:///data/NDS_parquet/ \
+--run-log test.log \
+--spark-submit-template power_run_gpu.template \
+--csv-output time.csv \
+```
+
+When it's finished, user will see parsed logs from terminal like:
+```
+......
+......
+====== Run query4 ======
+Time taken: 25532 ms
+====== Run query94 ======
+Time taken: 886 ms
+====== Run query20 ======
+Time taken: 1237 ms
+====== Run query14a ======
+Time taken: 11951 ms
+
+====== Total time : 325939 ms ======
+
+```
+
+To simplify the performance analysis process, the script will create a CSV file to save query and corresponding execution time.
+The file path is defined by `--csv-output` argument.
+
 ### Throughput Run
 (TODO)
+
+### NDS2.0 is using source code from TPC-DS Tool V3.2.0

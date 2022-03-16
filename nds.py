@@ -1,10 +1,39 @@
+#
+# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# -----
+#
+# Certain portions of the contents of this file are derived from TPC-DS version 3.2.0
+# (retrieved from www.tpc.org/tpc_documents_current_versions/current_specifications5.asp).
+# Such portions are subject to copyrights held by Transaction Processing Performance Council (“TPC”)
+# and licensed under the TPC EULA (a copy of which accompanies this file as “TPC EULA” and is also
+# available at http://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp) (the “TPC EULA”).
+#
+# You may not use this file except in compliance with the TPC EULA.
+# DISCLAIMER: Portions of this file is derived from the TPC-DS Benchmark and as such any results
+# obtained using this file are not comparable to published TPC-DS Benchmark results, as the results
+# obtained from using this file do not comply with the TPC-DS Benchmark.
+#
+
 import argparse
 import subprocess
 import shutil
 import sys
 import os
-from tabnanny import check
-
+import csv
 
 def check_build():
     # Check if necessary executable or jars are built.
@@ -15,15 +44,48 @@ def check_build():
 
 
 def generate_data(args):
-    # Check if hadoop is installed.
-    if shutil.which('hadoop') is None:
-        raise Exception('No Hadoop binary found in current environment, ' +
-                        'please install Hadoop for data generation in cluster.')
     check_build()
-    # Submit hadoop MR job to generate data
-    os.chdir('tpcds-gen')
-    subprocess.run(['hadoop', 'jar', 'target/tpcds-gen-1.0-SNAPSHOT.jar',
-                    '-d', args.data_dir, '-p', args.parallel, '-s', args.scale], check=True)
+    if args.type == 'hdfs':
+        # Check if hadoop is installed.
+        if shutil.which('hadoop') is None:
+            raise Exception('No Hadoop binary found in current environment, ' +
+                            'please install Hadoop for data generation in cluster.')
+        # Submit hadoop MR job to generate data
+        os.chdir('tpcds-gen')
+        subprocess.run(['hadoop', 'jar', 'target/tpcds-gen-1.0-SNAPSHOT.jar',
+                        '-d', args.data_dir, '-p', args.parallel, '-s', args.scale], check=True)
+    if args.type == 'local':
+        if not os.path.isdir(args.data_dir):
+            os.makedirs(args.data_dir)
+        if args.data_dir[0] == '/':
+            data_dir = args.data_dir
+        else:
+            # add this because the dsdgen will be executed in a sub-folder
+            data_dir = '../../../{}'.format(args.data_dir)
+
+        os.chdir('tpcds-gen/target/tools')
+        proc = []
+        for i in range(1, int(args.parallel) + 1):
+            dsdgen_args = ["-scale", args.scale, "-dir", data_dir, "-parallel", args.parallel, "-child", str(i), "-force", "Y", "-verbose", "Y"]
+            proc.append(subprocess.Popen(["./dsdgen"] + dsdgen_args))
+
+        # wait for data generation to complete
+        for i in range(int(args.parallel)):
+            proc[i].wait()
+            if proc[i].returncode != 0:
+                print("dsdgen failed with return code {}".format(proc[i].returncode))
+                raise Exception("dsdgen failed")
+
+        os.chdir('../../..')
+        from ds_convert import SCHEMAS
+        # move multi-partition files into table folders
+        for table in SCHEMAS.keys():
+            print('mkdir -p {}/{}'.format(args.data_dir, table))
+            os.system('mkdir -p {}/{}'.format(args.data_dir, table))
+            for i in range(1, int(args.parallel)+1):
+                os.system('mv {}/{}_{}_{}.dat {}/{}/ 2>/dev/null'.format(args.data_dir, table, i, args.parallel, args.data_dir, table))
+        # show summary
+        os.system('du -h -d1 {}'.format(args.data_dir))
 
 
 def generate_query(args):
@@ -78,12 +140,102 @@ def convert_csv_to_parquet(args):
     os.system(cmd)
 
 
+def power_run(args):
+
+    with open(args.query_stream, 'r') as f:
+        stream = f.read()
+    # add \n to the head of stream for better split at next step
+    stream = '\n' + stream
+    all_queries = stream.split('\n-- start')
+    # split query in q14, q23, q24, q39
+    extended_queries = []
+    matches = ['query14', 'query23', 'query24', 'query39']
+    for q in all_queries:
+        if any(s in q for s in matches):
+            split_q = q.split(';')
+            # now split_q has 3 items: 
+            # 1. "query x in stream x using template query[xx].tpl query_part_1"
+            # 2. "query_part_2"
+            # 3. "-- end query [x] in stream [x] using template query[xx].tpl"
+            part_1 = ''
+            part_1 += split_q[0].replace('.tpl', '_part1.tpl')
+            part_1 += ';'
+            extended_queries.append(part_1)
+            head = split_q[0].split('\n')[0]
+            part_2 = head.replace('.tpl', '_part2.tpl') + '\n'
+            part_2 += split_q[1]
+            part_2 += ';'
+            extended_queries.append(part_2)
+        else:
+            extended_queries.append(q)
+
+    # add create data tables content
+    spark_stream = ''
+    from ds_convert import SCHEMAS
+    for table_name in SCHEMAS.keys():
+        spark_stream += 'println("====== Creating TempView for table {} ======")\n'.format(table_name)
+        spark_stream += 'spark.time(spark.read.parquet("{}{}").createOrReplaceTempView("{}"))\n'.format(args.input_prefix, table_name, table_name)
+    # add spark execution content, drop the first \n line
+    for q in extended_queries[1:]:
+        query_name = q[q.find('template')+9:q.find('.tpl')]
+        spark_stream += 'println("====== Run {} ======")\n'.format(query_name)
+        spark_stream += 'spark.time(spark.sql("""\n -- start'
+        spark_stream += q
+        spark_stream += '\n""").collect())\n\n'
+    spark_stream += 'System.exit(0)'
+    with open('{}.scala'.format(args.query_stream), 'w') as f:
+        f.write(spark_stream)
+    
+    if args.spark_submit_template is None:
+        raise Exception('Please provide a Spark submit template file for the run.')
+    # Execute Power Run
+    with open(args.spark_submit_template, 'r') as f:
+        template = f.read()
+        cmd = template.strip() + "\n" + "-i {}.scala".format(args.query_stream)
+        cmd += " 2>&1 | tee {}".format(args.run_log)
+        print(cmd)
+        os.system(cmd)
+    
+    # Parse the log, show individual query time and total time
+    cmd = "sed -i 's/Time taken/\\nTime taken/' {}".format(args.run_log)
+    os.system(cmd)
+    with open(args.run_log, 'r') as log:
+        origin = log.read().splitlines()
+        total_time = 0
+        with open(args.csv_output, 'w') as csv_output:
+            writer = csv.writer(csv_output)
+            # writer header
+            writer.writerow(['query', 'time'])
+            row = []
+            for line in origin:
+                if 'TempView' in line:
+                    # e.g. "====== Creating TempView for table store_sales ======"
+                    print(line)
+                    row.append(line.split()[-2])
+                if 'Run query' in line:
+                    # e.g. "====== Run query4 ======"
+                    print(line)
+                    row.append(line.split()[-2])
+                if 'Time taken' in line:
+                    # e.g. "Time taken: 25532 ms"
+                    print(line)
+                    query_time = line.split()[-2]
+                    total_time += int(query_time)
+                    row.append(query_time)
+                # writer query and execution time
+                if len(row) == 2:
+                    writer.writerow(row)
+                    row = []
+        print("\n====== Total time : {} ms ======".format(total_time))
+        
 
 def main():
     parser = argparse.ArgumentParser(
         description='Argument parser for NDS benchmark options.')
-    parser.add_argument('--generate', choices=['data', 'query', 'streams', 'convert'], required=True,
+    parser.add_argument('--generate', choices=['data', 'query', 'streams', 'convert'], 
                         help='generate tpc-ds data or queries.')
+    parser.add_argument('--type', choices=['local', 'hdfs'], required='data' in sys.argv,
+                        help='file system to save the generated data')
     parser.add_argument('--data-dir',
                         help='If generating data: target HDFS path for generated data.')
     parser.add_argument(
@@ -96,7 +248,7 @@ def main():
     parser.add_argument('--streams', help='generate how many query streams.')
     parser.add_argument('--query-output-dir',
                         help='directory to write query streams.')
-    parser.add_argument('--spark-submit-template',
+    parser.add_argument('--spark-submit-template', required=('--run' in sys.argv) or ('convert' in sys.argv),
                         help='A Spark config template contains necessary Spark job configurations.')
     parser.add_argument('--output-mode',
                         help='Spark data source output mode for the result (default: overwrite)',
@@ -110,20 +262,29 @@ def main():
     parser.add_argument(
         '--report-file', help='location in which to store a performance report', default='report.txt')
     parser.add_argument(
-        '--log-level', help='set log level (default: OFF)', default="OFF")
+        '--log-level', help='set log level (default: OFF, same to log4j), possible values: OFF, ERROR, WARN, INFO, DEBUG, ALL', default="OFF")
+    parser.add_argument('--run', choices=['power','throughput'], help='NDS run type')
+    parser.add_argument(
+        '--query-stream', help='query stream file that contains all NDS queries in specific order')
+    parser.add_argument('--run-log', help='file to save  run logs')
+    parser.add_argument('--csv-output', required='--run' in sys.argv, help='CSV file to save query and query execution time')
     args = parser.parse_args()
 
-    if args.generate == 'data':
-        generate_data(args)
+    if args.generate != None:
+        if args.generate == 'data':
+            generate_data(args)
 
-    if args.generate == 'query':
-        generate_query(args)
+        if args.generate == 'query':
+            generate_query(args)
 
-    if args.generate == 'streams':
-        generate_query_streams(args)
+        if args.generate == 'streams':
+            generate_query_streams(args)
 
-    if args.generate == 'convert':
-        convert_csv_to_parquet(args)
+        if args.generate == 'convert':
+            convert_csv_to_parquet(args)
+    else:
+        if args.run == 'power':
+            power_run(args)
 
 
 if __name__ == '__main__':

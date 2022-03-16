@@ -1,8 +1,39 @@
+#
+# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# -----
+#
+# Certain portions of the contents of this file are derived from TPC-DS version 3.2.0
+# (retrieved from www.tpc.org/tpc_documents_current_versions/current_specifications5.asp).
+# Such portions are subject to copyrights held by Transaction Processing Performance Council (“TPC”)
+# and licensed under the TPC EULA (a copy of which accompanies this file as “TPC EULA” and is also
+# available at http://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp) (the “TPC EULA”).
+#
+# You may not use this file except in compliance with the TPC EULA.
+# DISCLAIMER: Portions of this file is derived from the TPC-DS Benchmark and as such any results
+# obtained using this file are not comparable to published TPC-DS Benchmark results, as the results
+# obtained from using this file do not comply with the TPC-DS Benchmark.
+#
+
 import argparse
 import timeit
 import pyspark
 
 from pyspark.sql.types import *
+from pyspark.sql.functions import col
 
 if not hasattr(pyspark.sql.types, "VarcharType"):
     # this is a version of Spark that doesn't have fixed- and max-length string types
@@ -517,12 +548,26 @@ SCHEMAS["store_sales"] = StructType([
     StructField("ss_net_profit", DecimalType(7,2))
 ])
 
+TABLE_PARTITIONING = {
+    'catalog_sales': 'cs_sold_date_sk',
+    'catalog_returns': 'cr_returned_date_sk',
+    'inventory': 'inv_date_sk',
+    'store_sales': 'ss_sold_date_sk',
+    'store_returns':'sr_returned_date_sk',
+    'web_sales': 'ws_sold_date_sk',
+    'web_returns': 'wr_returned_date_sk'
+}
+
+
 def load(filename, schema, delimiter="|", header="false", prefix=""):
     global session
     return session.read.option("delimiter", delimiter).option("header", header).csv(f"{prefix}{filename}", schema=schema)
 
 def store(df, filename, prefix=""):
-    df.write.mode("overwrite").parquet(f"{prefix}{filename}")
+    if filename in TABLE_PARTITIONING.keys():
+        df.repartition(col(TABLE_PARTITIONING[filename])).write.mode("overwrite").partitionBy(TABLE_PARTITIONING[filename]).parquet(f"{prefix}{filename}")
+    else:
+        df.coalesce(1).write.mode("overwrite").parquet(f"{prefix}{filename}")
 
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
@@ -545,7 +590,7 @@ if __name__ == "__main__":
     results = {}
 
     for fn, schema in SCHEMAS.items():
-        results[fn] = timeit.timeit(lambda: store(load(f"{fn}{args.input_suffix}", schema, prefix=args.input_prefix), f"{fn}.parquet", args.output_prefix), number=1)
+        results[fn] = timeit.timeit(lambda: store(load(f"{fn}{args.input_suffix}", schema, prefix=args.input_prefix), f"{fn}", args.output_prefix), number=1)
     
     report_text = "Total conversion time for %d tables was %.02fs\n" % (len(results.values()), sum(results.values()))
     for table, duration in results.items():
