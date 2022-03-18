@@ -174,6 +174,21 @@ To simplify the performance analysis process, the script will create a CSV file 
 The file path is defined by `--csv-output` argument.
 
 ### Throughput Run
-(TODO)
+Throughput Run simulates the scenario that multiple query sessions are running simultaneously in Spark. Different to Power Run, user needs to provide multiple query streams as input for `--query-stream` argument with `,` as seperator. Also the run log will be saved for each query stream independently with index number as naming suffix like _test.log_query_1_, _test.log_query2_ etc. and _time.csv_query_1_, _time.csv_query2_ etc.
+
+When providing `spark-submit-template` to Throughput Run, please do consider the computing resources in your environment to make sure all Spark job can get necessary resources to run at the same time, otherwise some query application may be in _WAITING_ status(which can be observed from Spark UI or Yarn Resource Manager UI) until enough resources are released.
+
+Sample command for Throughput Run:
+
+```
+python nds.py \
+--run power \
+--query-stream ./nds_query_streams/query_0.sql,./nds_query_streams/query_1.sql \
+--input-prefix hdfs:///data/NDS_parquet/ \
+--run-log test.log \
+--spark-submit-template power_run_gpu.template \
+--csv-output time.csv \
+```
+
 
 ### NDS2.0 is using source code from TPC-DS Tool V3.2.0
