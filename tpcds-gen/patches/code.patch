@@ -1,7 +1,7 @@
-diff --git print.c print.c
+diff --git a/tools/print.c b/tools/print.c
 index 5ecb5d7..1baf56e 100644
---- print.c
-+++ print.c
+--- a/tools/print.c
++++ b/tools/print.c
 @@ -68,6 +68,7 @@ print_close(int tbl)
  	fpOutfile = NULL;
  	if (pTdef->outfile)
@@ -19,10 +19,10 @@ index 5ecb5d7..1baf56e 100644
  
     return (res);
  }
-diff --git r_params.c r_params.c
+diff --git a/tools/r_params.c b/tools/r_params.c
 index 4db16e5..9b1a8e6 100644
---- r_params.c
-+++ r_params.c
+--- a/tools/r_params.c
++++ b/tools/r_params.c
 @@ -46,7 +46,7 @@
  #include "tdefs.h"
  #include "release.h"

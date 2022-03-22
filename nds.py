@@ -115,8 +115,8 @@ def generate_query_streams(args):
 
     subprocess.run(['./tpcds-gen/target/tools/dsqgen', '-scale', args.scale, '-directory',
                     args.template_dir, '-output_dir', args.query_output_dir, '-input',
-                    './query_templates_nds/templates.lst', '-dialect', 'spark', '-streams', args.streams],
-                   check=True)
+                    os.path.join(args.template_dir,'templates.lst'),
+                    '-dialect', 'spark', '-streams', args.streams], check=True)
     # Remove it after use.
     subprocess.run(['rm', './tpcds.idx'], check=True)
 

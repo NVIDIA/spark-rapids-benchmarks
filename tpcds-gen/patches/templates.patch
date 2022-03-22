@@ -1,0 +1,448 @@
+diff --git a/query_templates/query12.tpl b/query_templates/query12.tpl
+index 78f4dff..fa00386 100644
+--- a/query_templates/query12.tpl
++++ b/query_templates/query12.tpl
+@@ -55,7 +55,7 @@ where
+   	and i_category in ('[CATEGORY.1]', '[CATEGORY.2]', '[CATEGORY.3]')
+   	and ws_sold_date_sk = d_date_sk
+ 	and d_date between cast('[SDATE]' as date) 
+-				and (cast('[SDATE]' as date) + 30 days)
++				and (cast('[SDATE]' as date) + interval 30 days)
+ group by 
+ 	i_item_id
+         ,i_item_desc 
+diff --git a/query_templates/query16.tpl b/query_templates/query16.tpl
+index fd38d1b..e87657a 100644
+--- a/query_templates/query16.tpl
++++ b/query_templates/query16.tpl
+@@ -45,9 +45,9 @@ define COUNTY_E = distmember(fips_county, [COUNTYNUMBER.5], 2);
+ define _LIMIT=100;
+ 
+ [_LIMITA] select [_LIMITB] 
+-   count(distinct cs_order_number) as "order count"
+-  ,sum(cs_ext_ship_cost) as "total shipping cost"
+-  ,sum(cs_net_profit) as "total net profit"
++   count(distinct cs_order_number) as `order count`
++  ,sum(cs_ext_ship_cost) as `total shipping cost`
++  ,sum(cs_net_profit) as `total net profit`
+ from
+    catalog_sales cs1
+   ,date_dim
+@@ -55,7 +55,7 @@ from
+   ,call_center
+ where
+     d_date between '[YEAR]-[MONTH]-01' and 
+-           (cast('[YEAR]-[MONTH]-01' as date) + 60 days)
++           (cast('[YEAR]-[MONTH]-01' as date) + interval 60 days)
+ and cs1.cs_ship_date_sk = d_date_sk
+ and cs1.cs_ship_addr_sk = ca_address_sk
+ and ca_state = '[STATE]'
+diff --git a/query_templates/query20.tpl b/query_templates/query20.tpl
+index 52734c3..5334a8f 100644
+--- a/query_templates/query20.tpl
++++ b/query_templates/query20.tpl
+@@ -52,7 +52,7 @@
+    and i_category in ('[CATEGORY.1]', '[CATEGORY.2]', '[CATEGORY.3]')
+    and cs_sold_date_sk = d_date_sk
+  and d_date between cast('[SDATE]' as date) 
+- 				and (cast('[SDATE]' as date) + 30 days)
++ 				and (cast('[SDATE]' as date) + interval 30 days)
+  group by i_item_id
+          ,i_item_desc 
+          ,i_category
+diff --git a/query_templates/query21.tpl b/query_templates/query21.tpl
+index 8d13b23..8253396 100644
+--- a/query_templates/query21.tpl
++++ b/query_templates/query21.tpl
+@@ -53,8 +53,8 @@
+      and i_item_sk          = inv_item_sk
+      and inv_warehouse_sk   = w_warehouse_sk
+      and inv_date_sk    = d_date_sk
+-     and d_date between (cast ('[SALES_DATE]' as date) - 30 days)
+-                    and (cast ('[SALES_DATE]' as date) + 30 days)
++     and d_date between (cast ('[SALES_DATE]' as date) - interval 30 days)
++                    and (cast ('[SALES_DATE]' as date) + interval 30 days)
+    group by w_warehouse_name, i_item_id) x
+  where (case when inv_before > 0 
+              then inv_after / inv_before 
+diff --git a/query_templates/query32.tpl b/query_templates/query32.tpl
+index c04190d..03109ed 100644
+--- a/query_templates/query32.tpl
++++ b/query_templates/query32.tpl
+@@ -37,7 +37,7 @@ define YEAR  = random(1998,2002,uniform);
+ define CSDATE = date([YEAR]+"-01-01",[YEAR]+"-04-01",sales);
+ define _LIMIT=100;
+ 
+-[_LIMITA] select [_LIMITB] sum(cs_ext_discount_amt)  as "excess discount amount" 
++[_LIMITA] select [_LIMITB] sum(cs_ext_discount_amt)  as `excess discount amount`
+ from 
+    catalog_sales 
+    ,item 
+@@ -46,7 +46,7 @@ where
+ i_manufact_id = [IMID]
+ and i_item_sk = cs_item_sk 
+ and d_date between '[CSDATE]' and 
+-        (cast('[CSDATE]' as date) + 90 days)
++        (cast('[CSDATE]' as date) + interval 90 days)
+ and d_date_sk = cs_sold_date_sk 
+ and cs_ext_discount_amt  
+      > ( 
+@@ -58,7 +58,7 @@ and cs_ext_discount_amt
+          where 
+               cs_item_sk = i_item_sk 
+           and d_date between '[CSDATE]' and
+-                             (cast('[CSDATE]' as date) + 90 days)
++                             (cast('[CSDATE]' as date) + interval 90 days)
+           and d_date_sk = cs_sold_date_sk 
+       ) 
+ [_LIMITC]; 
+diff --git a/query_templates/query40.tpl b/query_templates/query40.tpl
+index 98d188a..88319b7 100644
+--- a/query_templates/query40.tpl
++++ b/query_templates/query40.tpl
+@@ -55,8 +55,8 @@
+  and i_item_sk          = cs_item_sk
+  and cs_warehouse_sk    = w_warehouse_sk 
+  and cs_sold_date_sk    = d_date_sk
+- and d_date between (cast ('[SALES_DATE]' as date) - 30 days)
+-                and (cast ('[SALES_DATE]' as date) + 30 days) 
++ and d_date between (cast ('[SALES_DATE]' as date) - interval 30 days)
++                and (cast ('[SALES_DATE]' as date) + interval 30 days)
+  group by
+     w_state,i_item_id
+  order by w_state,i_item_id
+diff --git a/query_templates/query5.tpl b/query_templates/query5.tpl
+index ce7552e..9ce3b9c 100644
+--- a/query_templates/query5.tpl
++++ b/query_templates/query5.tpl
+@@ -63,7 +63,7 @@
+      store
+  where date_sk = d_date_sk
+        and d_date between cast('[SALES_DATE]' as date) 
+-                  and (cast('[SALES_DATE]' as date) +  14 days)
++                  and (cast('[SALES_DATE]' as date) + interval 14 days)
+        and store_sk = s_store_sk
+  group by s_store_id)
+  ,
+@@ -94,7 +94,7 @@
+      catalog_page
+  where date_sk = d_date_sk
+        and d_date between cast('[SALES_DATE]' as date)
+-                  and (cast('[SALES_DATE]' as date) +  14 days)
++                  and (cast('[SALES_DATE]' as date) + interval 14 days)
+        and page_sk = cp_catalog_page_sk
+  group by cp_catalog_page_id)
+  ,
+@@ -127,7 +127,7 @@
+      web_site
+  where date_sk = d_date_sk
+        and d_date between cast('[SALES_DATE]' as date)
+-                  and (cast('[SALES_DATE]' as date) +  14 days)
++                  and (cast('[SALES_DATE]' as date) + interval 14 days)
+        and wsr_web_site_sk = web_site_sk
+  group by web_site_id)
+  [_LIMITA] select [_LIMITB] channel
+diff --git a/query_templates/query50.tpl b/query_templates/query50.tpl
+index 387e1c4..4e7a967 100644
+--- a/query_templates/query50.tpl
++++ b/query_templates/query50.tpl
+@@ -48,14 +48,14 @@ define _LIMIT=100;
+   ,s_county
+   ,s_state
+   ,s_zip
+-  ,sum(case when (sr_returned_date_sk - ss_sold_date_sk <= 30 ) then 1 else 0 end)  as "30 days" 
++  ,sum(case when (sr_returned_date_sk - ss_sold_date_sk <= 30 ) then 1 else 0 end)  as `30 days`
+   ,sum(case when (sr_returned_date_sk - ss_sold_date_sk > 30) and 
+-                 (sr_returned_date_sk - ss_sold_date_sk <= 60) then 1 else 0 end )  as "31-60 days" 
++                 (sr_returned_date_sk - ss_sold_date_sk <= 60) then 1 else 0 end )  as `31-60 days`
+   ,sum(case when (sr_returned_date_sk - ss_sold_date_sk > 60) and 
+-                 (sr_returned_date_sk - ss_sold_date_sk <= 90) then 1 else 0 end)  as "61-90 days" 
++                 (sr_returned_date_sk - ss_sold_date_sk <= 90) then 1 else 0 end)  as `61-90 days`
+   ,sum(case when (sr_returned_date_sk - ss_sold_date_sk > 90) and
+-                 (sr_returned_date_sk - ss_sold_date_sk <= 120) then 1 else 0 end)  as "91-120 days" 
+-  ,sum(case when (sr_returned_date_sk - ss_sold_date_sk  > 120) then 1 else 0 end)  as ">120 days" 
++                 (sr_returned_date_sk - ss_sold_date_sk <= 120) then 1 else 0 end)  as `91-120 days`
++  ,sum(case when (sr_returned_date_sk - ss_sold_date_sk  > 120) then 1 else 0 end)  as `>120 days`
+ from
+    store_sales
+   ,store_returns
+diff --git a/query_templates/query62.tpl b/query_templates/query62.tpl
+index 4918a4e..fc61ff4 100644
+--- a/query_templates/query62.tpl
++++ b/query_templates/query62.tpl
+@@ -40,14 +40,14 @@ define _LIMIT=100;
+    substr(w_warehouse_name,1,20)
+   ,sm_type
+   ,web_name
+-  ,sum(case when (ws_ship_date_sk - ws_sold_date_sk <= 30 ) then 1 else 0 end)  as "30 days" 
++  ,sum(case when (ws_ship_date_sk - ws_sold_date_sk <= 30 ) then 1 else 0 end)  as `30 days`
+   ,sum(case when (ws_ship_date_sk - ws_sold_date_sk > 30) and 
+-                 (ws_ship_date_sk - ws_sold_date_sk <= 60) then 1 else 0 end )  as "31-60 days" 
++                 (ws_ship_date_sk - ws_sold_date_sk <= 60) then 1 else 0 end )  as `31-60 days`
+   ,sum(case when (ws_ship_date_sk - ws_sold_date_sk > 60) and 
+-                 (ws_ship_date_sk - ws_sold_date_sk <= 90) then 1 else 0 end)  as "61-90 days" 
++                 (ws_ship_date_sk - ws_sold_date_sk <= 90) then 1 else 0 end)  as `61-90 days`
+   ,sum(case when (ws_ship_date_sk - ws_sold_date_sk > 90) and
+-                 (ws_ship_date_sk - ws_sold_date_sk <= 120) then 1 else 0 end)  as "91-120 days" 
+-  ,sum(case when (ws_ship_date_sk - ws_sold_date_sk  > 120) then 1 else 0 end)  as ">120 days" 
++                 (ws_ship_date_sk - ws_sold_date_sk <= 120) then 1 else 0 end)  as `91-120 days`
++  ,sum(case when (ws_ship_date_sk - ws_sold_date_sk  > 120) then 1 else 0 end)  as `>120 days`
+ from
+    web_sales
+   ,warehouse
+diff --git a/query_templates/query77.tpl b/query_templates/query77.tpl
+index e3d52dd..f7ac992 100644
+--- a/query_templates/query77.tpl
++++ b/query_templates/query77.tpl
+@@ -45,7 +45,7 @@
+       store
+  where ss_sold_date_sk = d_date_sk
+        and d_date between cast('[SALES_DATE]' as date) 
+-                  and (cast('[SALES_DATE]' as date) +  30 days) 
++                  and (cast('[SALES_DATE]' as date) + interval 30 days)
+        and ss_store_sk = s_store_sk
+  group by s_store_sk)
+  ,
+@@ -58,7 +58,7 @@
+       store
+  where sr_returned_date_sk = d_date_sk
+        and d_date between cast('[SALES_DATE]' as date)
+-                  and (cast('[SALES_DATE]' as date) +  30 days)
++                  and (cast('[SALES_DATE]' as date) + interval 30 days)
+        and sr_store_sk = s_store_sk
+  group by s_store_sk), 
+  cs as
+@@ -69,7 +69,7 @@
+       date_dim
+  where cs_sold_date_sk = d_date_sk
+        and d_date between cast('[SALES_DATE]' as date)
+-                  and (cast('[SALES_DATE]' as date) +  30 days)
++                  and (cast('[SALES_DATE]' as date) + interval 30 days)
+  group by cs_call_center_sk 
+  ), 
+  cr as
+@@ -80,7 +80,7 @@
+       date_dim
+  where cr_returned_date_sk = d_date_sk
+        and d_date between cast('[SALES_DATE]' as date)
+-                  and (cast('[SALES_DATE]' as date) +  30 days)
++                  and (cast('[SALES_DATE]' as date) + interval 30 days)
+  group by cr_call_center_sk
+  ), 
+  ws as
+@@ -92,7 +92,7 @@
+       web_page
+  where ws_sold_date_sk = d_date_sk
+        and d_date between cast('[SALES_DATE]' as date)
+-                  and (cast('[SALES_DATE]' as date) +  30 days)
++                  and (cast('[SALES_DATE]' as date) + interval 30 days)
+        and ws_web_page_sk = wp_web_page_sk
+  group by wp_web_page_sk), 
+  wr as
+@@ -104,7 +104,7 @@
+       web_page
+  where wr_returned_date_sk = d_date_sk
+        and d_date between cast('[SALES_DATE]' as date)
+-                  and (cast('[SALES_DATE]' as date) +  30 days)
++                  and (cast('[SALES_DATE]' as date) + interval 30 days)
+        and wr_web_page_sk = wp_web_page_sk
+  group by wp_web_page_sk)
+  [_LIMITA] select [_LIMITB] channel
+diff --git a/query_templates/query80.tpl b/query_templates/query80.tpl
+index d51a4da..4dc33d6 100644
+--- a/query_templates/query80.tpl
++++ b/query_templates/query80.tpl
+@@ -49,7 +49,7 @@
+      promotion
+  where ss_sold_date_sk = d_date_sk
+        and d_date between cast('[SALES_DATE]' as date) 
+-                  and (cast('[SALES_DATE]' as date) +  30 days)
++                  and (cast('[SALES_DATE]' as date) + interval 30 days)
+        and ss_store_sk = s_store_sk
+        and ss_item_sk = i_item_sk
+        and i_current_price > 50
+@@ -70,7 +70,7 @@
+      promotion
+  where cs_sold_date_sk = d_date_sk
+        and d_date between cast('[SALES_DATE]' as date)
+-                  and (cast('[SALES_DATE]' as date) +  30 days)
++                  and (cast('[SALES_DATE]' as date) + interval 30 days)
+         and cs_catalog_page_sk = cp_catalog_page_sk
+        and cs_item_sk = i_item_sk
+        and i_current_price > 50
+@@ -91,7 +91,7 @@ group by cp_catalog_page_id)
+      promotion
+  where ws_sold_date_sk = d_date_sk
+        and d_date between cast('[SALES_DATE]' as date)
+-                  and (cast('[SALES_DATE]' as date) +  30 days)
++                  and (cast('[SALES_DATE]' as date) + interval 30 days)
+         and ws_web_site_sk = web_site_sk
+        and ws_item_sk = i_item_sk
+        and i_current_price > 50
+diff --git a/query_templates/query92.tpl b/query_templates/query92.tpl
+index 655b949..f557a30 100644
+--- a/query_templates/query92.tpl
++++ b/query_templates/query92.tpl
+@@ -39,7 +39,7 @@ define WSDATE = date([YEAR]+"-01-01",[YEAR]+"-04-01",sales);
+ define _LIMIT=100;
+ 
+ [_LIMITA] select [_LIMITB] 
+-   sum(ws_ext_discount_amt)  as "Excess Discount Amount" 
++   sum(ws_ext_discount_amt)  as `Excess Discount Amount`
+ from 
+     web_sales 
+    ,item 
+@@ -48,7 +48,7 @@ where
+ i_manufact_id = [IMID]
+ and i_item_sk = ws_item_sk 
+ and d_date between '[WSDATE]' and 
+-        (cast('[WSDATE]' as date) + 90 days)
++        (cast('[WSDATE]' as date) + interval 90 days)
+ and d_date_sk = ws_sold_date_sk 
+ and ws_ext_discount_amt  
+      > ( 
+@@ -60,7 +60,7 @@ and ws_ext_discount_amt
+          WHERE 
+               ws_item_sk = i_item_sk 
+           and d_date between '[WSDATE]' and
+-                             (cast('[WSDATE]' as date) + 90 days)
++                             (cast('[WSDATE]' as date) + interval 90 days)
+           and d_date_sk = ws_sold_date_sk 
+       ) 
+ order by sum(ws_ext_discount_amt)
+diff --git a/query_templates/query94.tpl b/query_templates/query94.tpl
+index a0902ce..c5d18a4 100644
+--- a/query_templates/query94.tpl
++++ b/query_templates/query94.tpl
+@@ -39,9 +39,9 @@ define STATE = dist(fips_county,3,1);
+ define _LIMIT=100;
+ 
+ [_LIMITA] select [_LIMITB] 
+-   count(distinct ws_order_number) as "order count"
+-  ,sum(ws_ext_ship_cost) as "total shipping cost"
+-  ,sum(ws_net_profit) as "total net profit"
++   count(distinct ws_order_number) as `order count`
++  ,sum(ws_ext_ship_cost) as `total shipping cost`
++  ,sum(ws_net_profit) as `total net profit`
+ from
+    web_sales ws1
+   ,date_dim
+@@ -49,7 +49,7 @@ from
+   ,web_site
+ where
+     d_date between '[YEAR]-[MONTH]-01' and 
+-           (cast('[YEAR]-[MONTH]-01' as date) + 60 days)
++           (cast('[YEAR]-[MONTH]-01' as date) + interval 60 days)
+ and ws1.ws_ship_date_sk = d_date_sk
+ and ws1.ws_ship_addr_sk = ca_address_sk
+ and ca_state = '[STATE]'
+diff --git a/query_templates/query95.tpl b/query_templates/query95.tpl
+index 3919a7e..87f006c 100644
+--- a/query_templates/query95.tpl
++++ b/query_templates/query95.tpl
+@@ -44,9 +44,9 @@ with ws_wh as
+  where ws1.ws_order_number = ws2.ws_order_number
+    and ws1.ws_warehouse_sk <> ws2.ws_warehouse_sk)
+ [_LIMITA] select [_LIMITB] 
+-   count(distinct ws_order_number) as "order count"
+-  ,sum(ws_ext_ship_cost) as "total shipping cost"
+-  ,sum(ws_net_profit) as "total net profit"
++   count(distinct ws_order_number) as `order count`
++  ,sum(ws_ext_ship_cost) as `total shipping cost`
++  ,sum(ws_net_profit) as `total net profit`
+ from
+    web_sales ws1
+   ,date_dim
+@@ -54,7 +54,7 @@ from
+   ,web_site
+ where
+     d_date between '[YEAR]-[MONTH]-01' and 
+-           (cast('[YEAR]-[MONTH]-01' as date) + 60 days)
++           (cast('[YEAR]-[MONTH]-01' as date) + interval 60 days)
+ and ws1.ws_ship_date_sk = d_date_sk
+ and ws1.ws_ship_addr_sk = ca_address_sk
+ and ca_state = '[STATE]'
+diff --git a/query_templates/query98.tpl b/query_templates/query98.tpl
+index a6b859f..dc92f95 100644
+--- a/query_templates/query98.tpl
++++ b/query_templates/query98.tpl
+@@ -54,7 +54,7 @@ where
+   	and i_category in ('[CATEGORY.1]', '[CATEGORY.2]', '[CATEGORY.3]')
+   	and ss_sold_date_sk = d_date_sk
+ 	and d_date between cast('[SDATE]' as date) 
+-				and (cast('[SDATE]' as date) + 30 days)
++				and (cast('[SDATE]' as date) + interval 30 days)
+ group by 
+ 	i_item_id
+         ,i_item_desc 
+diff --git a/query_templates/query99.tpl b/query_templates/query99.tpl
+index 8cdd6fc..5e8150c 100644
+--- a/query_templates/query99.tpl
++++ b/query_templates/query99.tpl
+@@ -39,14 +39,14 @@ define _LIMIT=100;
+    substr(w_warehouse_name,1,20)
+   ,sm_type
+   ,cc_name
+-  ,sum(case when (cs_ship_date_sk - cs_sold_date_sk <= 30 ) then 1 else 0 end)  as "30 days" 
++  ,sum(case when (cs_ship_date_sk - cs_sold_date_sk <= 30 ) then 1 else 0 end)  as `30 days`
+   ,sum(case when (cs_ship_date_sk - cs_sold_date_sk > 30) and 
+-                 (cs_ship_date_sk - cs_sold_date_sk <= 60) then 1 else 0 end )  as "31-60 days" 
++                 (cs_ship_date_sk - cs_sold_date_sk <= 60) then 1 else 0 end )  as `31-60 days`
+   ,sum(case when (cs_ship_date_sk - cs_sold_date_sk > 60) and 
+-                 (cs_ship_date_sk - cs_sold_date_sk <= 90) then 1 else 0 end)  as "61-90 days" 
++                 (cs_ship_date_sk - cs_sold_date_sk <= 90) then 1 else 0 end)  as `61-90 days`
+   ,sum(case when (cs_ship_date_sk - cs_sold_date_sk > 90) and
+-                 (cs_ship_date_sk - cs_sold_date_sk <= 120) then 1 else 0 end)  as "91-120 days" 
+-  ,sum(case when (cs_ship_date_sk - cs_sold_date_sk  > 120) then 1 else 0 end)  as ">120 days" 
++                 (cs_ship_date_sk - cs_sold_date_sk <= 120) then 1 else 0 end)  as `91-120 days`
++  ,sum(case when (cs_ship_date_sk - cs_sold_date_sk  > 120) then 1 else 0 end)  as `>120 days`
+ from
+    catalog_sales
+   ,warehouse
+diff --git a/query_templates/spark.tpl b/query_templates/spark.tpl
+new file mode 100644
+index 0000000..93b8633
+--- /dev/null
++++ b/query_templates/spark.tpl
+@@ -0,0 +1,40 @@
++--
++-- Legal Notice 
++-- 
++-- This document and associated source code (the "Work") is a part of a 
++-- benchmark specification maintained by the TPC. 
++-- 
++-- The TPC reserves all right, title, and interest to the Work as provided 
++-- under U.S. and international laws, including without limitation all patent 
++-- and trademark rights therein. 
++-- 
++-- No Warranty 
++-- 
++-- 1.1 TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE INFORMATION 
++--     CONTAINED HEREIN IS PROVIDED "AS IS" AND WITH ALL FAULTS, AND THE 
++--     AUTHORS AND DEVELOPERS OF THE WORK HEREBY DISCLAIM ALL OTHER 
++--     WARRANTIES AND CONDITIONS, EITHER EXPRESS, IMPLIED OR STATUTORY, 
++--     INCLUDING, BUT NOT LIMITED TO, ANY (IF ANY) IMPLIED WARRANTIES, 
++--     DUTIES OR CONDITIONS OF MERCHANTABILITY, OF FITNESS FOR A PARTICULAR 
++--     PURPOSE, OF ACCURACY OR COMPLETENESS OF RESPONSES, OF RESULTS, OF 
++--     WORKMANLIKE EFFORT, OF LACK OF VIRUSES, AND OF LACK OF NEGLIGENCE. 
++--     ALSO, THERE IS NO WARRANTY OR CONDITION OF TITLE, QUIET ENJOYMENT, 
++--     QUIET POSSESSION, CORRESPONDENCE TO DESCRIPTION OR NON-INFRINGEMENT 
++--     WITH REGARD TO THE WORK. 
++-- 1.2 IN NO EVENT WILL ANY AUTHOR OR DEVELOPER OF THE WORK BE LIABLE TO 
++--     ANY OTHER PARTY FOR ANY DAMAGES, INCLUDING BUT NOT LIMITED TO THE 
++--     COST OF PROCURING SUBSTITUTE GOODS OR SERVICES, LOST PROFITS, LOSS 
++--     OF USE, LOSS OF DATA, OR ANY INCIDENTAL, CONSEQUENTIAL, DIRECT, 
++--     INDIRECT, OR SPECIAL DAMAGES WHETHER UNDER CONTRACT, TORT, WARRANTY,
++--     OR OTHERWISE, ARISING IN ANY WAY OUT OF THIS OR ANY OTHER AGREEMENT 
++--     RELATING TO THE WORK, WHETHER OR NOT SUCH AUTHOR OR DEVELOPER HAD 
++--     ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES. 
++-- 
++-- Contributors:
++-- 
++define __LIMITA = "";
++define __LIMITB = "";
++define __LIMITC = " LIMIT %d";
++define _BEGIN = "-- start query " + [_QUERY] + " in stream " + [_STREAM] + " using template " + [_TEMPLATE];
++define _END = "-- end query " + [_QUERY] + " in stream " + [_STREAM] + " using template " + [_TEMPLATE];
++
+ 

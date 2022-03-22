@@ -14,15 +14,29 @@ available at http://www.tpc.org/tpc_documents_current_versions/current_specifica
 EULA are identified as such within the files.
 
 You may not use NDS except in compliance with the Apache License, Version 2.0 and the TPC EULA.
+
+
+## prerequisites:
+
+1. python > 3.6
+2. Necessary libraries 
+    ```
+    sudo apt install openjdk-8-jdk-headless gcc make flex bison byacc maven
+    pip3 install pyspark
+    ```
+3. TPC-DS Tools
+
+    User must download TPC-DS Tools from [official TPC website](https://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp). The tool will be downloaded as a zip package with a random guid string prefix.
+    After unzipping it, a folder called `DSGen-software-code-3.2.0rc1` will be seen.
+
+    User must set a system environment variable `TPCDS_HOME` pointing to this directory. e.g.
+    ```
+    export TPCDS_HOME=/PATH/TO/YOUR/DSGen-software-code-3.2.0rc1
+    ```
+    This variable will help find the TPC-DS Tool when building essential component for this repository.
+
 ## Data Generation
 
-### prerequisites:
-
-python > 3.6
-```
-sudo apt install openjdk-8-jdk-headless gcc make flex bison byacc maven
-pip3 install pyspark
-```
 
 ### build the jar for data generation:
 ```
@@ -102,11 +116,11 @@ when converting CSV to Parquet data, the script will add data partitioning to so
 | web_returns        | wr_returned_date_sk |
 
 ## Query Generation
-The modified query templates for Spark SQL are in `query_templates_nds` folder. 
+The [templates.patch](./tpcds-gen/patches/templates.patch) that contains necessary modifications to make NDS queries runnable in Spark will be applied automatically in the build step. The final query templates will be in folder `$TPCDS_HOME/query_templates` after the build process.
 
-To make NDS queries runnable in Spark, we applied the following changes to original templates released in TPC-DS v3.2.0:
+we applied the following changes to original templates released in TPC-DS v3.2.0:
 
-- convert `+` syntax for `date interval add` to [date_add()](https://spark.apache.org/docs/latest/api/sql/index.html#date_add) function supported in Spark SQL.
+- add `interval` keyword before all `date interval add` mark `+` for syntax compatibility in Spark SQL.
 
 - convert `"` mark to `` ` `` mark for syntax compatibility in Spark SQL.
 
@@ -118,7 +132,7 @@ Sample command to generate query1 from template for NDS:
 python nds.py \
 --generate query \
 --template query1.tpl \
---template-dir ./query_templates_nds \
+--template-dir $TPCDS_HOME/query_templates \
 --scale 100 \
 --query-output-dir ./nds_queries
 
@@ -130,7 +144,7 @@ Sample command to generate query streams used for Power Run and Throughput Run.
 ```
 python nds.py \
 --generate streams \
---template-dir ./query_templates_nds \
+--template-dir $TPCDS_HOME/query_templates \
 --scale 100 \
 --query-output-dir ./nds_query_streams \
 --streams 10
@@ -146,7 +160,7 @@ Sample command for Power Run:
 ```
 python nds.py \
 --run power \
---query-stream ./nds_query_streams/query_0.sql \
+--query-stream $TPCDS_HOME/query_templates/query_0.sql \
 --input-prefix hdfs:///data/NDS_parquet/ \
 --run-log test.log \
 --spark-submit-template power_run_gpu.template \
@@ -183,7 +197,7 @@ Sample command for Throughput Run:
 ```
 python nds.py \
 --run power \
---query-stream ./nds_query_streams/query_0.sql,./nds_query_streams/query_1.sql \
+--query-stream $TPCDS_HOME/query_templates/query_0.sql,$TPCDS_HOME/query_templates/query_1.sql \
 --input-prefix hdfs:///data/NDS_parquet/ \
 --run-log test.log \
 --spark-submit-template power_run_gpu.template \
