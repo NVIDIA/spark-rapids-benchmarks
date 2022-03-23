@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 # SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -35,6 +36,14 @@ import sys
 import os
 import csv
 from multiprocessing import Process
+
+def check_version():
+    req_ver = (3,6)
+    cur_ver = sys.version_info
+    if cur_ver < req_ver:
+        raise Exception('Minimum required Python version is 3.6, but current python version is {}.'
+                        .format(str(cur_ver.major) + '.' + str(cur_ver.minor)) +
+                        ' Please use proper Python version')
 
 def check_build():
     # Check if necessary executable or jars are built.
@@ -264,6 +273,7 @@ def throughput_run(args):
 
 
 def main():
+    check_version()
     parser = argparse.ArgumentParser(
         description='Argument parser for NDS benchmark options.')
     parser.add_argument('--generate', choices=['data', 'query', 'streams', 'convert'], 
