@@ -87,11 +87,10 @@ Sample command to convert the data:
 python nds.py \
 --generate convert \
 --spark-submit-template convert_submit.template \
---input-prefix hdfs:///data/nds_raw/ \
---output-prefix hdfs:///data/nds_parquet/
+--input-prefix hdfs:///data/nds_raw \
+--output-prefix hdfs:///data/nds_parquet
 ```
 
-Note: the `/` at the end of `input-prefix` path is required.
 
 We provide two basic templates for GPU run(convert_submit_gpu.template) and CPU run(convert_submit_cpu.template).
 To enable GPU run, user need to download two jars in advance to use spark-rapids plugin.
