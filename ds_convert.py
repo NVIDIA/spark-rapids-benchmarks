@@ -31,6 +31,7 @@
 import argparse
 import timeit
 import pyspark
+import os
 
 from pyspark.sql.types import *
 from pyspark.sql.functions import col
@@ -560,21 +561,23 @@ TABLE_PARTITIONING = {
 
 
 def load(filename, schema, delimiter="|", header="false", prefix=""):
+    data_path = os.path.join(prefix, filename)
     global session
-    return session.read.option("delimiter", delimiter).option("header", header).csv(f"{prefix}{filename}", schema=schema)
+    return session.read.option("delimiter", delimiter).option("header", header).csv(data_path, schema=schema)
 
 def store(df, filename, prefix=""):
+    data_path = os.path.join(prefix, filename)
     if filename in TABLE_PARTITIONING.keys():
-        df.repartition(col(TABLE_PARTITIONING[filename])).write.mode("overwrite").partitionBy(TABLE_PARTITIONING[filename]).parquet(f"{prefix}{filename}")
+        df.repartition(col(TABLE_PARTITIONING[filename])).write.mode("overwrite").partitionBy(TABLE_PARTITIONING[filename]).parquet(data_path)
     else:
-        df.coalesce(1).write.mode("overwrite").parquet(f"{prefix}{filename}")
+        df.coalesce(1).write.mode("overwrite").parquet(data_path)
 
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
     parser.add_argument('--output-mode', help='Spark data source output mode for the result (default: overwrite)', default="overwrite")
-    parser.add_argument('--input-prefix', help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data/"; the default is empty)', default="")
+    parser.add_argument('--input-prefix', help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"; the default is empty)', default="")
     parser.add_argument('--input-suffix', help='text to append to every input filename (e.g., ".dat"; the default is empty)', default="")
-    parser.add_argument('--output-prefix', help='text to prepend to every output file (e.g., "hdfs:///ds-parquet/"; the default is empty)', default="")
+    parser.add_argument('--output-prefix', help='text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is empty)', default="")
     parser.add_argument('--report-file', help='location in which to store a performance report', default='report.txt')
     parser.add_argument('--log-level', help='set log level (default: OFF)', default="OFF")
     #    parser.add_argument('--coalesce-output', help='coalesce output to NUM partitions', default=0, type=int)
