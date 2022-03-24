@@ -10,7 +10,7 @@ target/tools/dsdgen: check-env
 	mkdir -p target/
 	cp patches/*.patch $(TPCDS_HOME)/
 	# apply patches to both source code and templates
-	cd $(TPCDS_HOME); git apply code.patch templates.patch
+	cd $(TPCDS_HOME); git init; git apply -v code.patch templates.patch
 	test -d target/tools/ || (cd target; cp -r $(TPCDS_HOME)/tools tools)
 	cd target/tools; make clean; make
 
