@@ -87,9 +87,9 @@ def generate_data(args):
                 raise Exception("dsdgen failed")
 
         os.chdir('../../..')
-        from ds_convert import SCHEMAS
+        from ds_convert import get_schemas
         # move multi-partition files into table folders
-        for table in SCHEMAS.keys():
+        for table in get_schemas(False).keys():
             print('mkdir -p {}/{}'.format(args.data_dir, table))
             os.system('mkdir -p {}/{}'.format(args.data_dir, table))
             for i in range(1, int(args.parallel)+1):
@@ -143,6 +143,8 @@ def convert_csv_to_parquet(args):
     cmd.append("--output-prefix " + args.output_prefix)
     cmd.append("--report-file " + args.report_file)
     cmd.append("--log-level " + args.log_level)
+    if args.non_decimal:
+        cmd.append("--non-decimal")
 
     # run spark-submit
     cmd = template.strip() + "\n  ds_convert.py " + " ".join(cmd).strip()
@@ -179,8 +181,8 @@ def gen_sql_from_stream(query_stream_file_path, data_path):
 
     # add create data tables content
     spark_stream = ''
-    from ds_convert import SCHEMAS
-    for table_name in SCHEMAS.keys():
+    from ds_convert import get_schemas
+    for table_name in get_schemas(False).keys():
         spark_stream += 'println("====== Creating TempView for table {} ======")\n'.format(table_name)
         spark_stream += 'spark.time(spark.read.parquet("{}{}").createOrReplaceTempView("{}"))\n'.format(data_path, table_name, table_name)
     # add spark execution content, drop the first \n line
@@ -312,6 +314,8 @@ def main():
         '--query-stream', help='query stream file that contains all NDS queries in specific order')
     parser.add_argument('--run-log', help='file to save  run logs')
     parser.add_argument('--csv-output', required='--run' in sys.argv, help='CSV file to save query and query execution time')
+    parser.add_argument('--non-decimal', action='store_true',
+                        help='replace DecimalType with DoubleType when saving parquet files. If not specified, decimal data will be saved.')
     args = parser.parse_args()
 
     if args.generate != None:
