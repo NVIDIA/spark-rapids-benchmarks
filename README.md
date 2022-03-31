@@ -82,6 +82,8 @@ python nds.py \
 
 The NDS python script will submit a Spark job to finish the data conversion. User should put necessary Spark configs into pre-defined template file.
 
+if `--non-decimal` is specified in the command, DoubleType will be used to replace decimal data in Parquet files, otherwise, DecimalType will be saved.
+
 Sample command to convert the data:
 ```
 python nds.py \
