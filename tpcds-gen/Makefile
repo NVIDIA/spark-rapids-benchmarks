@@ -2,7 +2,7 @@ all: target/lib/dsdgen.jar target/tpcds-gen-1.0-SNAPSHOT.jar
 
 target/tpcds-gen-1.0-SNAPSHOT.jar: $(shell find -name *.java)
 ifdef MVN_REPO_URL
-	mvn package -s ../cicd/settings.xml -p
+	mvn package -s ../cicd/settings.xml
 else
 	mvn package
 endif
