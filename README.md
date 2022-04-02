@@ -161,32 +161,30 @@ Sample command for Power Run:
 ```
 python nds.py \
 --run power \
---query-stream $TPCDS_HOME/query_templates/query_0.sql \
---input-prefix hdfs:///data/NDS_parquet/ \
+--query-stream ./nds_query_streams/query_0.sql \
+--input-prefix hdfs:///data/NDS_parquet \
 --run-log test.log \
 --spark-submit-template power_run_gpu.template \
---csv-output time.csv \
+--time-log time.csv \
 ```
 
-When it's finished, user will see parsed logs from terminal like:
+To simplify the performance analysis process, the script will create a local CSV file to save query(including TempView creation) and corresponding execution time. Note: please use `client` mode(set in your `spark-submit-template` file) when running in Yarn distributed environment to make sure the time log is saved correctly in your local path.
+
+The file path is defined by `--time-log` argument.
+
+The command above will use `collect()` action to trigger Spark job for each query. It is also supported to save query output to some place for further verification. User can also specify output format e.g. csv, parquet or orc:
 ```
-......
-......
-====== Run query4 ======
-Time taken: 25532 ms
-====== Run query94 ======
-Time taken: 886 ms
-====== Run query20 ======
-Time taken: 1237 ms
-====== Run query14a ======
-Time taken: 11951 ms
-
-====== Total time : 325939 ms ======
-
+python nds.py \
+--run power \
+--query-stream ./nds_query_streams/query_0.sql \
+--input-prefix hdfs:///data/NDS_parquet \
+--run-log test.log \
+--spark-submit-template power_run_gpu.template \
+--time-log time.csv \
+--output-prefix hdfs:///data/NDS_power_run_output \
+--output-format parquet
 ```
 
-To simplify the performance analysis process, the script will create a CSV file to save query and corresponding execution time.
-The file path is defined by `--csv-output` argument.
 
 ### Throughput Run
 Throughput Run simulates the scenario that multiple query sessions are running simultaneously in Spark. Different to Power Run, user needs to provide multiple query streams as input for `--query-stream` argument with `,` as seperator. Also the run log will be saved for each query stream independently with index number as naming suffix like _test.log_query_1_, _test.log_query2_ etc. and _time.csv_query_1_, _time.csv_query2_ etc.
@@ -198,11 +196,11 @@ Sample command for Throughput Run:
 ```
 python nds.py \
 --run power \
---query-stream $TPCDS_HOME/query_templates/query_0.sql,$TPCDS_HOME/query_templates/query_1.sql \
---input-prefix hdfs:///data/NDS_parquet/ \
+--query-stream ./nds_query_streams/query_1.sql,./nds_query_streams/query_2.sql \
+--input-prefix hdfs:///data/NDS_parquet \
 --run-log test.log \
 --spark-submit-template power_run_gpu.template \
---csv-output time.csv \
+--time-log time.csv \
 ```
 
 
