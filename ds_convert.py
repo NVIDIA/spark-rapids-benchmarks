@@ -43,14 +43,13 @@ if not hasattr(pyspark.sql.types, "VarcharType"):
 
 from pyspark.sql.types import VarcharType, CharType
 
-def decimalType(non_decimal, precision, scale):
-    if non_decimal:
-        return DoubleType()
-    else:
+def decimalType(use_decimal, precision, scale):
+    if use_decimal:
         return DecimalType(precision, scale)
-    
+    else:
+        return DoubleType()
 
-def get_schemas(non_decimal):
+def get_schemas(use_decimal):
     SCHEMAS = {}
     SCHEMAS["dbgen_version"] = StructType([
         StructField("dv_version", VarcharType(16)),
@@ -71,7 +70,7 @@ def get_schemas(non_decimal):
         StructField("ca_state", CharType(2)),
         StructField("ca_zip", CharType(10)),
         StructField("ca_country", VarcharType(20)),
-        StructField("ca_gmt_offset", decimalType(non_decimal, 5, 2)),
+        StructField("ca_gmt_offset", decimalType(use_decimal, 5, 2)),
         StructField("ca_location_type", CharType(20))
     ])
 
@@ -132,7 +131,7 @@ def get_schemas(non_decimal):
         StructField("w_state", CharType(2)),
         StructField("w_zip", CharType(10)),
         StructField("w_country", VarcharType(20)),
-        StructField("w_gmt_offset", decimalType(non_decimal, 5, 2))
+        StructField("w_gmt_offset", decimalType(use_decimal, 5, 2))
     ])
 
     SCHEMAS["ship_mode"] = StructType([
@@ -175,8 +174,8 @@ def get_schemas(non_decimal):
         StructField("i_rec_start_date", DateType()),
         StructField("i_rec_end_date", DateType()),
         StructField("i_item_desc", VarcharType(200)),
-        StructField("i_current_price", decimalType(non_decimal, 7, 2)),
-        StructField("i_wholesale_cost", decimalType(non_decimal, 7, 2)),
+        StructField("i_current_price", decimalType(use_decimal, 7, 2)),
+        StructField("i_wholesale_cost", decimalType(use_decimal, 7, 2)),
         StructField("i_brand_id", IntegerType()),
         StructField("i_brand", CharType(50)),
         StructField("i_class_id", IntegerType()),
@@ -222,8 +221,8 @@ def get_schemas(non_decimal):
         StructField("s_state", CharType(2)),
         StructField("s_zip", CharType(10)),
         StructField("s_country", VarcharType(20)),
-        StructField("s_gmt_offset", decimalType(non_decimal, 5, 2)),
-        StructField("s_tax_precentage", decimalType(non_decimal, 5, 2))
+        StructField("s_gmt_offset", decimalType(use_decimal, 5, 2)),
+        StructField("s_tax_precentage", decimalType(use_decimal, 5, 2))
     ])
 
     SCHEMAS["call_center"] = StructType([
@@ -256,8 +255,8 @@ def get_schemas(non_decimal):
         StructField("cc_state", CharType(2)),
         StructField("cc_zip", CharType(10)),
         StructField("cc_country", VarcharType(20)),
-        StructField("cc_gmt_offset", decimalType(non_decimal, 5, 2)),
-        StructField("cc_tax_percentage", decimalType(non_decimal, 5, 2))
+        StructField("cc_gmt_offset", decimalType(use_decimal, 5, 2)),
+        StructField("cc_tax_percentage", decimalType(use_decimal, 5, 2))
     ])
 
     SCHEMAS["customer"] = StructType([
@@ -306,8 +305,8 @@ def get_schemas(non_decimal):
         StructField("web_state", CharType(2)),
         StructField("web_zip", CharType(10)),
         StructField("web_country", VarcharType(20)),
-        StructField("web_gmt_offset", decimalType(non_decimal, 5, 2)),
-        StructField("web_tax_percentage", decimalType(non_decimal, 5, 2))
+        StructField("web_gmt_offset", decimalType(use_decimal, 5, 2)),
+        StructField("web_tax_percentage", decimalType(use_decimal, 5, 2))
     ])
 
     SCHEMAS["store_returns"] = StructType([
@@ -322,15 +321,15 @@ def get_schemas(non_decimal):
         StructField("sr_reason_sk", IntegerType()),
         StructField("sr_ticket_number", IntegerType(), nullable=False),
         StructField("sr_return_quantity", IntegerType()),
-        StructField("sr_return_amt", decimalType(non_decimal, 7, 2)),
-        StructField("sr_return_tax", decimalType(non_decimal, 7, 2)),
-        StructField("sr_return_amt_inc_tax", decimalType(non_decimal, 7, 2)),
-        StructField("sr_fee", decimalType(non_decimal, 7, 2)),
-        StructField("sr_return_ship_cost", decimalType(non_decimal, 7, 2)),
-        StructField("sr_refunded_cash", decimalType(non_decimal, 7, 2)),
-        StructField("sr_reversed_charge", decimalType(non_decimal, 7, 2)),
-        StructField("sr_store_credit", decimalType(non_decimal, 7, 2)),
-        StructField("sr_net_loss", decimalType(non_decimal, 7, 2))
+        StructField("sr_return_amt", decimalType(use_decimal, 7, 2)),
+        StructField("sr_return_tax", decimalType(use_decimal, 7, 2)),
+        StructField("sr_return_amt_inc_tax", decimalType(use_decimal, 7, 2)),
+        StructField("sr_fee", decimalType(use_decimal, 7, 2)),
+        StructField("sr_return_ship_cost", decimalType(use_decimal, 7, 2)),
+        StructField("sr_refunded_cash", decimalType(use_decimal, 7, 2)),
+        StructField("sr_reversed_charge", decimalType(use_decimal, 7, 2)),
+        StructField("sr_store_credit", decimalType(use_decimal, 7, 2)),
+        StructField("sr_net_loss", decimalType(use_decimal, 7, 2))
     ])
 
     SCHEMAS["household_demographics"] = StructType([
@@ -364,7 +363,7 @@ def get_schemas(non_decimal):
         StructField("p_start_date_sk", IntegerType()),
         StructField("p_end_date_sk", IntegerType()),
         StructField("p_item_sk", IntegerType()),
-        StructField("p_cost", decimalType(non_decimal, 15, 2)),
+        StructField("p_cost", decimalType(use_decimal, 15, 2)),
         StructField("p_response_target", IntegerType()),
         StructField("p_promo_name", CharType(50)),
         StructField("p_channel_dmail", CharType(1)),
@@ -418,15 +417,15 @@ def get_schemas(non_decimal):
         StructField("cr_reason_sk", IntegerType()),
         StructField("cr_order_number", IntegerType(), nullable=False),
         StructField("cr_return_quantity", IntegerType()),
-        StructField("cr_return_amount", decimalType(non_decimal, 7, 2)),
-        StructField("cr_return_tax", decimalType(non_decimal, 7, 2)),
-        StructField("cr_return_amt_inc_tax", decimalType(non_decimal, 7, 2)),
-        StructField("cr_fee", decimalType(non_decimal, 7, 2)),
-        StructField("cr_return_ship_cost", decimalType(non_decimal, 7, 2)),
-        StructField("cr_refunded_cash", decimalType(non_decimal, 7, 2)),
-        StructField("cr_reversed_charge", decimalType(non_decimal, 7, 2)),
-        StructField("cr_store_credit", decimalType(non_decimal, 7, 2)),
-        StructField("cr_net_loss", decimalType(non_decimal, 7, 2))
+        StructField("cr_return_amount", decimalType(use_decimal, 7, 2)),
+        StructField("cr_return_tax", decimalType(use_decimal, 7, 2)),
+        StructField("cr_return_amt_inc_tax", decimalType(use_decimal, 7, 2)),
+        StructField("cr_fee", decimalType(use_decimal, 7, 2)),
+        StructField("cr_return_ship_cost", decimalType(use_decimal, 7, 2)),
+        StructField("cr_refunded_cash", decimalType(use_decimal, 7, 2)),
+        StructField("cr_reversed_charge", decimalType(use_decimal, 7, 2)),
+        StructField("cr_store_credit", decimalType(use_decimal, 7, 2)),
+        StructField("cr_net_loss", decimalType(use_decimal, 7, 2))
     ])
 
     SCHEMAS["web_returns"] = StructType([
@@ -445,15 +444,15 @@ def get_schemas(non_decimal):
         StructField("wr_reason_sk", IntegerType()),
         StructField("wr_order_number", IntegerType(), nullable=False),
         StructField("wr_return_quantity", IntegerType()),
-        StructField("wr_return_amt", decimalType(non_decimal, 7, 2)),
-        StructField("wr_return_tax", decimalType(non_decimal, 7, 2)),
-        StructField("wr_return_amt_inc_tax", decimalType(non_decimal, 7, 2)),
-        StructField("wr_fee", decimalType(non_decimal, 7, 2)),
-        StructField("wr_return_ship_cost", decimalType(non_decimal, 7, 2)),
-        StructField("wr_refunded_cash", decimalType(non_decimal, 7, 2)),
-        StructField("wr_reversed_charge", decimalType(non_decimal, 7, 2)),
-        StructField("wr_account_credit", decimalType(non_decimal, 7, 2)),
-        StructField("wr_net_loss", decimalType(non_decimal, 7, 2))
+        StructField("wr_return_amt", decimalType(use_decimal, 7, 2)),
+        StructField("wr_return_tax", decimalType(use_decimal, 7, 2)),
+        StructField("wr_return_amt_inc_tax", decimalType(use_decimal, 7, 2)),
+        StructField("wr_fee", decimalType(use_decimal, 7, 2)),
+        StructField("wr_return_ship_cost", decimalType(use_decimal, 7, 2)),
+        StructField("wr_refunded_cash", decimalType(use_decimal, 7, 2)),
+        StructField("wr_reversed_charge", decimalType(use_decimal, 7, 2)),
+        StructField("wr_account_credit", decimalType(use_decimal, 7, 2)),
+        StructField("wr_net_loss", decimalType(use_decimal, 7, 2))
     ])
 
     SCHEMAS["web_sales"] = StructType([
@@ -476,21 +475,21 @@ def get_schemas(non_decimal):
         StructField("ws_promo_sk", IntegerType()),
         StructField("ws_order_number", IntegerType(), nullable=False),
         StructField("ws_quantity", IntegerType()),
-        StructField("ws_wholesale_cost", decimalType(non_decimal, 7, 2)),
-        StructField("ws_list_price", decimalType(non_decimal, 7, 2)),
-        StructField("ws_sales_price", decimalType(non_decimal, 7, 2)),
-        StructField("ws_ext_discount_amt", decimalType(non_decimal, 7, 2)),
-        StructField("ws_ext_sales_price", decimalType(non_decimal, 7, 2)),
-        StructField("ws_ext_wholesale_cost", decimalType(non_decimal, 7, 2)),
-        StructField("ws_ext_list_price", decimalType(non_decimal, 7, 2)),
-        StructField("ws_ext_tax", decimalType(non_decimal, 7, 2)),
-        StructField("ws_coupon_amt", decimalType(non_decimal, 7, 2)),
-        StructField("ws_ext_ship_cost", decimalType(non_decimal, 7, 2)),
-        StructField("ws_net_paid", decimalType(non_decimal, 7, 2)),
-        StructField("ws_net_paid_inc_tax", decimalType(non_decimal, 7, 2)),
-        StructField("ws_net_paid_inc_ship", decimalType(non_decimal, 7, 2)),
-        StructField("ws_net_paid_inc_ship_tax", decimalType(non_decimal, 7, 2)),
-        StructField("ws_net_profit", decimalType(non_decimal, 7, 2))
+        StructField("ws_wholesale_cost", decimalType(use_decimal, 7, 2)),
+        StructField("ws_list_price", decimalType(use_decimal, 7, 2)),
+        StructField("ws_sales_price", decimalType(use_decimal, 7, 2)),
+        StructField("ws_ext_discount_amt", decimalType(use_decimal, 7, 2)),
+        StructField("ws_ext_sales_price", decimalType(use_decimal, 7, 2)),
+        StructField("ws_ext_wholesale_cost", decimalType(use_decimal, 7, 2)),
+        StructField("ws_ext_list_price", decimalType(use_decimal, 7, 2)),
+        StructField("ws_ext_tax", decimalType(use_decimal, 7, 2)),
+        StructField("ws_coupon_amt", decimalType(use_decimal, 7, 2)),
+        StructField("ws_ext_ship_cost", decimalType(use_decimal, 7, 2)),
+        StructField("ws_net_paid", decimalType(use_decimal, 7, 2)),
+        StructField("ws_net_paid_inc_tax", decimalType(use_decimal, 7, 2)),
+        StructField("ws_net_paid_inc_ship", decimalType(use_decimal, 7, 2)),
+        StructField("ws_net_paid_inc_ship_tax", decimalType(use_decimal, 7, 2)),
+        StructField("ws_net_profit", decimalType(use_decimal, 7, 2))
     ])
 
     SCHEMAS["catalog_sales"] = StructType([
@@ -513,21 +512,21 @@ def get_schemas(non_decimal):
         StructField("cs_promo_sk", IntegerType()),
         StructField("cs_order_number", IntegerType(), nullable=False),
         StructField("cs_quantity", IntegerType()),
-        StructField("cs_wholesale_cost", decimalType(non_decimal, 7, 2)),
-        StructField("cs_list_price", decimalType(non_decimal, 7, 2)),
-        StructField("cs_sales_price", decimalType(non_decimal, 7, 2)),
-        StructField("cs_ext_discount_amt", decimalType(non_decimal, 7, 2)),
-        StructField("cs_ext_sales_price", decimalType(non_decimal, 7, 2)),
-        StructField("cs_ext_wholesale_cost", decimalType(non_decimal, 7, 2)),
-        StructField("cs_ext_list_price", decimalType(non_decimal, 7, 2)),
-        StructField("cs_ext_tax", decimalType(non_decimal, 7, 2)),
-        StructField("cs_coupon_amt", decimalType(non_decimal, 7, 2)),
-        StructField("cs_ext_ship_cost", decimalType(non_decimal, 7, 2)),
-        StructField("cs_net_paid", decimalType(non_decimal, 7, 2)),
-        StructField("cs_net_paid_inc_tax", decimalType(non_decimal, 7, 2)),
-        StructField("cs_net_paid_inc_ship", decimalType(non_decimal, 7, 2)),
-        StructField("cs_net_paid_inc_ship_tax", decimalType(non_decimal, 7, 2)),
-        StructField("cs_net_profit", decimalType(non_decimal, 7, 2))
+        StructField("cs_wholesale_cost", decimalType(use_decimal, 7, 2)),
+        StructField("cs_list_price", decimalType(use_decimal, 7, 2)),
+        StructField("cs_sales_price", decimalType(use_decimal, 7, 2)),
+        StructField("cs_ext_discount_amt", decimalType(use_decimal, 7, 2)),
+        StructField("cs_ext_sales_price", decimalType(use_decimal, 7, 2)),
+        StructField("cs_ext_wholesale_cost", decimalType(use_decimal, 7, 2)),
+        StructField("cs_ext_list_price", decimalType(use_decimal, 7, 2)),
+        StructField("cs_ext_tax", decimalType(use_decimal, 7, 2)),
+        StructField("cs_coupon_amt", decimalType(use_decimal, 7, 2)),
+        StructField("cs_ext_ship_cost", decimalType(use_decimal, 7, 2)),
+        StructField("cs_net_paid", decimalType(use_decimal, 7, 2)),
+        StructField("cs_net_paid_inc_tax", decimalType(use_decimal, 7, 2)),
+        StructField("cs_net_paid_inc_ship", decimalType(use_decimal, 7, 2)),
+        StructField("cs_net_paid_inc_ship_tax", decimalType(use_decimal, 7, 2)),
+        StructField("cs_net_profit", decimalType(use_decimal, 7, 2))
     ])
 
     SCHEMAS["store_sales"] = StructType([
@@ -542,18 +541,18 @@ def get_schemas(non_decimal):
         StructField("ss_promo_sk", IntegerType()),
         StructField("ss_ticket_number", IntegerType(), nullable=False),
         StructField("ss_quantity", IntegerType()),
-        StructField("ss_wholesale_cost", decimalType(non_decimal, 7, 2)),
-        StructField("ss_list_price", decimalType(non_decimal, 7, 2)),
-        StructField("ss_sales_price", decimalType(non_decimal, 7, 2)),
-        StructField("ss_ext_discount_amt", decimalType(non_decimal, 7, 2)),
-        StructField("ss_ext_sales_price", decimalType(non_decimal, 7, 2)),
-        StructField("ss_ext_wholesale_cost", decimalType(non_decimal, 7, 2)),
-        StructField("ss_ext_list_price", decimalType(non_decimal, 7, 2)),
-        StructField("ss_ext_tax", decimalType(non_decimal, 7, 2)),
-        StructField("ss_coupon_amt", decimalType(non_decimal, 7, 2)),
-        StructField("ss_net_paid", decimalType(non_decimal, 7, 2)),
-        StructField("ss_net_paid_inc_tax", decimalType(non_decimal, 7, 2)),
-        StructField("ss_net_profit", decimalType(non_decimal, 7, 2))
+        StructField("ss_wholesale_cost", decimalType(use_decimal, 7, 2)),
+        StructField("ss_list_price", decimalType(use_decimal, 7, 2)),
+        StructField("ss_sales_price", decimalType(use_decimal, 7, 2)),
+        StructField("ss_ext_discount_amt", decimalType(use_decimal, 7, 2)),
+        StructField("ss_ext_sales_price", decimalType(use_decimal, 7, 2)),
+        StructField("ss_ext_wholesale_cost", decimalType(use_decimal, 7, 2)),
+        StructField("ss_ext_list_price", decimalType(use_decimal, 7, 2)),
+        StructField("ss_ext_tax", decimalType(use_decimal, 7, 2)),
+        StructField("ss_coupon_amt", decimalType(use_decimal, 7, 2)),
+        StructField("ss_net_paid", decimalType(use_decimal, 7, 2)),
+        StructField("ss_net_paid_inc_tax", decimalType(use_decimal, 7, 2)),
+        StructField("ss_net_profit", decimalType(use_decimal, 7, 2))
     ])
     return SCHEMAS
 
@@ -602,8 +601,8 @@ if __name__ == "__main__":
 
     results = {}
 
-    schemas = get_schemas(args.non_decimal)
-    
+    schemas = get_schemas(use_decimal = not args.non_decimal)
+
     for fn, schema in schemas.items():
         results[fn] = timeit.timeit(lambda: store(load(f"{fn}{args.input_suffix}", schema, prefix=args.input_prefix), f"{fn}", args.output_prefix), number=1)
     

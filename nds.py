@@ -34,7 +34,6 @@ import subprocess
 import shutil
 import sys
 import os
-import csv
 from multiprocessing import Process
 
 def check_version():
@@ -89,7 +88,7 @@ def generate_data(args):
         os.chdir('../../..')
         from ds_convert import get_schemas
         # move multi-partition files into table folders
-        for table in get_schemas(False).keys():
+        for table in get_schemas(use_decimal=True).keys():
             print('mkdir -p {}/{}'.format(args.data_dir, table))
             os.system('mkdir -p {}/{}'.format(args.data_dir, table))
             for i in range(1, int(args.parallel)+1):
@@ -151,99 +150,41 @@ def convert_csv_to_parquet(args):
     print(cmd)
     os.system(cmd)
 
-def gen_sql_from_stream(query_stream_file_path, data_path):
-    with open(query_stream_file_path, 'r') as f:
-        stream = f.read()
-    # add \n to the head of stream for better split at next step
-    stream = '\n' + stream
-    all_queries = stream.split('\n-- start')
-    # split query in q14, q23, q24, q39
-    extended_queries = []
-    matches = ['query14', 'query23', 'query24', 'query39']
-    for q in all_queries:
-        if any(s in q for s in matches):
-            split_q = q.split(';')
-            # now split_q has 3 items: 
-            # 1. "query x in stream x using template query[xx].tpl query_part_1"
-            # 2. "query_part_2"
-            # 3. "-- end query [x] in stream [x] using template query[xx].tpl"
-            part_1 = ''
-            part_1 += split_q[0].replace('.tpl', '_part1.tpl')
-            part_1 += ';'
-            extended_queries.append(part_1)
-            head = split_q[0].split('\n')[0]
-            part_2 = head.replace('.tpl', '_part2.tpl') + '\n'
-            part_2 += split_q[1]
-            part_2 += ';'
-            extended_queries.append(part_2)
-        else:
-            extended_queries.append(q)
 
-    # add create data tables content
-    spark_stream = ''
-    from ds_convert import get_schemas
-    for table_name in get_schemas(False).keys():
-        spark_stream += 'println("====== Creating TempView for table {} ======")\n'.format(table_name)
-        spark_stream += 'spark.time(spark.read.parquet("{}{}").createOrReplaceTempView("{}"))\n'.format(data_path, table_name, table_name)
-    # add spark execution content, drop the first \n line
-    for q in extended_queries[1:]:
-        query_name = q[q.find('template')+9:q.find('.tpl')]
-        spark_stream += 'println("====== Run {} ======")\n'.format(query_name)
-        spark_stream += 'spark.time(spark.sql("""\n -- start'
-        spark_stream += q
-        spark_stream += '\n""").collect())\n\n'
-    spark_stream += 'System.exit(0)'
-    with open('{}.scala'.format(query_stream_file_path), 'w') as f:
-        f.write(spark_stream)
-
-def parse_run_log(run_log_path, csv_path):
-    # Parse the log, show individual query time and total time
-    cmd = "sed -i 's/Time taken/\\nTime taken/' {}".format(run_log_path)
-    os.system(cmd)
-    with open(run_log_path, 'r') as log:
-        origin = log.read().splitlines()
-        total_time = 0
-        with open(csv_path, 'w') as csv_output:
-            writer = csv.writer(csv_output)
-            # writer header
-            writer.writerow(['query', 'time'])
-            row = []
-            for line in origin:
-                if 'TempView' in line:
-                    # e.g. "====== Creating TempView for table store_sales ======"
-                    print(line)
-                    row.append(line.split()[-2])
-                if 'Run query' in line:
-                    # e.g. "====== Run query4 ======"
-                    print(line)
-                    row.append(line.split()[-2])
-                if 'Time taken' in line:
-                    # e.g. "Time taken: 25532 ms"
-                    print(line)
-                    query_time = line.split()[-2]
-                    total_time += int(query_time)
-                    row.append(query_time)
-                # writer query and execution time
-                if len(row) == 2:
-                    writer.writerow(row)
-                    row = []
-        print("\n====== Total time : {} ms ======".format(total_time))
-
-def run_query_stream(template_file_path, query_stream_file_path, run_log_path):
-    if template_file_path is None:
-        raise Exception('Please provide a Spark submit template file for the run.')
-    # Execute Power Run
-    with open(template_file_path, 'r') as f:
+def submit_one_stream(spark_submit_template_path,
+                      input_prefix,
+                      output_prefix,
+                      output_format,
+                      query_stream,
+                      run_log_path,
+                      time_log_path):
+    # The configuration for this will be read from an external template file. User should set Spark
+    # parameters there.
+    with open(spark_submit_template_path, 'r') as f:
         template = f.read()
-        cmd = template.strip() + "\n" + "-i {}.scala".format(query_stream_file_path)
-        cmd += " 2>&1 | tee {}".format(run_log_path)
-        print(cmd)
-        os.system(cmd)
+    cmd = []
+    cmd.append("--input-prefix " + input_prefix)
+    cmd.append("--time-log " + time_log_path)
+    if output_prefix:
+        cmd.append("--output-prefix " + output_prefix)
+    if output_format:
+        cmd.append("--output-format " + output_format)
+    cmd.append("--query-stream " + query_stream)
+    # run spark-submit
+    cmd = template.strip() + "\n  power_run.py " + " ".join(cmd).strip()
+    cmd += " 2>&1 | tee {}".format(run_log_path)
+    print(cmd)
+    subprocess.run(cmd, shell=True, check=True)
 
 def power_run(args):
-    gen_sql_from_stream(args.query_stream, args.input_prefix)
-    run_query_stream(args.spark_submit_template, args.query_stream, args.run_log)
-    parse_run_log(args.run_log, args.csv_output)
+    # This will submit a Spark job to do the Power Run
+    submit_one_stream(args.spark_submit_template,
+                      args.input_prefix,
+                      args.output_prefix,
+                      args.output_format,
+                      args.query_stream,
+                      args.run_log,
+                      args.time_log)
 
 
 def throughput_run(args):
@@ -255,24 +196,24 @@ def throughput_run(args):
     # run queries together
     procs = []
     for stream in streams:
-        gen_sql_from_stream(stream, args.input_prefix)
         # rename the log for each stream.
-        # e.g. "./nds_query_streams/query_1.sql"
-        log_path = args.run_log + '_{}'.format(stream.split('/')[-1][:-4])
-        p = Process(target=run_query_stream, args=(args.spark_submit_template, stream, log_path))
+        # stream name: e.g. "./nds_query_streams/query_1.sql"
+        # if args.run_log is "YOUR_RUN_LOG", the final renamed log file path will be e.g. "YOUR_RUN_LOG_query_1"
+        run_log_path = args.run_log + '_{}'.format(stream.split('/')[-1][:-4])
+        time_log_path = args.time_log + '_{}'.format(stream.split('/')[-1][:-4])
+        p = Process(target=submit_one_stream, args=(args.spark_submit_template,
+                                                    args.input_prefix,
+                                                    args.output_prefix,
+                                                    args.output_format,
+                                                    stream,
+                                                    run_log_path,
+                                                    time_log_path))
         procs.append(p)
         p.start()
 
     for p in procs:
         p.join()
-
-    # parse logs for each stream
-    for stream in streams:
-        log_suffix = '_{}'.format(stream.split('/')[-1][:-4])
-        log_path = args.run_log + log_suffix
-        csv_path = args.csv_output + log_suffix
-        parse_run_log(log_path, csv_path)
-
+        
 
 def main():
     check_version()
@@ -306,16 +247,18 @@ def main():
     parser.add_argument(
         '--output-prefix', help='text to prepend to every output file (e.g., "hdfs:///ds-parquet/"; the default is empty)', default="")
     parser.add_argument(
+        '--output-format', help='type of query output, e.g. csv, parquet, orc.')
+    parser.add_argument(
         '--report-file', help='location in which to store a performance report', default='report.txt')
     parser.add_argument(
         '--log-level', help='set log level (default: OFF, same to log4j), possible values: OFF, ERROR, WARN, INFO, DEBUG, ALL', default="OFF")
     parser.add_argument('--run', choices=['power','throughput'], help='NDS run type')
     parser.add_argument(
         '--query-stream', help='query stream file that contains all NDS queries in specific order')
-    parser.add_argument('--run-log', help='file to save  run logs')
-    parser.add_argument('--csv-output', required='--run' in sys.argv, help='CSV file to save query and query execution time')
     parser.add_argument('--non-decimal', action='store_true',
                         help='replace DecimalType with DoubleType when saving parquet files. If not specified, decimal data will be saved.')
+    parser.add_argument('--run-log', help='file to save run logs')
+    parser.add_argument('--time-log', required='--run' in sys.argv, help='CSV file to save query and query execution time')
     args = parser.parse_args()
 
     if args.generate != None:
