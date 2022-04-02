@@ -57,6 +57,7 @@ public class GenTable extends Configured implements Tool {
         options.addOption("t","table", true, "table");
         options.addOption("d","dir", true, "dir");
         options.addOption("p", "parallel", true, "parallel");
+        options.addOption("r", "range", true, "child range in one data generation run");
         CommandLine line = parser.parse(options, remainingArgs);
 
         if(!(line.hasOption("scale") && line.hasOption("dir"))) {
@@ -78,12 +79,29 @@ public class GenTable extends Configured implements Tool {
           parallel = Integer.parseInt(line.getOptionValue("parallel"));
         }
 
+        int rangeStart = 1;
+        int rangeEnd = parallel;
+
+        if(line.hasOption("range")) {
+            String[] range = line.getOptionValue("range").split(",");
+            if (range.length == 1) {
+                System.err.println("Please provide range with comma for both range start and range end.");
+                return 1;
+            }
+            rangeStart = Integer.parseInt(range[0]);
+            rangeEnd = Integer.parseInt(range[1]);
+            if (rangeStart < 1 || rangeStart > rangeEnd || rangeEnd > parallel) {
+                System.err.println("Please provide correct child range: 1 <= rangeStart <= rangeEnd <= parallel");
+                return 1;
+            }
+        }
+
         if(parallel == 1 || scale == 1) {
           System.err.println("The MR task does not work for scale=1 or parallel=1");
           return 1;
         }
 
-        Path in = genInput(table, scale, parallel);
+        Path in = genInput(table, scale, parallel, rangeStart, rangeEnd);
 
         Path dsdgen = copyJar(new File("target/lib/dsdgen.jar"));
         URI dsuri = dsdgen.toUri();
@@ -150,13 +168,13 @@ public class GenTable extends Configured implements Tool {
       return dst; 
     }
 
-    public Path genInput(String table, int scale, int parallel) throws Exception {
+    public Path genInput(String table, int scale, int parallel, int rangeStart, int rangeEnd) throws Exception {
         long epoch = System.currentTimeMillis()/1000;
 
         Path in = new Path("/tmp/"+table+"_"+scale+"-"+epoch);
         FileSystem fs = FileSystem.get(getConf());
         FSDataOutputStream out = fs.create(in);
-        for(int i = 1; i <= parallel; i++) {
+        for(int i = rangeStart; i <= rangeEnd; i++) {
           if(table.equals("all")) {
             out.writeBytes(String.format("./dsdgen -dir $DIR -force Y -scale %d -parallel %d -child %d\n", scale, parallel, i));
           } else {
@@ -229,7 +247,7 @@ public class GenTable extends Configured implements Tool {
           String line;
           while ((line = br.readLine()) != null) {
             // process the line.
-            mos.write("text", line, null, f.getName().replace(suffix,"/data"));
+            mos.write("text", line, null, f.getName().replace(suffix, String.format("/data_%s_%s", child, parallel)));
           }
           br.close();
           f.deleteOnExit();
