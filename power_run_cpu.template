@@ -17,7 +17,7 @@
 export CUDF_JAR=cudf-22.02.0.jar
 export SPARK_RAPIDS_PLUGIN_JAR=rapids-4-spark_2.12-22.02.0.jar
 export SPARK_HOME=/usr/lib/spark
-$SPARK_HOME/bin/spark-shell \
+$SPARK_HOME/bin/spark-submit \
 --master yarn \
 --conf spark.rapids.sql.enabled=false \
 --conf spark.executor.cores=16 \

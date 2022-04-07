@@ -195,7 +195,7 @@ Sample command for Throughput Run:
 
 ```
 python nds.py \
---run power \
+--run throughput \
 --query-stream ./nds_query_streams/query_1.sql,./nds_query_streams/query_2.sql \
 --input-prefix hdfs:///data/NDS_parquet \
 --run-log test.log \
