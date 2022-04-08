@@ -36,8 +36,6 @@ import sys
 import os
 from multiprocessing import Process
 
-from ds_convert import get_schemas
-
 def check_version():
     req_ver = (3,6)
     cur_ver = sys.version_info
@@ -45,6 +43,9 @@ def check_version():
         raise Exception('Minimum required Python version is 3.6, but current python version is {}.'
                         .format(str(cur_ver.major) + '.' + str(cur_ver.minor)) +
                         ' Please use proper Python version')
+check_version()
+
+from ds_convert import get_schemas
 
 def check_build():
     # Check if necessary executable or jars are built.
@@ -287,7 +288,6 @@ def valid_range(child_range, parallel):
     return range_start, range_end
 
 def main():
-    check_version()
     parser = argparse.ArgumentParser(
         description='Argument parser for NDS benchmark options.')
     parser.add_argument('--generate', choices=['data', 'query', 'streams', 'convert'], 
