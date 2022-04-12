@@ -147,7 +147,7 @@ if __name__ == "__main__":
         '--time-log', help='path to execution time log, both local and HDFS path are supported', default="")
     parser.add_argument(
         '--output-prefix', help='text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is empty)', default="")
-    parser.add_argument('--output_format', help='type of query output')
+    parser.add_argument('--output-format', help='type of query output', default="parquet")
     parser.add_argument(
         '--query-stream', help='query stream file that contains all NDS queries in specific order')
 
