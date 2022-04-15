@@ -22,7 +22,6 @@ You may not use NDS except in compliance with the Apache License, Version 2.0 an
 2. Necessary libraries 
     ```
     sudo apt install openjdk-8-jdk-headless gcc make flex bison byacc maven
-    pip3 install pyspark
     ```
 3. TPC-DS Tools
 
@@ -51,48 +50,79 @@ Then two jars will be built at:
 
 ### Generate data
 
-#### For HDFS
 
 Note: please make sure you have `Hadoop binary` locally.
 
-Checkout to the parent folder of the repo.
-(We assume the working directory is always the parent folder in the following sections)
+How to generate data to local or HDFS:
+```
+$ python nds_gen_data.py -h
+usage: nds_gen_data.py [-h] [--range RANGE] [--overwrite_output] {local,hdfs} scale parallel data_dir
+positional arguments:
+  {local,hdfs}        file system to save the generated data.
+  scale               volume of data to generate in GB.
+  parallel            build data in <parallel_value> separate chunks
+  data_dir            generate data in directory.
 
-```
-python nds.py \
---generate data \
---type hdfs \
---data-dir /PATH_FOR_DATA \
---scale 100 \
---parallel 100
+optional arguments:
+  -h, --help          show this help message and exit
+  --range RANGE       Used for incremental data generation, meaning which part of childchunks are
+                      generated in one run. Format: "start,end", both are inclusive. e.g. "1,100". Note:
+                      the child range must be within the "parallel", "--parallel 100 --range 100,200" is
+                      illegal.
+  --overwrite_output  overwrite if there has already existing data in the path provided.
 ```
 
-Please note: HDFS data generation doesn't allow scale=1 or parallel=1.
-#### For local FS
+Example command:
 ```
-python nds.py \
---generate data \
---type local \
---data-dir /PATH_FOR_DATA \
---scale 100 \
---parallel 100
+python nds_gen_data.py hdfs 100 100 /data/raw_sf100 --overwrite_output
 ```
+
 
 ### Convert CSV to Parquet
 
-The NDS python script will submit a Spark job to finish the data conversion. User should put necessary Spark configs into pre-defined template file.
+To do the data conversion, the `nds_transcode.py` need to be submitted as a Spark job. User can leverage
+the [spark-submit-template](./spark-submit-template) utilty to simpify the submission.
+The utility requires a pre-defined [template file](./convert_submit_gpu.template)where user needs to put 
+necessary Spark configurations. Either user can submit the `nds_transcode.py` directly to spark with
+arbitary Spark parameters.
 
-if `--non-decimal` is specified in the command, DoubleType will be used to replace decimal data in Parquet files, otherwise, DecimalType will be saved.
+if `--floats` is specified in the command, DoubleType will be used to replace DecimalType data in Parquet files,
+otherwise DecimalType will be saved.
 
-Sample command to convert the data:
+arguments for `nds_transcode.py`:
 ```
-python nds.py \
---generate convert \
---spark-submit-template convert_submit.template \
---input-prefix hdfs:///data/nds_raw \
---output-prefix hdfs:///data/nds_parquet
+python nds_transcode.py -h
+usage: nds_transcode.py [-h] [--output_mode OUTPUT_MODE] [--input_suffix INPUT_SUFFIX]
+                        [--log_level LOG_LEVEL] [--floats]
+                        input_prefix output_prefix report_file
+
+positional arguments:
+  input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"; the
+                        default is empty)
+  output_prefix         text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is
+                        empty)
+  report_file           location to store a performance report(local)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --output_mode {overwrite,append,ignore,error,errorifexists,default}
+                        save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modesdefault value is errorifexists, which is the Spark default behavior
+  --input_suffix INPUT_SUFFIX
+                        text to append to every input filename (e.g., ".dat"; the default is empty)
+  --log_level LOG_LEVEL
+                        set log level (default: OFF)
+  --floats              replace DecimalType with DoubleType when saving parquet files. If not specified,
+                        decimal data will be saved.
+
 ```
 
+Example command to submit via `spark-submit-template` utility:
+```
+./spark-submit-template convert_submit_gpu.template \
+nds_transcode.py  raw_sf3k  parquet_sf3k report.txt
+```
+
+User can also use `spark-submit` to submit `nds_transcode.py` directly.
 
 We provide two basic templates for GPU run(convert_submit_gpu.template) and CPU run(convert_submit_cpu.template).
 To enable GPU run, user need to download two jars in advance to use spark-rapids plugin.
@@ -100,7 +130,8 @@ To enable GPU run, user need to download two jars in advance to use spark-rapids
 - cuDF jar: https://repo1.maven.org/maven2/ai/rapids/cudf/22.02.0/cudf-22.02.0.jar
 - spark-rapids jar: https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.02.0/rapids-4-spark_2.12-22.02.0.jar
 
-After that, please set environment variable `CUDF_JAR` and `SPARK_RAPIDS_PLUGIN_JAR` to the path where the jars are downloaded to in spark submit templates.
+After that, please set environment variable `CUDF_JAR` and `SPARK_RAPIDS_PLUGIN_JAR` to the path where
+the jars are downloaded to in spark submit templates.
 
 ### Data partitioning
 
@@ -126,82 +157,109 @@ we applied the following changes to original templates released in TPC-DS v3.2.0
 - convert `"` mark to `` ` `` mark for syntax compatibility in Spark SQL.
 
 
-### Generate Specific Query
-
-Sample command to generate query1 from template for NDS:
-```
-python nds.py \
---generate query \
---template query1.tpl \
---template-dir $TPCDS_HOME/query_templates \
---scale 100 \
---query-output-dir ./nds_queries
+### Generate Specific Query or Query Streams
 
 ```
+usage: nds_gen_query_stream.py [-h] [--template TEMPLATE] [--streams STREAMS]
+                               template_dir scale output_dir
 
-### Generate Query Streams
+positional arguments:
+  template_dir         directory to find query templates and dialect file.
+  scale                assume a database of this scale factor.
+  output_dir           generate query in directory.
 
-Sample command to generate query streams used for Power Run and Throughput Run.
+optional arguments:
+  -h, --help           show this help message and exit
+  --template TEMPLATE  build queries from this template
+  --streams STREAMS    generate how many query streams. If not specified, only one query will be produced.
+
 ```
-python nds.py \
---generate streams \
---template-dir $TPCDS_HOME/query_templates \
---scale 100 \
---query-output-dir ./nds_query_streams \
---streams 10
+
+Example command to generate one query using query1.tpl:
+```
+python nds_gen_query_stream.py $TPCDS_HOME/query_templates 3000 ./query_1 --template query1.tpl
+```
+
+Example command to generate 10 query streams each one of which contains all NDS queries but in 
+different order:
+```
+python nds_gen_query_stream.py $TPCDS_HOME/query_templates 3000 ./query_streams --streams 10
 ```
 
 ## Benchmark Runner
 
 ### Power Run
 
-_After_ user generates query streams, Power Run can be executed using one of the streams.
+_After_ user generates query streams, Power Run can be executed using one of the them by submitting `nds_power.py` to Spark. 
 
-Sample command for Power Run:
+Arguments supported for `nds_power.py`:
 ```
-python nds.py \
---run power \
---query-stream ./nds_query_streams/query_0.sql \
---input-prefix hdfs:///data/NDS_parquet \
---run-log test.log \
---spark-submit-template power_run_gpu.template \
---time-log time.csv \
+usage: nds_power.py [-h] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT]
+                    input_prefix query_stream_file time_log
+
+positional arguments:
+  input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data")
+  query_stream_file     query stream file that contains NDS queries in specific order
+  time_log              path to execution time CSV log, only support local path.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --output_prefix OUTPUT_PREFIX
+                        text to prepend to every output file (e.g., "hdfs:///ds-parquet")
+  --output_format OUTPUT_FORMAT
+                        type of query output
+
 ```
 
-To simplify the performance analysis process, the script will create a local CSV file to save query(including TempView creation) and corresponding execution time. Note: please use `client` mode(set in your `spark-submit-template` file) when running in Yarn distributed environment to make sure the time log is saved correctly in your local path.
+Example command to submit nds_power.py by spark-submit-template utility:
+```
+./spark-submit-template power_run_gpu.template \
+nds_power.py \
+parquet_sf3k \
+./nds_query_streams/query_0.sql \
+time.csv
+```
 
-The file path is defined by `--time-log` argument.
+User can also use `spark-submit` to submit `nds_power.py` directly.
+
+To simplify the performance analysis process, the script will create a local CSV file to save query(including TempView creation) and corresponding execution time. Note: please use `client` mode(set in your `power_run_gpu.template` file) when running in Yarn distributed environment to make sure the time log is saved correctly in your local path. The file path is defined by `--time-log` argument.
+
+Note the template file must follow the `spark-submit-template` utility as the _first_ argument.
+
 
 The command above will use `collect()` action to trigger Spark job for each query. It is also supported to save query output to some place for further verification. User can also specify output format e.g. csv, parquet or orc:
 ```
-python nds.py \
---run power \
---query-stream ./nds_query_streams/query_0.sql \
---input-prefix hdfs:///data/NDS_parquet \
---run-log test.log \
---spark-submit-template power_run_gpu.template \
---time-log time.csv \
---output-prefix hdfs:///data/NDS_power_run_output \
---output-format parquet
+./spark-submit-template power_run_gpu.template \
+nds_power.py \
+parquet_sf3k \
+./nds_query_streams/query_0.sql \
+time.csv \
+--output_prefix /data/query_output \
+--output_format parquet
 ```
 
 
 ### Throughput Run
-Throughput Run simulates the scenario that multiple query sessions are running simultaneously in Spark. Different to Power Run, user needs to provide multiple query streams as input for `--query-stream` argument with `,` as seperator. Also the run log will be saved for each query stream independently with index number as naming suffix like _test.log_query_1_, _test.log_query2_ etc. and _time.csv_query_1_, _time.csv_query2_ etc.
+Throughput Run simulates the scenario that multiple query sessions are running simultaneously in
+Spark.
 
-When providing `spark-submit-template` to Throughput Run, please do consider the computing resources in your environment to make sure all Spark job can get necessary resources to run at the same time, otherwise some query application may be in _WAITING_ status(which can be observed from Spark UI or Yarn Resource Manager UI) until enough resources are released.
+We provide an executable bash utility `nds-throughput` to do Throughput Run.
 
-Sample command for Throughput Run:
+Example command for Throughput Run that runs _2_ Power Run in parallel with stream file _query_1.sql_
+and _query_2.sql_ and produces csv log for execution time _time_1.csv_ and _time_2.csv_.
 
 ```
-python nds.py \
---run throughput \
---query-stream ./nds_query_streams/query_1.sql,./nds_query_streams/query_2.sql \
---input-prefix hdfs:///data/NDS_parquet \
---run-log test.log \
---spark-submit-template power_run_gpu.template \
---time-log time.csv \
+./nds-throughput 1,2 \
+./spark-submit-template power_run_gpu.template \
+nds_power.py \
+parquet_sf3k \
+./nds_query_streams/query_'{}'.sql \
+time_`{}`.csv
 ```
 
+When providing `spark-submit-template` to Throughput Run, please do consider the computing resources
+in your environment to make sure all Spark job can get necessary resources to run at the same time,
+otherwise some query application may be in _WAITING_ status(which can be observed from Spark UI or 
+Yarn Resource Manager UI) until enough resources are released.
 
 ### NDS2.0 is using source code from TPC-DS Tool V3.2.0

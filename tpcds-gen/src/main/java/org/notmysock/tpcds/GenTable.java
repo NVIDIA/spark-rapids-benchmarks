@@ -58,6 +58,7 @@ public class GenTable extends Configured implements Tool {
         options.addOption("d","dir", true, "dir");
         options.addOption("p", "parallel", true, "parallel");
         options.addOption("r", "range", true, "child range in one data generation run");
+        options.addOption("o", "overwrite", true, "overwrite existing data");
         CommandLine line = parser.parse(options, remainingArgs);
 
         if(!(line.hasOption("scale") && line.hasOption("dir"))) {
@@ -129,10 +130,13 @@ public class GenTable extends Configured implements Tool {
         FileInputFormat.addInputPath(job, in);
         FileOutputFormat.setOutputPath(job, out);
 
-        // delete existing files
+
         FileSystem fs = FileSystem.get(getConf());
-        if (fs.exists(out)) {
-          fs.delete(out, true);
+        // delete existing files if "overwrite" is set
+        if(line.hasOption("overwrite")) {
+            if (fs.exists(out)) {
+                fs.delete(out, true);
+            }
         }
 
         // use multiple output to only write the named files

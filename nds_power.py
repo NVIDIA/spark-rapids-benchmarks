@@ -34,6 +34,11 @@ import csv
 import time
 from pyspark.sql import SparkSession
 
+from check import check_version
+from nds_transcode import get_schemas
+
+check_version()
+
 
 def gen_sql_from_stream(query_stream_file_path):
     """Read Spark compatible query stream and split them one by one
@@ -98,11 +103,11 @@ def run_query_stream(input_prefix,
         "NDS - Power Run").getOrCreate()
     spark_app_id = spark_session.sparkContext.applicationId
     # Create TempView for tables
-    from ds_convert import get_schemas
     for table_name in get_schemas(False).keys():
         start = time.time()
         table_path = input_prefix + '/' + table_name
-        spark_session.read.parquet(table_path).createOrReplaceTempView(table_name)
+        spark_session.read.parquet(
+            table_path).createOrReplaceTempView(table_name)
         end = time.time()
         print("====== Creating TempView for table {} ======".format(table_name))
         print("Time taken: {} s for table {}".format(end - start, table_name))
@@ -130,9 +135,9 @@ def run_query_stream(input_prefix,
         total_time_end - total_time_start))
     execution_time_list.append(
         (spark_app_id, "Total Time", total_time_end - total_time_start))
-    
+
     # write to local csv file
-    header = ["application_id","query", "time/s"]
+    header = ["application_id", "query", "time/s"]
     with open(time_log_output_path, 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
         writer.writerow(header)
@@ -141,18 +146,21 @@ def run_query_stream(input_prefix,
 
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--input-prefix', help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"; the default is empty)', default="")
-    parser.add_argument(
-        '--time-log', help='path to execution time log, both local and HDFS path are supported', default="")
-    parser.add_argument(
-        '--output-prefix', help='text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is empty)', default="")
-    parser.add_argument('--output-format', help='type of query output', default="parquet")
-    parser.add_argument(
-        '--query-stream', help='query stream file that contains all NDS queries in specific order')
+    parser.add_argument('input_prefix',
+                        help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data")')
+    parser.add_argument('query_stream_file',
+                        help='query stream file that contains NDS queries in specific order')
+    parser.add_argument('time_log',
+                        help='path to execution time log, only support local path.',
+                        default="")
+    parser.add_argument('--output_prefix',
+                        help='text to prepend to every output file (e.g., "hdfs:///ds-parquet")')
+    parser.add_argument('--output_format',
+                        help='type of query output',
+                        default='parquet')
 
     args = parser.parse_args()
-    query_list = gen_sql_from_stream(args.query_stream)
+    query_list = gen_sql_from_stream(args.query_stream_file)
     run_query_stream(args.input_prefix,
                      query_list,
                      args.time_log,
