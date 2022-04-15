@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 # SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -43,13 +44,24 @@ if not hasattr(pyspark.sql.types, "VarcharType"):
 
 from pyspark.sql.types import VarcharType, CharType
 
+
 def decimalType(use_decimal, precision, scale):
     if use_decimal:
         return DecimalType(precision, scale)
     else:
         return DoubleType()
 
+
 def get_schemas(use_decimal):
+    """get the schemas of all tables. If use_decimal is True, DecimalType are applied, otherwide,
+    DoubleType will be used for DecimalType.
+
+    Args:
+        use_decimal (bool): use decimal or not
+
+    Returns:
+        dict: {table_name: schema}
+    """
     SCHEMAS = {}
     SCHEMAS["dbgen_version"] = StructType([
         StructField("dv_version", VarcharType(16)),
@@ -556,57 +568,57 @@ def get_schemas(use_decimal):
     ])
     return SCHEMAS
 
+
+# Note the specific partitioning is applied when save the parquet data files.
 TABLE_PARTITIONING = {
     'catalog_sales': 'cs_sold_date_sk',
     'catalog_returns': 'cr_returned_date_sk',
     'inventory': 'inv_date_sk',
     'store_sales': 'ss_sold_date_sk',
-    'store_returns':'sr_returned_date_sk',
+    'store_returns': 'sr_returned_date_sk',
     'web_sales': 'ws_sold_date_sk',
     'web_returns': 'wr_returned_date_sk'
 }
 
 
-def load(filename, schema, delimiter="|", header="false", prefix=""):
-    data_path = os.path.join(prefix, filename)
-    global session
+def load(session, filename, schema, delimiter="|", header="false", prefix=""):
+    data_path = prefix + '/' + filename
     return session.read.option("delimiter", delimiter).option("header", header).csv(data_path, schema=schema)
 
-def store(df, filename, prefix=""):
-    data_path = os.path.join(prefix, filename)
+
+def store(df, filename, write_mode, prefix=""):
+    data_path = prefix + '/' + filename
     if filename in TABLE_PARTITIONING.keys():
-        df.repartition(col(TABLE_PARTITIONING[filename])).write.mode("overwrite").partitionBy(TABLE_PARTITIONING[filename]).parquet(data_path)
+        df = df.repartition(col(TABLE_PARTITIONING[filename]))
+        df.write.mode(write_mode).partitionBy(TABLE_PARTITIONING[filename]).parquet(data_path)
     else:
-        df.coalesce(1).write.mode("overwrite").parquet(data_path)
+        df.coalesce(1).write.mode(write_mode).parquet(data_path)
 
-if __name__ == "__main__":
-    parser = parser = argparse.ArgumentParser()
-    parser.add_argument('--output-mode', help='Spark data source output mode for the result (default: overwrite)', default="overwrite")
-    parser.add_argument('--input-prefix', help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"; the default is empty)', default="")
-    parser.add_argument('--input-suffix', help='text to append to every input filename (e.g., ".dat"; the default is empty)', default="")
-    parser.add_argument('--output-prefix', help='text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is empty)', default="")
-    parser.add_argument('--report-file', help='location in which to store a performance report', default='report.txt')
-    parser.add_argument('--log-level', help='set log level (default: OFF)', default="OFF")
-    parser.add_argument('--non-decimal', action='store_true',
-                        help='replace DecimalType with DoubleType when saving parquet files. If not specified, decimal data will be saved.')
-    #    parser.add_argument('--coalesce-output', help='coalesce output to NUM partitions', default=0, type=int)
 
-    args = parser.parse_args()
-
+def transcode(args):
     session = pyspark.sql.SparkSession.builder \
-        .appName("ds-convert") \
+        .appName("NDS - transcode") \
         .getOrCreate()
 
     session.sparkContext.setLogLevel(args.log_level)
-
     results = {}
 
-    schemas = get_schemas(use_decimal = not args.non_decimal)
+    schemas = get_schemas(use_decimal=not args.floats)
 
     for fn, schema in schemas.items():
-        results[fn] = timeit.timeit(lambda: store(load(f"{fn}{args.input_suffix}", schema, prefix=args.input_prefix), f"{fn}", args.output_prefix), number=1)
-    
-    report_text = "Total conversion time for %d tables was %.02fs\n" % (len(results.values()), sum(results.values()))
+        results[fn] = timeit.timeit(
+            lambda: store(
+                load(session,
+                     f"{fn}",
+                     schema,
+                     prefix=args.input_prefix),
+                f"{fn}",
+                args.output_mode,
+                args.output_prefix),
+            number=1)
+
+    report_text = "Total conversion time for %d tables was %.02fs\n" % (
+        len(results.values()), sum(results.values()))
     for table, duration in results.items():
         report_text += "Time to convert '%s' was %.04fs\n" % (table, duration)
 
@@ -619,3 +631,36 @@ if __name__ == "__main__":
         for conf in session.sparkContext.getConf().getAll():
             report.write(str(conf) + "\n")
             print(conf)
+
+
+
+
+if __name__ == "__main__":
+    parser = parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'input_prefix',
+        help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"; the default is empty)')
+    parser.add_argument(
+        'output_prefix',
+        help='text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is empty)')
+    parser.add_argument(
+        'report_file',
+        help='location to store a performance report(local)')
+    parser.add_argument(
+        '--output_mode',
+        choices=['overwrite', 'append', 'ignore', 'error', 'errorifexists'],
+        help="save modes as defined by " +
+        "https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes." +
+        "default value is errorifexists, which is the Spark default behavior.",
+        default="errorifexists")
+    parser.add_argument(
+        '--log_level',
+        help='set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: OFF)',
+        default="OFF")
+    parser.add_argument(
+        '--floats',
+        action='store_true',
+        help='replace DecimalType with DoubleType when saving parquet files. If not specified, decimal data will be saved.')
+
+    args = parser.parse_args()
+    transcode(args)

@@ -15,12 +15,11 @@
 # limitations under the License.
 #
 export SPARK_HOME=YOUR_SPARK_HOME
-$SPARK_HOME/bin/spark-submit \
-  --master yarn \
+export SPARK_CONF="--master yarn \
   --deploy-mode cluster \
   --driver-memory 10G \
   --num-executors 8 \
   --executor-memory 40G \
   --executor-cores 12 \
-  --conf spark.task.cpus=1 \
+  --conf spark.task.cpus=1"
 

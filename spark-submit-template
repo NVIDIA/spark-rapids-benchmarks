@@ -1,3 +1,4 @@
+#!/bin/bash
 #
 # SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -14,20 +15,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-export CUDF_JAR=cudf-22.02.0.jar
-export SPARK_RAPIDS_PLUGIN_JAR=rapids-4-spark_2.12-22.02.0.jar
-export SPARK_HOME=/usr/lib/spark
-export SPARK_CONF="--master yarn \
---conf spark.rapids.sql.enabled=false \
---conf spark.executor.cores=16 \
---conf spark.executor.memory=16G \
---conf spark.driver.memory=50G \
---conf spark.sql.adaptive.enabled=true \
---conf spark.locality.wait=0 \
---conf spark.sql.shuffle.partitions=128 \
---conf spark.executor.instances=8 \
---conf spark.dynamicAllocation.enabled=false \
---conf spark.scheduler.mode=FIFO \
---conf spark.sql.autoBroadcastJoinThreshold=10m \
---conf spark.scheduler.minRegisteredResourcesRatio=1.0 \
---conf spark.sql.broadcastTimeout=1200"
+set -e
+# e.g.
+# ./spark-submit-template power_run_gpu.template nds_power.py \
+# --query-stream ./nds_query_streams/query_0.sql \
+# --input-prefix local_data_parquet/ \
+# --time-log time.csv
+
+# the first argument must be the template file
+source "$1"
+SPARK_CONF="$SPARK_CONF ${@:2}"
+cmd="$SPARK_HOME/bin/spark-submit $SPARK_CONF"
+echo $cmd
+exec $cmd
