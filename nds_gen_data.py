@@ -91,6 +91,8 @@ def generate_data_hdfs(args, jar_path):
     # Submit hadoop MR job to generate data
     cmd = ['hadoop', 'jar', str(jar_path),
            '-p', args.parallel, '-s', args.scale]
+    # get dsdgen.jar path, assume user won't change file structure
+    tpcds_gen_path = jar_path.parent.parent.absolute()
     if args.overwrite_output:
         cmd += ['-o']
     if args.range:
@@ -104,13 +106,13 @@ def generate_data_hdfs(args, jar_path):
         cmd.extend(["-r", args.range])
         cmd.extend(["-d", temp_data_path])
         try:
-            subprocess.run(cmd, check=True)
+            subprocess.run(cmd, check=True, cwd=str(tpcds_gen_path))
             merge_temp_tables(temp_data_path, args.data_dir)
         finally:
             clean_temp_data(temp_data_path)
     else:
         cmd.extend(["-d", args.data_dir])
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, cwd=str(tpcds_gen_path))
 
 
 def generate_data_local(args, range_start, range_end, tool_path):
