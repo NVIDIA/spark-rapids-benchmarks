@@ -70,6 +70,8 @@ optional arguments:
                       the child range must be within the "parallel", "--parallel 100 --range 100,200" is
                       illegal.
   --overwrite_output  overwrite if there has already existing data in the path provided.
+  --replication REPLICATION
+                      the number of replication factor when generating data to HDFS. if not set, the Hadoop job will use the setting in the Hadoop cluster.
 ```
 
 Example command:

@@ -58,7 +58,7 @@ public class GenTable extends Configured implements Tool {
         options.addOption("d","dir", true, "dir");
         options.addOption("p", "parallel", true, "parallel");
         options.addOption("r", "range", true, "child range in one data generation run");
-        options.addOption("o", "overwrite", true, "overwrite existing data");
+        options.addOption("o", "overwrite", false, "overwrite existing data");
         CommandLine line = parser.parse(options, remainingArgs);
 
         if(!(line.hasOption("scale") && line.hasOption("dir"))) {

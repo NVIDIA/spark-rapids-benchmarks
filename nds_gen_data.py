@@ -89,8 +89,10 @@ def generate_data_hdfs(args, jar_path):
         raise Exception('No Hadoop binary found in current environment, ' +
                         'please install Hadoop for data generation in cluster.')
     # Submit hadoop MR job to generate data
-    cmd = ['hadoop', 'jar', str(jar_path),
-           '-p', args.parallel, '-s', args.scale]
+    cmd =  ['hadoop', 'jar', str(jar_path)]
+    if args.replication:
+        cmd += ["-D", f"dfs.replication={args.replication}"]
+    cmd += ['-p', args.parallel, '-s', args.scale]
     # get dsdgen.jar path, assume user won't change file structure
     tpcds_gen_path = jar_path.parent.parent.absolute()
     if args.overwrite_output:
@@ -204,6 +206,9 @@ if __name__ == "__main__":
     parser.add_argument("--overwrite_output",
                         action="store_true",
                         help="overwrite if there has already existing data in the path provided.")
+    parser.add_argument("--replication",
+                        help="the number of replication factor when generating data to HDFS. " +
+                        "if not set, the Hadoop job will use the setting in the Hadoop cluster.")
 
 
     args = parser.parse_args()
