@@ -256,7 +256,7 @@ and _query_2.sql_ and produces csv log for execution time _time_1.csv_ and _time
 nds_power.py \
 parquet_sf3k \
 ./nds_query_streams/query_'{}'.sql \
-time_`{}`.csv
+time_'{}'.csv
 ```
 
 When providing `spark-submit-template` to Throughput Run, please do consider the computing resources
