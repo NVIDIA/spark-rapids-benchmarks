@@ -103,6 +103,7 @@ def run_query_stream(input_prefix,
         "NDS - Power Run").getOrCreate()
     spark_app_id = spark_session.sparkContext.applicationId
     # Create TempView for tables
+    load_start = time.time()
     for table_name in get_schemas(False).keys():
         start = time.time()
         table_path = input_prefix + '/' + table_name
@@ -113,8 +114,12 @@ def run_query_stream(input_prefix,
         print("Time taken: {} s for table {}".format(end - start, table_name))
         execution_time_list.append(
             (spark_app_id, "CreateTempView {}".format(table_name), end - start))
-
+    load_end = time.time()
+    load_elapse = load_end - load_start
+    print("Load Time: {} s for all tables".format(load_end - load_start))
+    execution_time_list.append((spark_app_id, "Load Time", load_elapse))
     # Run query
+    power_start = time.time()
     for q in query_list:
         df = spark_session.sql(q)
         # e.g. "-- start query 32 in stream 0 using template query98.tpl"
@@ -131,8 +136,12 @@ def run_query_stream(input_prefix,
         print("Time taken: {} s for {}".format(end-start, query_name))
         execution_time_list.append((spark_app_id, query_name, end-start))
     total_time_end = time.time()
-    print("====== Total Time: {} s ======".format(
-        total_time_end - total_time_start))
+    power_elapse = total_time_end - power_start
+    total_elapse = total_time_end - total_time_start
+    print("====== Power Test Time: {} s ======".format(power_elapse))
+    print("====== Total Time: {} s ======".format(total_elapse))
+    execution_time_list.append(
+        (spark_app_id, "Power Test Time", power_elapse))
     execution_time_list.append(
         (spark_app_id, "Total Time", total_time_end - total_time_start))
 
