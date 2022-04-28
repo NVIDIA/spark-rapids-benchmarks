@@ -119,6 +119,8 @@ def run_query_stream(input_prefix,
         df = spark_session.sql(q)
         # e.g. "-- start query 32 in stream 0 using template query98.tpl"
         query_name = q[q.find('template')+9: q.find('.tpl')]
+        # show query name in Spark web UI
+        spark_session.sparkContext.setJobGroup(query_name, query_name)
         print("====== Run {} ======".format(query_name))
         start = time.time()
         if not output_path:
