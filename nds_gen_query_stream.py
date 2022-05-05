@@ -66,6 +66,38 @@ def generate_query_streams(args, tool_path):
         cmd = base_cmd + ['-template', args.template]
     subprocess.run(cmd, check=True, cwd=str(work_dir))
 
+    if args.template:
+        # It's specific query, rename the stream file to its template query name
+        # Special cases for query 14,23,24,39. They contains two queries in one template
+        if any(q_num in args.template for q_num in ['14', '23', '24', '39']):
+            with open(output_dir + '/' + 'query_0.sql', 'r') as f:
+                full_content = f.read()
+                part_1, part_2 = split_special_query(full_content)
+            with open(output_dir + '/' + args.template[:-4] + '_part1.sql', 'w') as f:
+                f.write(part_1)
+            with open(output_dir + '/' + args.template[:-4] + '_part2.sql', 'w') as f:
+                f.write(part_2)
+            cmd = ['rm',  output_dir + '/' + 'query_0.sql']
+            subprocess.run(cmd, check=True, cwd=str(work_dir))
+        else:
+            subprocess.run(['mv',
+                            output_dir + '/' + 'query_0.sql',
+                            output_dir + '/' + args.template[:-4] + '.sql'],
+                           check=True, cwd=str(work_dir))
+
+def split_special_query(q):
+    split_q = q.split(';')
+    # now split_q has 3 items:
+    # 1. "query x in stream x using template query[xx].tpl query_part_1"
+    # 2. "query_part_2"
+    # 3. "-- end query [x] in stream [x] using template query[xx].tpl"
+    part_1 = split_q[0].replace('.tpl', '_part1.tpl')
+    part_1 += ';'
+    head = split_q[0].split('\n')[0]
+    part_2 = head.replace('.tpl', '_part2.tpl') + '\n'
+    part_2 += split_q[1]
+    part_2 += ';'
+    return part_1, part_2
 
 if __name__ == "__main__":
     _, tool_path = check_build()
