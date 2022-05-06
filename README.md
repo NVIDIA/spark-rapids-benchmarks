@@ -202,7 +202,7 @@ usage: nds_power.py [-h] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT
 positional arguments:
   input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data")
   query_stream_file     query stream file that contains NDS queries in specific order
-  time_log              path to execution time CSV log, only support local path.
+  time_log              path to execution time log, only support local path.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -210,6 +210,8 @@ optional arguments:
                         text to prepend to every output file (e.g., "hdfs:///ds-parquet")
   --output_format OUTPUT_FORMAT
                         type of query output
+  --property_file PROPERTY_FILE
+                        property file for Spark configuration.
 
 ```
 
@@ -219,14 +221,17 @@ Example command to submit nds_power.py by spark-submit-template utility:
 nds_power.py \
 parquet_sf3k \
 ./nds_query_streams/query_0.sql \
-time.csv
+time.csv \
+--property_file properties/aqe-on.properties
 ```
 
 User can also use `spark-submit` to submit `nds_power.py` directly.
 
-To simplify the performance analysis process, the script will create a local CSV file to save query(including TempView creation) and corresponding execution time. Note: please use `client` mode(set in your `power_run_gpu.template` file) when running in Yarn distributed environment to make sure the time log is saved correctly in your local path. The file path is defined by `--time-log` argument.
+To simplify the performance analysis process, the script will create a local CSV file to save query(including TempView creation) and corresponding execution time. Note: please use `client` mode(set in your `power_run_gpu.template` file) when running in Yarn distributed environment to make sure the time log is saved correctly in your local path.
 
 Note the template file must follow the `spark-submit-template` utility as the _first_ argument.
+
+User can define the `properties` file like [aqe-on.properties](./properties/aqe-on.properties). The properties will be passed to the submitted Spark job along with the configurations defined in the template file. User can define some common properties in the template file and put some other properties that usually varies in the property file.
 
 
 The command above will use `collect()` action to trigger Spark job for each query. It is also supported to save query output to some place for further verification. User can also specify output format e.g. csv, parquet or orc:

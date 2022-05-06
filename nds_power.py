@@ -31,13 +31,18 @@
 
 import argparse
 import csv
+import json
+import os
 import time
 from collections import OrderedDict
 from pyspark.sql import SparkSession
+from pyspark.conf import SparkConf
+from PysparkBenchReport import PysparkBenchReport
 
 from check import check_version
 from nds_gen_query_stream import split_special_query
 from nds_transcode import get_schemas
+import pyspark_spy
 
 check_version()
 
@@ -71,8 +76,35 @@ def gen_sql_from_stream(query_stream_file_path):
         extended_queries[q_name] = '-- start' + q_content
     return extended_queries
 
+def setup_tables(spark_session, input_prefix, execution_time_list):
+    spark_app_id = spark_session.sparkContext.applicationId
+    # Create TempView for tables
+    for table_name in get_schemas(False).keys():
+        start = int(time.time() * 1000)
+        table_path = input_prefix + '/' + table_name
+        spark_session.read.parquet(
+            table_path).createOrReplaceTempView(table_name)
+        end = int(time.time() * 1000)
+        print("====== Creating TempView for table {} ======".format(table_name))
+        print("Time taken: {} millis for table {}".format(end - start, table_name))
+        execution_time_list.append(
+            (spark_app_id, "CreateTempView {}".format(table_name), end - start))
+    return execution_time_list
+
+def run_one_query(spark_session,
+                  query,
+                  query_name,
+                  output_path,
+                  output_format):
+    df = spark_session.sql(query)
+    if not output_path:
+        df.collect()
+    else:
+        df.write.format(output_format).mode('overwrite').save(
+            output_path + '/' + query_name)
 
 def run_query_stream(input_prefix,
+                     property_file,
                      query_dict,
                      time_log_output_path,
                      output_path=None,
@@ -96,45 +128,40 @@ def run_query_stream(input_prefix,
     if len(query_dict) == 1:
         app_name = "NDS - " + list(query_dict.keys())[0]
     else:
-        app_name = "NDS- Power Run"
+        app_name = "NDS - Power Run"
     # Execute Power Run or Specific query in Spark 
     # build Spark Session
-    spark_session = SparkSession.builder.appName(
+    session_builder = SparkSession.builder
+    if property_file:
+        spark_properties = load_properties(property_file)
+        for k,v in spark_properties.items():
+            session_builder = session_builder.config(k,v)
+    spark_session = session_builder.appName(
         app_name).getOrCreate()
     spark_app_id = spark_session.sparkContext.applicationId
-    # Create TempView for tables
-    load_start = time.time()
-    for table_name in get_schemas(False).keys():
-        start = time.time()
-        table_path = input_prefix + '/' + table_name
-        spark_session.read.parquet(
-            table_path).createOrReplaceTempView(table_name)
-        end = time.time()
-        print("====== Creating TempView for table {} ======".format(table_name))
-        print("Time taken: {} s for table {}".format(end - start, table_name))
-        execution_time_list.append(
-            (spark_app_id, "CreateTempView {}".format(table_name), end - start))
-    load_end = time.time()
-    load_elapse = load_end - load_start
-    print("Load Time: {} s for all tables".format(load_end - load_start))
-    execution_time_list.append((spark_app_id, "Load Time", load_elapse))
+    execution_time_list = setup_tables(spark_session, input_prefix, execution_time_list)
+
     # Run query
     power_start = time.time()
     for query_name, q_content in query_dict.items():
-        df = spark_session.sql(q_content)
         # show query name in Spark web UI
         spark_session.sparkContext.setJobGroup(query_name, query_name)
         print("====== Run {} ======".format(query_name))
-        start = time.time()
-        if not output_path:
-            df.collect()
+        q_report = PysparkBenchReport(spark_session)
+        summary = q_report.report_on(run_one_query,spark_session,
+                                                   q_content,
+                                                   query_name,
+                                                   output_path,
+                                                   output_format)
+        print(f"Time taken: {summary['queryTimes']} millis for {query_name}")
+        execution_time_list.append((spark_app_id, query_name, summary['queryTimes']))
+        # property_file e.g.: "property/aqe-on.properties" or just "aqe-off.properties"
+        if property_file:
+            summary_prefix = property_file.split('/')[-1].split('.')[0]
         else:
-            df.write.format(output_format).mode('overwrite').save(
-                output_path + '/' + query_name)
-        end = time.time()
-
-        print("Time taken: {} s for {}".format(end-start, query_name))
-        execution_time_list.append((spark_app_id, query_name, end-start))
+            summary_prefix = ''
+        q_report.write_summary(query_name, prefix=summary_prefix)
+    spark_session.sparkContext.stop()
     total_time_end = time.time()
     power_elapse = total_time_end - power_start
     total_elapse = total_time_end - total_time_start
@@ -152,6 +179,13 @@ def run_query_stream(input_prefix,
         writer.writerow(header)
         writer.writerows(execution_time_list)
 
+def load_properties(filename):
+    myvars = {}
+    with open(filename) as myfile:
+        for line in myfile:
+            name, var = line.partition("=")[::2]
+            myvars[name.strip()] = var.strip()
+    return myvars
 
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
@@ -167,10 +201,14 @@ if __name__ == "__main__":
     parser.add_argument('--output_format',
                         help='type of query output',
                         default='parquet')
+    parser.add_argument('--property_file',
+                        help='property file for Spark configuration.')
+
 
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
     run_query_stream(args.input_prefix,
+                     args.property_file,
                      query_dict,
                      args.time_log,
                      args.output_prefix,
