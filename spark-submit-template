@@ -18,13 +18,16 @@
 set -e
 # e.g.
 # ./spark-submit-template power_run_gpu.template nds_power.py \
-# --query-stream ./nds_query_streams/query_0.sql \
-# --input-prefix local_data_parquet/ \
-# --time-log time.csv
+# local_data_parquet/
+# ./nds_query_streams/query_0.sql \
+# time.csv
 
 # the first argument must be the template file
 source "$1"
-SPARK_CONF="$SPARK_CONF ${@:2}"
-cmd="$SPARK_HOME/bin/spark-submit $SPARK_CONF"
-echo $cmd
-exec $cmd
+# build spark-submit command
+MORE_ARGS=("${@:2}")
+CMD=("$SPARK_HOME/bin/spark-submit")
+CMD+=("${SPARK_CONF[@]}")
+CMD+=("${MORE_ARGS[@]}")
+# submit
+"${CMD[@]}"

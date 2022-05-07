@@ -230,6 +230,8 @@ User can also use `spark-submit` to submit `nds_power.py` directly.
 To simplify the performance analysis process, the script will create a local CSV file to save query(including TempView creation) and corresponding execution time. Note: please use `client` mode(set in your `power_run_gpu.template` file) when running in Yarn distributed environment to make sure the time log is saved correctly in your local path.
 
 Note the template file must follow the `spark-submit-template` utility as the _first_ argument.
+All Spark configuration words (such as `--conf` and corresponding `k=v` values)  are quoted by
+double quotes in the template file. Please follow the format in [power_run_gpu.template](./power_run_gpu.template).
 
 User can define the `properties` file like [aqe-on.properties](./properties/aqe-on.properties). The properties will be passed to the submitted Spark job along with the configurations defined in the template file. User can define some common properties in the template file and put some other properties that usually varies in the property file.
 
