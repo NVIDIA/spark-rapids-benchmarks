@@ -84,7 +84,7 @@ class PysparkBenchReport:
                 self.summary['queryStatus'].append("Completed")
             return self.summary
         except Exception as e:
-            self.summary['exceptions'].append(e)
+            self.summary['exceptions'].append(str(e))
             return self.summary
         finally:
             self.spark_session.sparkContext._jsc.sc().removeSparkListener(listener)

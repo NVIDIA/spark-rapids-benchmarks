@@ -38,6 +38,8 @@ from collections import OrderedDict
 from pyspark.sql import SparkSession
 from pyspark.conf import SparkConf
 from PysparkBenchReport import PysparkBenchReport
+from pyspark.sql import DataFrame
+from pyspark.sql.functions import col
 
 from check import check_version
 from nds_gen_query_stream import split_special_query
@@ -100,8 +102,48 @@ def run_one_query(spark_session,
     if not output_path:
         df.collect()
     else:
-        df.write.format(output_format).mode('overwrite').save(
-            output_path + '/' + query_name)
+        ensure_valid_column_names(df).write.format(output_format).mode('overwrite').save(
+                output_path + '/' + query_name)
+
+def ensure_valid_column_names(df: DataFrame):
+    def is_column_start(char):
+        return char.isalpha() or char == '_'
+
+    def is_column_part(char):
+        return char.isalpha() or char.isdigit() or char == '_'
+
+    def is_valid(column_name):
+        len(column_name) > 0 and is_column_start(column_name[0]) and all(
+            [is_column_part(char) for char in column_name[1:]])
+        
+    def make_valid(column_name):
+        # To simplify: replace all invalid char with '_'
+        valid_name = ''
+        if is_column_start(column_name[0]):
+            valid_name += column_name[0]
+        else:
+            valid_name += '_'
+        for char in column_name[1:]:
+            if not is_column_part(char):
+                valid_name += '_'
+            else:
+                valid_name += char
+        return valid_name
+    
+    def deduplicate(column_names):
+        # In some queries like q35, it's possible to get columns with the same name. Append a number
+        # suffix to resolve this problem.
+        dedup_col_names = []
+        for i,v in enumerate(column_names):
+            count = column_names.count(v)
+            index = column_names[:i].count(v)
+            dedup_col_names.append(v+str(index) if count > 1 else v)
+        return dedup_col_names
+
+    valid_col_names = [c if is_valid(c) else make_valid(c) for c in df.columns]
+    dedup_col_names = deduplicate(valid_col_names)
+    return df.toDF(*dedup_col_names)
+
 
 def run_query_stream(input_prefix,
                      property_file,
