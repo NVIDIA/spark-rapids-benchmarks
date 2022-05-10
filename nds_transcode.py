@@ -655,8 +655,8 @@ if __name__ == "__main__":
         default="errorifexists")
     parser.add_argument(
         '--log_level',
-        help='set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: OFF)',
-        default="OFF")
+        help='set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: INFO)',
+        default="INFO")
     parser.add_argument(
         '--floats',
         action='store_true',

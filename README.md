@@ -112,7 +112,7 @@ optional arguments:
   --input_suffix INPUT_SUFFIX
                         text to append to every input filename (e.g., ".dat"; the default is empty)
   --log_level LOG_LEVEL
-                        set log level (default: OFF)
+                        set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: INFO)
   --floats              replace DecimalType with DoubleType when saving parquet files. If not specified,
                         decimal data will be saved.
 
