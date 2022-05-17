@@ -50,7 +50,7 @@ class PysparkBenchReport:
             'queryStatus': [],
             'exceptions': [],
             'startTime': None,
-            'queryTimes': None,
+            'queryTimes': [],
         }
         
     def report_on(self, fn: Callable, *args):
@@ -70,24 +70,24 @@ class PysparkBenchReport:
         self.summary['env']['envVars'] = filtered_env_vars
         self.summary['env']['sparkConf'] = spark_conf
         self.summary['env']['sparkVersion'] = self.spark_session.version
+        listener = pyspark_spy.TaskFailureListener()
         try:
-            listener = pyspark_spy.TaskFailureListener()
             pyspark_spy.register_listener(self.spark_session.sparkContext, listener)
             start_time = int(time.time() * 1000)
             fn(*args)
-            end_time = int(time.time() * 1000)
-            self.summary['startTime'] = start_time
-            self.summary['queryTimes'] = [ end_time - start_time ]
             if len(listener.failures) != 0:
                 self.summary['queryStatus'].append("CompletedWithTaskFailures")
             else:
                 self.summary['queryStatus'].append("Completed")
-            return self.summary
         except Exception as e:
+            self.summary['queryStatus'].append("Failed")
             self.summary['exceptions'].append(str(e))
-            return self.summary
         finally:
+            end_time = int(time.time() * 1000)
+            self.summary['startTime'] = start_time
+            self.summary['queryTimes'].append(end_time - start_time)
             self.spark_session.sparkContext._jsc.sc().removeSparkListener(listener)
+            return self.summary
             
     def write_summary(self, query_name, prefix=""):
         """_summary_
