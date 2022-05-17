@@ -31,3 +31,5 @@ CMD+=("${SPARK_CONF[@]}")
 CMD+=("${MORE_ARGS[@]}")
 # submit
 "${CMD[@]}"
+# print full command
+echo "${CMD[@]}"
