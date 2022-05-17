@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-set -e
+set -ex
 # e.g.
 # ./spark-submit-template power_run_gpu.template nds_power.py \
 # local_data_parquet/
@@ -31,5 +31,3 @@ CMD+=("${SPARK_CONF[@]}")
 CMD+=("${MORE_ARGS[@]}")
 # submit
 "${CMD[@]}"
-# print full command
-echo "${CMD[@]}"
