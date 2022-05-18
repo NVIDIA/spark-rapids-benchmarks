@@ -75,15 +75,16 @@ class PysparkBenchReport:
             pyspark_spy.register_listener(self.spark_session.sparkContext, listener)
             start_time = int(time.time() * 1000)
             fn(*args)
+            end_time = int(time.time() * 1000)
             if len(listener.failures) != 0:
                 self.summary['queryStatus'].append("CompletedWithTaskFailures")
             else:
                 self.summary['queryStatus'].append("Completed")
         except Exception as e:
+            end_time = int(time.time() * 1000)
             self.summary['queryStatus'].append("Failed")
             self.summary['exceptions'].append(str(e))
         finally:
-            end_time = int(time.time() * 1000)
             self.summary['startTime'] = start_time
             self.summary['queryTimes'].append(end_time - start_time)
             self.spark_session.sparkContext._jsc.sc().removeSparkListener(listener)
