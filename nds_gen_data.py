@@ -38,7 +38,33 @@ from check import check_build, check_version, get_abs_path, get_dir_size, parall
 
 check_version()
 
-from nds_transcode import get_schemas
+table_names = [
+    'call_center',
+    'catalog_page',
+    'catalog_returns',
+    'catalog_sales',
+    'customer',
+    'customer_address',
+    'customer_demographics',
+    'date_dim',
+    'dbgen_version',
+    'household_demographics',
+    'income_band',
+    'inventory',
+    'item',
+    'promotion',
+    'reason',
+    'ship_mode',
+    'store',
+    'store_returns',
+    'store_sales',
+    'time_dim',
+    'warehouse',
+    'web_page',
+    'web_returns',
+    'web_sales',
+    'web_site',
+]
 
 
 def clean_temp_data(temp_data_path):
@@ -55,7 +81,7 @@ def merge_temp_tables(temp_data_path, parent_data_path):
         temp_data_path (str): temorary child range data path
         parent_data_path (str): parent data path
     """
-    for table_name in get_schemas(False).keys():
+    for table_name in table_names:
         # manually create table sub-folders
         # redundent step if it's not the first range part.
         cmd = ['hadoop', 'fs', '-mkdir', parent_data_path + '/' + table_name]
@@ -162,7 +188,7 @@ def generate_data_local(args, range_start, range_end, tool_path):
             print("dsdgen failed with return code {}".format(p.returncode))
             raise Exception("dsdgen failed")
     # move multi-partition files into table folders
-    for table in get_schemas(use_decimal=True).keys():
+    for table in table_names:
         print('mkdir -p {}/{}'.format(data_dir, table))
         subprocess.run(['mkdir', '-p', data_dir + '/' + table])
         for i in range(range_start, range_end + 1):
