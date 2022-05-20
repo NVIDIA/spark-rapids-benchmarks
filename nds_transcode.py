@@ -500,7 +500,8 @@ def get_schemas(use_decimal):
         StructField("ws_net_paid", decimalType(use_decimal, 7, 2)),
         StructField("ws_net_paid_inc_tax", decimalType(use_decimal, 7, 2)),
         StructField("ws_net_paid_inc_ship", decimalType(use_decimal, 7, 2)),
-        StructField("ws_net_paid_inc_ship_tax", decimalType(use_decimal, 7, 2)),
+        StructField("ws_net_paid_inc_ship_tax",
+                    decimalType(use_decimal, 7, 2)),
         StructField("ws_net_profit", decimalType(use_decimal, 7, 2))
     ])
 
@@ -537,7 +538,8 @@ def get_schemas(use_decimal):
         StructField("cs_net_paid", decimalType(use_decimal, 7, 2)),
         StructField("cs_net_paid_inc_tax", decimalType(use_decimal, 7, 2)),
         StructField("cs_net_paid_inc_ship", decimalType(use_decimal, 7, 2)),
-        StructField("cs_net_paid_inc_ship_tax", decimalType(use_decimal, 7, 2)),
+        StructField("cs_net_paid_inc_ship_tax",
+                    decimalType(use_decimal, 7, 2)),
         StructField("cs_net_profit", decimalType(use_decimal, 7, 2))
     ])
 
@@ -586,13 +588,14 @@ def load(session, filename, schema, delimiter="|", header="false", prefix=""):
     return session.read.option("delimiter", delimiter).option("header", header).csv(data_path, schema=schema)
 
 
-def store(df, filename, write_mode, prefix=""):
+def store(df, filename, write_mode, output_format, prefix=""):
     data_path = prefix + '/' + filename
     if filename in TABLE_PARTITIONING.keys():
         df = df.repartition(col(TABLE_PARTITIONING[filename]))
-        df.write.mode(write_mode).partitionBy(TABLE_PARTITIONING[filename]).parquet(data_path)
+        df.write.format(output_format).mode(write_mode).partitionBy(
+            TABLE_PARTITIONING[filename]).save(data_path)
     else:
-        df.coalesce(1).write.mode(write_mode).parquet(data_path)
+        df.coalesce(1).write.format(output_format).mode(write_mode).save(data_path)
 
 
 def transcode(args):
@@ -604,8 +607,15 @@ def transcode(args):
     results = {}
 
     schemas = get_schemas(use_decimal=not args.floats)
-
-    for fn, schema in schemas.items():
+    
+    trans_tables = schemas
+    if args.tables:
+        for t in args.tables:
+            if t not in schemas.keys():
+                raise Exception(f"invalid table name: {t}. Valid tables are: {schemas.keys()}")
+        trans_tables = {t: schemas[t] for t in args.tables if t in schemas}
+        
+    for fn, schema in trans_tables.items():
         results[fn] = timeit.timeit(
             lambda: store(
                 load(session,
@@ -614,6 +624,7 @@ def transcode(args):
                      prefix=args.input_prefix),
                 f"{fn}",
                 args.output_mode,
+                args.output_format,
                 args.output_prefix),
             number=1)
 
@@ -631,8 +642,6 @@ def transcode(args):
         for conf in session.sparkContext.getConf().getAll():
             report.write(str(conf) + "\n")
             print(conf)
-
-
 
 
 if __name__ == "__main__":
@@ -653,6 +662,16 @@ if __name__ == "__main__":
         "https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes." +
         "default value is errorifexists, which is the Spark default behavior.",
         default="errorifexists")
+    parser.add_argument(
+        '--output_format',
+        choices=['parquet', 'orc', 'avro'],
+        default='parquet',
+        help="output data format when converting CSV data sources."
+    )
+    parser.add_argument(
+        '--tables',
+        type=lambda s: s.split(','),
+        help="specify table names by a comma seprated string. e.g. 'catalog_page,catalog_sales'")
     parser.add_argument(
         '--log_level',
         help='set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: INFO)',
