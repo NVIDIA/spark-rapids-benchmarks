@@ -80,13 +80,17 @@ python nds_gen_data.py hdfs 100 100 /data/raw_sf100 --overwrite_output
 ```
 
 
-### Convert CSV to Parquet
+### Convert CSV to Parquet or Other data sources
 
 To do the data conversion, the `nds_transcode.py` need to be submitted as a Spark job. User can leverage
 the [spark-submit-template](./spark-submit-template) utilty to simpify the submission.
 The utility requires a pre-defined [template file](./convert_submit_gpu.template)where user needs to put 
 necessary Spark configurations. Either user can submit the `nds_transcode.py` directly to spark with
 arbitary Spark parameters.
+
+Parquet and Orc are supported for output data foramt at present.
+
+User can also specify `--tables` to convert specific table or tables. See argument details below.
 
 if `--floats` is specified in the command, DoubleType will be used to replace DecimalType data in Parquet files,
 otherwise DecimalType will be saved.
@@ -109,6 +113,9 @@ optional arguments:
   -h, --help            show this help message and exit
   --output_mode {overwrite,append,ignore,error,errorifexists,default}
                         save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modesdefault value is errorifexists, which is the Spark default behavior
+  --output_format {parquet,orc}
+                        output data format when converting CSV data sources. Now supports parquet, orc.
+  --tables TABLES       specify table names by a comma seprated string. e.g. 'catalog_page,catalog_sales'.
   --input_suffix INPUT_SUFFIX
                         text to append to every input filename (e.g., ".dat"; the default is empty)
   --log_level LOG_LEVEL
