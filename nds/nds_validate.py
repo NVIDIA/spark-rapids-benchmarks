@@ -17,7 +17,8 @@ def compare_results(spark_session: SparkSession,
                     use_iterator=False,
                     max_errors=10,
                     epsilon=0.00001) -> bool :
-    """_summary_
+    """Giving 2 paths of input query output data, compare them row by row, value by value to see if
+    the results match or not.
 
     Args:
         spark_session (SparkSession): Spark Session to hold the comparison
