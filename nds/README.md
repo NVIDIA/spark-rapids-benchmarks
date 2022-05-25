@@ -169,7 +169,7 @@ we applied the following changes to original templates released in TPC-DS v3.2.0
 ### Generate Specific Query or Query Streams
 
 ```
-usage: nds_gen_query_stream.py [-h] [--template TEMPLATE] [--streams STREAMS]
+usage: nds_gen_query_stream.py [-h] (--template TEMPLATE | --streams STREAMS)
                                template_dir scale output_dir
 
 positional arguments:
