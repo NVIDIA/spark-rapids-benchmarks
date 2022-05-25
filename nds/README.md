@@ -278,4 +278,39 @@ in your environment to make sure all Spark job can get necessary resources to ru
 otherwise some query application may be in _WAITING_ status(which can be observed from Spark UI or 
 Yarn Resource Manager UI) until enough resources are released.
 
+## Data Validation
+To validate query output between Power Runs w/o GPU, we providing [nds_validate.py](nds_validate.py) to do
+the job.
+
+Arguments supported for `nds_validate.py`:
+```
+usage: nds_validate.py [-h] [--max_errors MAX_ERRORS] [--epsilon EPSILON] [--ignore_ordering] [--use_iterator]
+                       input1 input2 input_format query_stream_file
+
+positional arguments:
+  input1                path of the first input data
+  input2                path of the second input data
+  input_format          data source type. e.g. parquet, orc
+  query_stream_file     query stream file that contains NDS queries in specific order.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --max_errors MAX_ERRORS
+                        Maximum number of differences to report.
+  --epsilon EPSILON     Allow for differences in precision when comparing floating point values.
+  --ignore_ordering     Sort the data collected from the DataFrames before comparing them.
+  --use_iterator        When set, use `toLocalIterator` to load one partition at atime into driver memory, reducing
+                        memory usage at the cost of performancebecause processing will be single-threaded.
+```
+
+Example command to compare two query output data:
+```
+python validate.py \
+query_output_cpu \
+query_output_gpu \
+parquet \
+./nds_query_streams/query_1.sql \
+--ignore_ordering
+```
+
 ### NDS2.0 is using source code from TPC-DS Tool V3.2.0
