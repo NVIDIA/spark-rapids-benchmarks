@@ -1,7 +1,6 @@
 import argparse
 import math
 import time
-from typing import Iterable
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import *
 from pyspark.sql.functions import col
@@ -13,6 +12,7 @@ def compare_results(spark_session: SparkSession,
                     input2: str,
                     input_format: str,
                     ignore_ordering: bool,
+                    is_q78: bool,
                     use_iterator=False,
                     max_errors=10,
                     epsilon=0.00001):
@@ -25,6 +25,7 @@ def compare_results(spark_session: SparkSession,
         input_format (str): data source format, e.g. parquet, orc
         ignore_ordering (bool): whether ignoring the order of input data.
             If true, we will order by ourselves.
+        is_q78 (bool): whether the query is query78.
         use_iterator (bool, optional): When set to true, use `toLocalIterator` to load one partition
             at a time into driver memory, reducing memory usage at the cost of performance because
             processing will be single-threaded. Defaults to False.
@@ -50,7 +51,7 @@ def compare_results(spark_session: SparkSession,
         while i < count1 and errors < max_errors:
             lhs = next(result1)
             rhs = next(result2)
-            if not rowEqual(list(lhs), list(rhs), epsilon):
+            if not rowEqual(list(lhs), list(rhs), epsilon, is_q78):
                 print(f"Row {i}: \n{list(lhs)}\n{list(rhs)}\n")
                 errors += 1
             i += 1
@@ -95,9 +96,27 @@ def collect_results(df: DataFrame,
         it = iter(rows)
     return it
 
-def rowEqual(row1, row2, epsilon):
+def rowEqual(row1, row2, epsilon, is_q78):
     # only simple types in a row for NDS results
-    return all([compare(lhs, rhs, epsilon) for lhs, rhs in zip(row1, row2)])
+    if is_q78:
+        # TODO: remove this special case after we resolve https://github.com/NVIDIA/spark-rapids/issues/1573
+        # see example error case: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/7#issue-1247422850
+        # Pop the 4th column value in q78, compare it alone.
+        fourth_val_row1 = row1.pop(3)
+        fourth_val_row2 = row2.pop(3)
+        fourth_val_eq = False
+        # this value could be none in some rows
+        if all([fourth_val_row1, fourth_val_row2]):
+            # this value is rounded to its pencentile: round(ss_qty/(coalesce(ws_qty,0)+coalesce(cs_qty,0)),2)
+            # so we allow the diff <= 0.01
+            fourth_val_eq = abs(fourth_val_row1 - fourth_val_row2) <= 0.01
+        elif fourth_val_row1 == None and fourth_val_row2 == None:
+            fourth_val_eq = True
+        else:
+            fourth_val_eq = False
+        return fourth_val_eq and all([compare(lhs, rhs, epsilon) for lhs, rhs in zip(row1, row2)])
+    else:
+        return all([compare(lhs, rhs, epsilon) for lhs, rhs in zip(row1, row2)])
 
 def compare(expected, actual, epsilon=0.00001):
     #TODO 1: we can optimize this with case-match after Python 3.10
@@ -140,6 +159,7 @@ def iterate_queries(spark_session: SparkSession,
                         sub_input2,
                         input_format,
                         ignore_ordering,
+                        query == 'query78',
                         use_iterator=use_iterator,
                         max_errors=max_errors,
                         epsilon=epsilon)
