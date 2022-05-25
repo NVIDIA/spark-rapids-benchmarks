@@ -1,6 +1,6 @@
-# Contributing to Nvidia Decision Support(NDS)
+# Contributing to Spark RAPIDS Benchmarks
 
-Contributions to Nvidia Decision Support(NDS) fall into the following three categories.
+Contributing to Spark RAPIDS Benchmarks fall into the following three categories.
 
 1. To report a bug, request a new feature, or report a problem with
     documentation, please file an issue
@@ -18,13 +18,15 @@ Contributions to Nvidia Decision Support(NDS) fall into the following three cate
     need more context on a particular issue, please ask in a comment.
 
 ## Building From Source
-Please refer to [README](./README.md#prerequisites) for prerequisites and build instructions.
+[Nvidia Decision Support(NDS)](./nds/): 
+        
+- Please refer to [nds/README](./nds/README.md#prerequisites) for prerequisites and build instructions.
 
-Note: the build step aims to:
-1. Apply code and query template modifications to original TPC-DS toolkit to make it compatible to
-Spark (see [patches](./tpcds-gen/patches/))
-2. Use maven to build a maven project that is used to only generate data on HDFS.
-(see [tpcds-gen/src](./tpcds-gen/src/))
+- Note: the build step aims to:
+    1. Apply code and query template modifications to original TPC-DS toolkit to make it compatible to
+Spark (see [patches](./nds/tpcds-gen/patches/))
+    2. Use maven to build a maven project that is used to only generate data on HDFS.
+(see [tpcds-gen/src](./nds/tpcds-gen/src/))
 
 ## Code contributions
 
@@ -32,6 +34,7 @@ Spark (see [patches](./tpcds-gen/patches/))
 
 The repository contains the following parts:
 
+[Nvidia Decision Support(NDS)](./nds):
 - `cicd` contains an settings.xml file used for maven build tool
 - `properties` property files that contains Spark configs used for submitting Spark jobs
 - `pyspark_spy` a third party library used to add SparkListener via pyspark
@@ -49,12 +52,12 @@ The repository contains the following parts:
 
 ### Integrated Development Environment
 For python scripts, VSCode or PyCharm are recommended but developers can choose arbitary IDE they prefer.
-For java code in [tpcds-gen/src](./tpcds-gen/src/), IntelliJ IDEA is recommended.
+For java code in [tpcds-gen/src](./nds/tpcds-gen/src/), IntelliJ IDEA is recommended.
 It will download necessary dependencies once it opens the folder as a maven project.
 
 ### Your first issue
 
-1. Read the project's [README.md](./README.md) to learn how to build the project and run scripts.
+1. Read the project's [README.md](./nds/README.md) to learn how to build the project and run scripts.
 2. Find an issue to work on.
 
 ## Coding style
