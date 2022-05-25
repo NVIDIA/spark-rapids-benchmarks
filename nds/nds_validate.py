@@ -1,5 +1,6 @@
 import argparse
 import math
+import sys
 import time
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import *
@@ -15,7 +16,7 @@ def compare_results(spark_session: SparkSession,
                     is_q78: bool,
                     use_iterator=False,
                     max_errors=10,
-                    epsilon=0.00001):
+                    epsilon=0.00001) -> bool :
     """_summary_
 
     Args:
@@ -34,7 +35,7 @@ def compare_results(spark_session: SparkSession,
             values. Defaults to 0.00001.
 
     Returns:
-        Iterable[Row]: _description_
+        bool: True if result matches otherwise False
     """
     df1 = spark_session.read.format(input_format).load(input1)
     df2 = spark_session.read.format(input_format).load(input2)
@@ -59,12 +60,16 @@ def compare_results(spark_session: SparkSession,
         
         if errors == max_errors:
             print(f"Aborting comparison after reaching maximum of {max_errors} errors")
+            return False
         elif errors == 0:
             print("Results match")
+            return True
         else:
             print(f"There were {errors} errors")
+            return False
     else:
         print(f"DataFrame row counts do not match: {count1} != {count2}")
+        return False
 
 def collect_results(df: DataFrame,
                    ignore_ordering: bool,
@@ -149,12 +154,13 @@ def iterate_queries(spark_session: SparkSession,
                     max_errors=10,
                     epsilon=0.00001):
     # Iterate each query folder for a Power Run output
-    # Providing a list instead of hard-coding all NDS queires is to satify the arbitary queries run.
+    # Providing a list instead of hard-coding all NDS queires is to satisfy the arbitary queries run.
+    unmatch_queries = []
     for query in queries:
         sub_input1 = input1 + '/' + query
         sub_input2 = input2 + '/' + query
         print(f"=== Comparing Query: {query} ===")
-        compare_results(spark_session,
+        compare_result = compare_results(spark_session,
                         sub_input1,
                         sub_input2,
                         input_format,
@@ -163,6 +169,11 @@ def iterate_queries(spark_session: SparkSession,
                         use_iterator=use_iterator,
                         max_errors=max_errors,
                         epsilon=epsilon)
+        if compare_result == False:
+            unmatch_queries.append(query)
+    if len(unmatch_queries) != 0:
+        print(f"=== Unmatch Queries: {unmatch_queries} ===")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
