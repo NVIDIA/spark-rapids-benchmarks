@@ -680,6 +680,26 @@ def get_maintenance_schemas(use_decimal):
         StructField("cret_catalog_page_id", CharType(16)),
         StructField("cret_warehouse_id", CharType(16)),
     ])
+    MAINTENANCE_SCHEMAS["s_web_returns"] = StructType([
+         StructField("wret_web_page_id", CharType(16)),
+         StructField("wret_order_id", IntegerType(), nullable=False),
+         StructField("wret_line_number", IntegerType(), nullable=False),
+         StructField("wret_item_id", CharType(16), nullable=False),
+         StructField("wret_return_customer_id", CharType(16)),
+         StructField("wret_refund_customer_id", CharType(16)),
+         StructField("wret_return_date", CharType(10)),
+         StructField("wret_return_time", CharType(10)),
+         StructField("wret_return_qty", IntegerType()),
+         StructField("wret_return_amt", decimalType(use_decimal,7,2)),
+         StructField("wret_return_tax", decimalType(use_decimal,7,2)),
+         StructField("wret_return_fee", decimalType(use_decimal,7,2)),
+         StructField("wret_return_ship_cost", decimalType(use_decimal,7,2)),
+         StructField("wret_refunded_cash", decimalType(use_decimal,7,2)),
+         StructField("wret_reversed_CharTypege", decimalType(use_decimal,7,2)),
+         StructField("wret_account_credit", decimalType(use_decimal,7,2)),
+         StructField("wret_reason_id", CharType(16)),
+    ])
+
     MAINTENANCE_SCHEMAS["s_inventory"] = StructType([
         StructField("invn_warehouse_id", CharType(16), nullable=False),
         StructField("invn_item_id", CharType(16), nullable=False),

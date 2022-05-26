@@ -75,7 +75,8 @@ maintenance_table_names = [
     's_purchase_lineitem',
     's_store_returns',
     's_web_order',
-    's_web_order_lineitem'
+    's_web_order_lineitem',
+    's_web_returns'
 ]
 
 def clean_temp_data(temp_data_path):
