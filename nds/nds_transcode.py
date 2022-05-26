@@ -570,6 +570,123 @@ def get_schemas(use_decimal):
     ])
     return SCHEMAS
 
+def get_maintenance_schemas(use_decimal):
+    MAINTENANCE_SCHEMAS = {}
+    MAINTENANCE_SCHEMAS["s_purchase_lineitem"] = StructType([
+        StructField("plin_purchase_id", IntegerType(), nullable=False),
+        StructField("plin_line_number", IntegerType(), nullable=False),
+        StructField("plin_item_id", CharType(16)),
+        StructField("plin_promotion_id", CharType(16)),
+        StructField("plin_quantity", IntegerType()),
+        StructField("plin_sale_price", decimalType(use_decimal, 7,2)),
+        StructField("plin_coupon_amt", decimalType(use_decimal, 7,2)),
+        StructField("plin_comment", VarcharType(100)),
+    ])
+    MAINTENANCE_SCHEMAS["s_purchase"] = StructType([
+        StructField("purc_purchase_id", IntegerType(), nullable=False),
+        StructField("purc_store_id", CharType(16)),
+        StructField("purc_customer_id", CharType(16)),
+        StructField("purc_purchase_date", CharType(10)),
+        StructField("purc_purchase_time", IntegerType()),
+        StructField("purc_register_id", IntegerType()),
+        StructField("purc_clerk_id", IntegerType()),
+        StructField("purc_comment", CharType(100)),
+    ])
+    MAINTENANCE_SCHEMAS["s_catalog_order"] = StructType([
+        StructField("cord_order_id", IntegerType(), nullable=False),
+        StructField("cord_bill_customer_id", CharType(16)),
+        StructField("cord_ship_customer_id", CharType(16)),
+        StructField("cord_order_date", CharType(10)),
+        StructField("cord_order_time", IntegerType()),
+        StructField("cord_ship_mode_id", CharType(16)),
+        StructField("cord_call_center_id", CharType(16)),
+        StructField("cord_order_comments", VarcharType(100)),
+    ])
+    MAINTENANCE_SCHEMAS["s_web_order"] = StructType([
+        StructField("word_order_id", IntegerType(), nullable=False),
+        StructField("word_bill_customer_id", CharType(16)),
+        StructField("word_ship_customer_id", CharType(16)),
+        StructField("word_order_date", CharType(10)),
+        StructField("word_order_time", IntegerType()),
+        StructField("word_ship_mode_id", CharType(16)),
+        StructField("word_web_site_id", CharType(16)),
+        StructField("word_order_comments", CharType(100)),
+    ])
+    MAINTENANCE_SCHEMAS["s_catalog_order_lineitem"] = StructType([
+        StructField("clin_order_id", IntegerType(), nullable=False),
+        StructField("clin_line_number", IntegerType(), nullable=False),
+        StructField("clin_item_id", CharType(16)),
+        StructField("clin_promotion_id", CharType(16)),
+        StructField("clin_quantity", IntegerType()),
+        StructField("clin_sales_price", decimalType(use_decimal, 7,2)),
+        StructField("clin_coupon_amt", decimalType(use_decimal, 7,2)),
+        StructField("clin_warehouse_id", CharType(16)),
+        StructField("clin_ship_date", CharType(10)),
+        StructField("clin_catalog_number", IntegerType()),
+        StructField("clin_catalog_page_number", IntegerType()),
+        StructField("clin_ship_cost", decimalType(use_decimal, 7,2)),
+    ])
+    MAINTENANCE_SCHEMAS["s_web_order_lineitem"] = StructType([
+        StructField("wlin_order_id", IntegerType(), nullable=False),
+        StructField("wlin_line_number", IntegerType(), nullable=False),
+        StructField("wlin_item_id", CharType(16)),
+        StructField("wlin_promotion_id", CharType(16)),
+        StructField("wlin_quantity", IntegerType()),
+        StructField("wlin_sales_price", decimalType(use_decimal, 7,2)),
+        StructField("wlin_coupon_amt", decimalType(use_decimal, 7,2)),
+        StructField("wlin_warehouse_id", CharType(16)),
+        StructField("wlin_ship_date", CharType(10)),
+        StructField("wlin_ship_cost", decimalType(use_decimal, 7,2)),
+        StructField("wlin_web_page_id", CharType(16)),
+    ])
+    MAINTENANCE_SCHEMAS["s_store_returns"] = StructType([
+        StructField("sret_store_id", CharType(16)),
+        StructField("sret_purchase_id", CharType(16), nullable=False),
+        StructField("sret_line_number", IntegerType(), nullable=False),
+        StructField("sret_item_id", CharType(16), nullable=False),
+        StructField("sret_customer_id", CharType(16)),
+        StructField("sret_return_date", CharType(10)),
+        StructField("sret_return_time", CharType(10)),
+        StructField("sret_ticket_number", CharType(20)),
+        StructField("sret_return_qty", IntegerType()),
+        StructField("sret_return_amt", decimalType(use_decimal, 7,2)),
+        StructField("sret_return_tax", decimalType(use_decimal, 7,2)),
+        StructField("sret_return_fee", decimalType(use_decimal, 7,2)),
+        StructField("sret_return_ship_cost", decimalType(use_decimal, 7,2)),
+        StructField("sret_refunded_cash", decimalType(use_decimal, 7,2)),
+        StructField("sret_reversed_charge", decimalType(use_decimal, 7,2)),
+        StructField("sret_store_credit", decimalType(use_decimal, 7,2)),
+        StructField("sret_reason_id", CharType(16)),
+    ])
+    MAINTENANCE_SCHEMAS["s_catalog_returns"] = StructType([
+        StructField("cret_call_center_id", CharType(16)),
+        StructField("cret_order_id", IntegerType(), nullable=False),
+        StructField("cret_line_number", IntegerType(), nullable=False),
+        StructField("cret_item_id", CharType(16), nullable=False),
+        StructField("cret_return_customer_id", CharType(16)),
+        StructField("cret_refund_customer_id", CharType(16)),
+        StructField("cret_return_date", CharType(10)),
+        StructField("cret_return_time", CharType(10)),
+        StructField("cret_return_qty", IntegerType()),
+        StructField("cret_return_amt", decimalType(use_decimal, 7,2)),
+        StructField("cret_return_tax", decimalType(use_decimal, 7,2)),
+        StructField("cret_return_fee", decimalType(use_decimal, 7,2)),
+        StructField("cret_return_ship_cost", decimalType(use_decimal, 7,2)),
+        StructField("cret_refunded_cash", decimalType(use_decimal, 7,2)),
+        StructField("cret_reversed_charge", decimalType(use_decimal, 7,2)),
+        StructField("cret_merchant_credit", decimalType(use_decimal, 7,2)),
+        StructField("cret_reason_id", CharType(16)),
+        StructField("cret_shipmode_id", CharType(16)),
+        StructField("cret_catalog_page_id", CharType(16)),
+        StructField("cret_warehouse_id", CharType(16)),
+    ])
+    MAINTENANCE_SCHEMAS["s_inventory"] = StructType([
+        StructField("invn_warehouse_id", CharType(16), nullable=False),
+        StructField("invn_item_id", CharType(16), nullable=False),
+        StructField("invn_date", CharType(10), nullable=False),
+        StructField("invn_qty_on_hand", IntegerType()),
+    ])
+    return MAINTENANCE_SCHEMAS
 
 # Note the specific partitioning is applied when save the parquet data files.
 TABLE_PARTITIONING = {
@@ -588,15 +705,27 @@ def load(session, filename, schema, delimiter="|", header="false", prefix=""):
     return session.read.option("delimiter", delimiter).option("header", header).csv(data_path, schema=schema)
 
 
-def store(df, filename, write_mode, output_format, prefix=""):
-    data_path = prefix + '/' + filename
-    if filename in TABLE_PARTITIONING.keys():
-        df = df.repartition(col(TABLE_PARTITIONING[filename]))
-        df.write.format(output_format).mode(write_mode).partitionBy(
-            TABLE_PARTITIONING[filename]).save(data_path)
-    else:
-        df.coalesce(1).write.format(output_format).mode(write_mode).save(data_path)
+def store(session, df, filename, output_format, compression):
+    """Create Iceberg tables by CTAS
 
+    Args:
+        session (SparkSession): a working SparkSession instance
+        df (DataFrame): DataFrame to be serialized into Iceberg table
+        filename (str): name of the table(file)
+        output_format (str): parquet, orc or avro
+        compression (str): Parquet compression codec when saving Iceberg tables
+    """
+    CTAS = f"create table {filename} using iceberg "
+    if filename in TABLE_PARTITIONING.keys():
+       df.repartition(col(TABLE_PARTITIONING[filename])).sortWithinPartitions(TABLE_PARTITIONING[filename]).createOrReplaceTempView("temptbl")
+       CTAS += f"partitioned by ({TABLE_PARTITIONING[filename]})"
+    else:
+        df.coalesce(1).createOrReplaceTempView("temptbl")
+    CTAS += f" tblproperties('write.format.default' = '{output_format}'"
+    # the compression-codec won't panic when output_format is not parquet
+    CTAS += f", 'write.parquet.compression-codec' = '{compression}')"
+    CTAS += " as select * from temptbl"
+    session.sql(CTAS)
 
 def transcode(args):
     session = pyspark.sql.SparkSession.builder \
@@ -607,25 +736,29 @@ def transcode(args):
     results = {}
 
     schemas = get_schemas(use_decimal=not args.floats)
-    
-    trans_tables = schemas
+    maintenance_schemas = get_maintenance_schemas(use_decimal=not args.floats)
+
+    if args.update:
+        trans_tables = maintenance_schemas
+    else:
+        trans_tables = schemas
+
     if args.tables:
         for t in args.tables:
-            if t not in schemas.keys():
+            if t not in trans_tables.keys() :
                 raise Exception(f"invalid table name: {t}. Valid tables are: {schemas.keys()}")
-        trans_tables = {t: schemas[t] for t in args.tables if t in schemas}
+        trans_tables = {t: trans_tables[t] for t in args.tables if t in trans_tables}
         
     for fn, schema in trans_tables.items():
         results[fn] = timeit.timeit(
-            lambda: store(
+            lambda: store(session,
                 load(session,
                      f"{fn}",
                      schema,
                      prefix=args.input_prefix),
                 f"{fn}",
-                args.output_mode,
                 args.output_format,
-                args.output_prefix),
+                args.compression),
             number=1)
 
     report_text = "Total conversion time for %d tables was %.02fs\n" % (
@@ -680,6 +813,16 @@ if __name__ == "__main__":
         '--floats',
         action='store_true',
         help='replace DecimalType with DoubleType when saving parquet files. If not specified, decimal data will be saved.')
-
+    parser.add_argument(
+        '--update',
+        action='store_true',
+        help='transcode the source data or update data'
+    )
+    parser.add_argument(
+        '--compression',
+        default='snappy',
+        help='Parquet compression codec. Iceberg is using gzip as default but spark-rapids plugin ' +
+        'does not support it yet, so default it to snappy.'
+    )
     args = parser.parse_args()
     transcode(args)

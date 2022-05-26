@@ -72,6 +72,7 @@ optional arguments:
   --overwrite_output  overwrite if there has already existing data in the path provided.
   --replication REPLICATION
                       the number of replication factor when generating data to HDFS. if not set, the Hadoop job will use the setting in the Hadoop cluster.
+  --update UPDATE     generate update dataset <n>. <n> is identical to the number of streams used in the Throughput Tests of the benchmark
 ```
 
 Example command:
