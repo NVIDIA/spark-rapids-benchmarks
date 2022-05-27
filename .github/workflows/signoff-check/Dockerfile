@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM python:alpine
+FROM python:3.8-slim-buster
 
 WORKDIR /
 COPY signoff-check .
