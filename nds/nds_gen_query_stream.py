@@ -109,7 +109,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("output_dir",
                         help="generate query in directory.")
-    group = parser.add_mutually_exclusive_group()
+    group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--template",
                         help="build queries from this template")
     group.add_argument('--streams',
