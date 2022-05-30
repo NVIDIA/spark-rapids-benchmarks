@@ -331,7 +331,10 @@ def get_schemas(use_decimal):
         StructField("sr_addr_sk", IntegerType()),
         StructField("sr_store_sk", IntegerType()),
         StructField("sr_reason_sk", IntegerType()),
-        StructField("sr_ticket_number", IntegerType(), nullable=False),
+        # Use LongType due to https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1138379596
+        # Databricks is using LongType as well in their accpeted benchmark reports.
+        # See https://www.tpc.org/results/supporting_files/tpcds/databricks~tpcds~100000~databricks_SQL_8.3~sup-1~2021-11-02~v01.zip
+        StructField("sr_ticket_number", LongType(), nullable=False),
         StructField("sr_return_quantity", IntegerType()),
         StructField("sr_return_amt", decimalType(use_decimal, 7, 2)),
         StructField("sr_return_tax", decimalType(use_decimal, 7, 2)),
@@ -725,7 +728,7 @@ def load(session, filename, schema, delimiter="|", header="false", prefix=""):
     return session.read.option("delimiter", delimiter).option("header", header).csv(data_path, schema=schema)
 
 
-def store(session, df, filename, output_format, compression):
+def store(session, df, filename, output_format, output_mode, use_iceberg, compression, prefix=""):
     """Create Iceberg tables by CTAS
 
     Args:
@@ -733,19 +736,37 @@ def store(session, df, filename, output_format, compression):
         df (DataFrame): DataFrame to be serialized into Iceberg table
         filename (str): name of the table(file)
         output_format (str): parquet, orc or avro
+        write_mode (str): save modes as defined by "https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.
+        use_iceberg (bool): write data into Iceberg tables
         compression (str): Parquet compression codec when saving Iceberg tables
+        prefix (str): output data path when not using Iceberg.
     """
-    CTAS = f"create table {filename} using iceberg "
-    if filename in TABLE_PARTITIONING.keys():
-       df.repartition(col(TABLE_PARTITIONING[filename])).sortWithinPartitions(TABLE_PARTITIONING[filename]).createOrReplaceTempView("temptbl")
-       CTAS += f"partitioned by ({TABLE_PARTITIONING[filename]})"
+    if use_iceberg:
+        if output_mode == 'overwrite':
+            session.sql(f"drop table {filename}")
+        CTAS = f"create table {filename} using iceberg "
+        if filename in TABLE_PARTITIONING.keys():
+           df.repartition(
+               col(TABLE_PARTITIONING[filename])).sortWithinPartitions(
+                   TABLE_PARTITIONING[filename]).createOrReplaceTempView("temptbl")
+           CTAS += f"partitioned by ({TABLE_PARTITIONING[filename]})"
+        else:
+            df.coalesce(1).createOrReplaceTempView("temptbl")
+        CTAS += f" tblproperties('write.format.default' = '{output_format}'"
+        # the compression-codec won't panic when output_format is not parquet
+        CTAS += f", 'write.parquet.compression-codec' = '{compression}')"
+        CTAS += " as select * from temptbl"
+        session.sql(CTAS)
     else:
-        df.coalesce(1).createOrReplaceTempView("temptbl")
-    CTAS += f" tblproperties('write.format.default' = '{output_format}'"
-    # the compression-codec won't panic when output_format is not parquet
-    CTAS += f", 'write.parquet.compression-codec' = '{compression}')"
-    CTAS += " as select * from temptbl"
-    session.sql(CTAS)
+        data_path = prefix + '/' + filename
+        if filename in TABLE_PARTITIONING.keys():
+            df = df.repartition(
+                col(TABLE_PARTITIONING[filename])).sortWithinPartitions(
+                    TABLE_PARTITIONING[filename])
+            df.write.format(output_format).mode(output_mode).partitionBy(
+                TABLE_PARTITIONING[filename]).save(data_path)
+        else:
+            df.coalesce(1).write.format(output_format).mode(output_mode).save(data_path)
 
 def transcode(args):
     session = pyspark.sql.SparkSession.builder \
@@ -772,13 +793,16 @@ def transcode(args):
     for fn, schema in trans_tables.items():
         results[fn] = timeit.timeit(
             lambda: store(session,
-                load(session,
-                     f"{fn}",
-                     schema,
-                     prefix=args.input_prefix),
-                f"{fn}",
-                args.output_format,
-                args.compression),
+                          load(session,
+                               f"{fn}",
+                               schema,
+                               prefix=args.input_prefix),
+                          f"{fn}",
+                          args.output_format,
+                          args.output_mode,
+                          args.iceberg,
+                          args.compression,
+                          args.output_prefix),
             number=1)
 
     report_text = "Total conversion time for %d tables was %.02fs\n" % (
@@ -804,7 +828,9 @@ if __name__ == "__main__":
         help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"; the default is empty)')
     parser.add_argument(
         'output_prefix',
-        help='text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is empty)')
+        help='text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is empty)' +
+        '. This positional arguments will not take effect if "--iceberg" is specified. ' +
+        'User needs to set Iceberg table path in their Spark submit templates/configs.')
     parser.add_argument(
         'report_file',
         help='location to store a performance report(local)')
@@ -837,6 +863,11 @@ if __name__ == "__main__":
         '--update',
         action='store_true',
         help='transcode the source data or update data'
+    )
+    parser.add_argument(
+        '--iceberg',
+        action='store_true',
+        help='Save converted data into Iceberg tables.'
     )
     parser.add_argument(
         '--compression',

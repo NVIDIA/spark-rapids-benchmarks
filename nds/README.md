@@ -99,30 +99,31 @@ otherwise DecimalType will be saved.
 arguments for `nds_transcode.py`:
 ```
 python nds_transcode.py -h
-usage: nds_transcode.py [-h] [--output_mode OUTPUT_MODE] [--input_suffix INPUT_SUFFIX]
-                        [--log_level LOG_LEVEL] [--floats]
+usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--output_format {parquet,orc,avro}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update] [--iceberg] [--compression COMPRESSION]
                         input_prefix output_prefix report_file
 
 positional arguments:
   input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"; the
                         default is empty)
-  output_prefix         text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is
-                        empty)
+  output_prefix         text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is empty).
+                        This positional arguments will not take effect if "--iceberg" is specified and user needs to set Iceberg table path in their Spark submit templates/configs.
   report_file           location to store a performance report(local)
 
 optional arguments:
   -h, --help            show this help message and exit
   --output_mode {overwrite,append,ignore,error,errorifexists,default}
-                        save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modesdefault value is errorifexists, which is the Spark default behavior
-  --output_format {parquet,orc}
-                        output data format when converting CSV data sources. Now supports parquet, orc.
+                        save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.
+                        default value is errorifexists, which is the Spark default behavior.
+  --output_format {parquet,orc,avro}
+                        output data format when converting CSV data sources.
   --tables TABLES       specify table names by a comma seprated string. e.g. 'catalog_page,catalog_sales'.
-  --input_suffix INPUT_SUFFIX
-                        text to append to every input filename (e.g., ".dat"; the default is empty)
   --log_level LOG_LEVEL
                         set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: INFO)
-  --floats              replace DecimalType with DoubleType when saving parquet files. If not specified,
-                        decimal data will be saved.
+  --floats              replace DecimalType with DoubleType when saving parquet files. If not specified, decimal data will be saved.
+  --update              transcode the source data or update data
+  --iceberg             Save converted data into Iceberg tables.
+  --compression COMPRESSION
+                        Parquet compression codec. Iceberg is using gzip as default but spark-rapids plugin does not support it yet, so default it to snappy.
 
 ```
 
