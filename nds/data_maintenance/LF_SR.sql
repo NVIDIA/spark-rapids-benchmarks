@@ -1,3 +1,4 @@
+DROP VIEW IF EXISTS srv;
 CREATE view srv as
 SELECT d_date_sk sr_returned_date_sk
  ,t_time_sk sr_return_time_sk

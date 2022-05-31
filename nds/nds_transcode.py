@@ -709,6 +709,16 @@ def get_maintenance_schemas(use_decimal):
         StructField("invn_date", CharType(10), nullable=False),
         StructField("invn_qty_on_hand", IntegerType()),
     ])
+
+    MAINTENANCE_SCHEMAS["delete"] = StructType([
+        StructField("date1", StringType(), nullable=False),
+        StructField("date2", StringType(), nullable=False),
+    ])
+
+    MAINTENANCE_SCHEMAS["inventory_delete"] = StructType([
+        StructField("date1", StringType(), nullable=False),
+        StructField("date2", StringType(), nullable=False),
+    ])
     return MAINTENANCE_SCHEMAS
 
 # Note the specific partitioning is applied when save the parquet data files.
@@ -743,7 +753,7 @@ def store(session, df, filename, output_format, output_mode, use_iceberg, compre
     """
     if use_iceberg:
         if output_mode == 'overwrite':
-            session.sql(f"drop table {filename}")
+            session.sql(f"drop table if exists {filename}")
         CTAS = f"create table {filename} using iceberg "
         if filename in TABLE_PARTITIONING.keys():
            df.repartition(

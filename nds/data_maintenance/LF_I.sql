@@ -1,3 +1,4 @@
+DROP VIEW IF EXISTS iv;
 CREATE view iv AS
 SELECT d_date_sk inv_date_sk,
  i_item_sk inv_item_sk,
