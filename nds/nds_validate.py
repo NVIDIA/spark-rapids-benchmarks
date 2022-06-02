@@ -2,6 +2,7 @@ import argparse
 import math
 import sys
 import time
+from decimal import *
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import *
 from pyspark.sql.functions import col
@@ -142,6 +143,8 @@ def compare(expected, actual, epsilon=0.00001):
         return False
     elif expected == None and actual != None:
         return False
+    elif isinstance(expected, Decimal) and isinstance(actual, Decimal):
+        return math.isclose(expected, actual, rel_tol=epsilon)
     else:
         return expected == actual
 
