@@ -280,4 +280,40 @@ in your environment to make sure all Spark job can get necessary resources to ru
 otherwise some query application may be in _WAITING_ status(which can be observed from Spark UI or 
 Yarn Resource Manager UI) until enough resources are released.
 
+### Data Maintenance
+Data Maintenance performance data update over existed dataset including data INSERT and DELETE. Due
+to the limits of Spark that the update operations are not supported yet in Spark, we use
+[Iceberg](https://iceberg.apache.org/) as dataset metadata manager to overcome the issue.
+
+To enable Iceberg, user must set proper configurations. Please refer to [Iceberg Spark](https://iceberg.apache.org/docs/latest/getting-started/)
+for details. We also provide a Spark submit template with necessary Iceberg configs: [convert_submit_cpu_iceberg.template](./convert_submit_cpu_iceberg.template)
+
+The data maintenance queries are in [data_maintenance](./data_maintenance) folder. `DF_*.sql` are
+DELETE queries while `LF_*.sql` are INSERT queries.
+
+Arguments supported for data maintenance:
+```
+usage: nds_maintenance.py [-h] [--maintenance_queries MAINTENANCE_QUERIES] maintenance_queries_folder time_log
+
+positional arguments:
+  maintenance_queries_folder
+                        folder contains all NDS Data Maintenance queries. If "--maintenance_queries"
+                        is not set, all queries under the folder will beexecuted.
+  time_log              path to execution time log in csv format, only support local path.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --maintenance_queries MAINTENANCE_QUERIES
+                        specify Data Maintenance query names by a comma seprated string. e.g. "LF_CR,LF_CS"
+```
+
+An example command to run only _LF_CS_ and _DF_CS_ functions:
+```
+./spark-submit-template convert_submit_cpu_iceberg.template \
+nds_maintenance.py \
+./data_maintenance \
+time.csv \
+--maintenance_queries LF_CS,DF_CS
+```
+
 ### NDS2.0 is using source code from TPC-DS Tool V3.2.0
