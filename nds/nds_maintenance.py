@@ -7,6 +7,19 @@ from PysparkBenchReport import PysparkBenchReport
 
 from check import get_abs_path
 
+INSERT_FUNCS = ['LF_CR',
+            'LF_CS',
+            'LF_I',
+            'LF_SR',
+            'LF_SS',
+            'LF_WR',
+            'LF_WS']
+DELETE_FUNCS = ['DF_CS',
+                'DF_SS',
+                'DF_WS']
+INVENTORY_DELETE_FUNC = ['DF_I']
+DM_FUNCS = INSERT_FUNCS + DELETE_FUNCS + INVENTORY_DELETE_FUNC
+
 def get_delete_date(spark_session):
     """get delete dates for Data Maintenance. Each delete functions requires 3 tuples: (date1, date2)
 
@@ -46,21 +59,12 @@ def get_maintenance_queries(folder, spec_queries):
     Returns:
         dict{str: list[str]}: a dict contains Data Maintenance query name and its content.
     """
-    INSERT_FUNCS = ['LF_CR',
-                'LF_CS',
-                'LF_I',
-                'LF_SR',
-                'LF_SS',
-                'LF_WR',
-                'LF_WS']
-    DELETE_FUNCS = ['DF_CS',
-                    'DF_SS',
-                    'DF_WS']
-    INVENTORY_DELETE_FUNC = ['DF_I']
-    DM_FUNCS = INSERT_FUNCS + DELETE_FUNCS + INVENTORY_DELETE_FUNC
     # need a spark session to get delete date
     spark = SparkSession.builder.appName("GET DELETE DATES").getOrCreate()
     delete_date_dict = get_delete_date(spark)
+    # exclude this "get_delte_date" step from main DM process.
+    spark.stop()
+    global DM_FUNCS
     if spec_queries:
         for q in spec_queries:
             if q not in DM_FUNCS:
@@ -83,6 +87,50 @@ def get_maintenance_queries(folder, spec_queries):
             q_dict[q] = q_content
     return q_dict
 
+def run_insert_query(spark, query_list):
+    """Run insert query. Insert query contains 3 subqueries.
+    See data_maintenance/LF_*.sql for details.
+
+    Args:
+        spark (SparkSession):  SparkSession instance.
+        query_list ([str]): INSERT query list.
+    """
+    for q in query_list:
+        spark.sql(q)
+
+def run_delete_query(spark, query_name, query_list):
+    """Only process DELETE queries as Spark doesn't support it yet.
+    See https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1141956487.
+    This function runs subqueries first to get subquery results. Then run the main delete query
+    using the intermediate results.
+    # See data_maintenance/DF_*.sql for query details.
+
+    Args:
+        spark (SparkSession): SparkSession instance.
+        query_name (str): query name to identify DELETE or INVENTORY DELETE queries.
+        query_list ([str]): DELETE query list. The first 3 queires are subquery results.
+                            The last 2 queries are main DELETE queries.
+    """
+    if query_name in DELETE_FUNCS:
+        # contains 3 subqueries
+        # a list "[1,2,3,4,5]", drop box brackets for further SQL process.
+        list_result = str([x[0] for x in spark.sql(query_list[0]).collect()])[1:-1]
+        # date results are integer
+        date1 = str(spark.sql(query_list[1]).collect()[0][0])
+        date2 = str(spark.sql(query_list[2]).collect()[0][0])
+        main_delete_1 = query_list[3].replace("SQL1", list_result)
+        main_delete_2 = query_list[4].replace("SQL2", date1)
+        main_delete_2 = main_delete_2.replace("SQL3", date2)
+        spark.sql(main_delete_1)
+        spark.sql(main_delete_2)
+    if query_name in INVENTORY_DELETE_FUNC:
+        # contains 2 subqueries
+        date1 = str(spark.sql(query_list[0]).collect()[0][0])
+        date2 = str(spark.sql(query_list[1]).collect()[0][0])
+        main_delete = query_list[4].replace("SQL1", date1)
+        main_delete = main_delete.replace("SQL2", date2)
+        spark.sql(main_delete)
+
 def run_query(query_dict, time_log_output_path):
     # TODO: Duplicate code in nds_power.py. Refactor this part, make it general.
     execution_time_list = []
@@ -101,12 +149,16 @@ def run_query(query_dict, time_log_output_path):
         spark_session.sparkContext.setJobGroup(query_name, query_name)
         print(f"====== Run {query_name} ======")
         q_report = PysparkBenchReport(spark_session)
-        for q in q_content:
-            summary = q_report.report_on(spark_session.sql,
-                                                        q)
-            print(f"Time taken: {summary['queryTimes']} millis for {query_name}")
-            execution_time_list.append((spark_app_id, query_name, summary['queryTimes']))
-            q_report.write_summary(query_name, prefix="")
+        if query_name in DELETE_FUNCS + INVENTORY_DELETE_FUNC:
+            summary = q_report.report_on(run_delete_query,spark_session,
+                                                          query_name,
+                                                          q_content)
+        else:
+            summary = q_report.report_on(run_insert_query, spark_session,
+                                                           q_content)
+        print(f"Time taken: {summary['queryTimes']} millis for {query_name}")
+        execution_time_list.append((spark_app_id, query_name, summary['queryTimes']))
+        q_report.write_summary(query_name, prefix="")
     spark_session.sparkContext.stop()
     DM_end = time.time()
     DM_elapse = DM_end - DM_start
