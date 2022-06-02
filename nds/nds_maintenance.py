@@ -150,9 +150,9 @@ def run_query(query_dict, time_log_output_path):
         print(f"====== Run {query_name} ======")
         q_report = PysparkBenchReport(spark_session)
         if query_name in DELETE_FUNCS + INVENTORY_DELETE_FUNC:
-            summary = q_report.report_on(run_delete_query,spark_session,
-                                                          query_name,
-                                                          q_content)
+            summary = q_report.report_on(run_delete_query, spark_session,
+                                                           query_name,
+                                                           q_content)
         else:
             summary = q_report.report_on(run_insert_query, spark_session,
                                                            q_content)
