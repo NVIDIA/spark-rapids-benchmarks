@@ -88,7 +88,7 @@ The utility requires a pre-defined [template file](./convert_submit_gpu.template
 necessary Spark configurations. Either user can submit the `nds_transcode.py` directly to spark with
 arbitary Spark parameters.
 
-Parquet and Orc are supported for output data foramt at present.
+Parquet, Orc, Avro, and JSON are supported for output data foramt at present.
 
 User can also specify `--tables` to convert specific table or tables. See argument details below.
 
@@ -114,7 +114,7 @@ optional arguments:
   --output_mode {overwrite,append,ignore,error,errorifexists,default}
                         save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modesdefault value is errorifexists, which is the Spark default behavior
   --output_format {parquet,orc}
-                        output data format when converting CSV data sources. Now supports parquet, orc.
+                        output data format when converting CSV data sources. Now supports parquet, orc, avro, and json.
   --tables TABLES       specify table names by a comma seprated string. e.g. 'catalog_page,catalog_sales'.
   --input_suffix INPUT_SUFFIX
                         text to append to every input filename (e.g., ".dat"; the default is empty)
