@@ -83,12 +83,12 @@ python nds_gen_data.py hdfs 100 100 /data/raw_sf100 --overwrite_output
 ### Convert CSV to Parquet or Other data sources
 
 To do the data conversion, the `nds_transcode.py` need to be submitted as a Spark job. User can leverage
-the [spark-submit-template](./spark-submit-template) utilty to simpify the submission.
-The utility requires a pre-defined [template file](./convert_submit_gpu.template)where user needs to put 
+the [spark-submit-template](./spark-submit-template) utility to simplify the submission.
+The utility requires a pre-defined [template file](./convert_submit_gpu.template) where user needs to put
 necessary Spark configurations. Either user can submit the `nds_transcode.py` directly to spark with
-arbitary Spark parameters.
+arbitrary Spark parameters.
 
-Parquet and Orc are supported for output data foramt at present.
+Parquet and Orc are supported for output data format at present.
 
 User can also specify `--tables` to convert specific table or tables. See argument details below.
 
@@ -144,7 +144,7 @@ the jars are downloaded to in spark submit templates.
 
 ### Data partitioning
 
-when converting CSV to Parquet data, the script will add data partitioning to some tables:
+When converting CSV to Parquet data, the script will add data partitioning to some tables:
 
 | Table              | Partition Column    |
 | -----------        | -----------         |
@@ -199,7 +199,7 @@ python nds_gen_query_stream.py $TPCDS_HOME/query_templates 3000 ./query_streams 
 
 ### Power Run
 
-_After_ user generates query streams, Power Run can be executed using one of the them by submitting `nds_power.py` to Spark. 
+_After_ user generates query streams, Power Run can be executed using one of them by submitting `nds_power.py` to Spark.
 
 Arguments supported for `nds_power.py`:
 ```
