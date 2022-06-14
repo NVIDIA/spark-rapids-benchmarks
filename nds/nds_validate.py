@@ -161,6 +161,9 @@ def iterate_queries(spark_session: SparkSession,
     # Providing a list instead of hard-coding all NDS queires is to satisfy the arbitary queries run.
     unmatch_queries = []
     for query in queries:
+        if query == 'query65':
+            # query65 is skipped due to: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/7#issuecomment-1147077894
+            continue
         sub_input1 = input1 + '/' + query
         sub_input2 = input2 + '/' + query
         print(f"=== Comparing Query: {query} ===")
