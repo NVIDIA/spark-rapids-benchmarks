@@ -98,7 +98,7 @@ otherwise DecimalType will be saved.
 arguments for `nds_transcode.py`:
 ```
 python nds_transcode.py -h
-usage: nds_transcode.py [-h] [--output_mode OUTPUT_MODE] [--input_suffix INPUT_SUFFIX]
+usage: nds_transcode.py [-h] [--output_mode OUTPUT_MODE]
                         [--log_level LOG_LEVEL] [--floats]
                         input_prefix output_prefix report_file
 
@@ -116,8 +116,6 @@ optional arguments:
   --output_format {parquet,orc}
                         output data format when converting CSV data sources. Now supports parquet, orc.
   --tables TABLES       specify table names by a comma seprated string. e.g. 'catalog_page,catalog_sales'.
-  --input_suffix INPUT_SUFFIX
-                        text to append to every input filename (e.g., ".dat"; the default is empty)
   --log_level LOG_LEVEL
                         set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: INFO)
   --floats              replace DecimalType with DoubleType when saving parquet files. If not specified,
