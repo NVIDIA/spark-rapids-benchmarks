@@ -193,15 +193,15 @@ public class GenTable extends Configured implements Tool {
         String cmd = "";
         for(int i = rangeStart; i <= rangeEnd; i++) {
           if(table.equals("all")) {
-            cmd += String.format("./dsdgen -dir $DIR -force Y -scale %d -parallel %d -child %d", scale, parallel, i)
+            cmd += String.format("./dsdgen -dir $DIR -force Y -scale %d -parallel %d -child %d", scale, parallel, i);
           } else {
-            cmd += String.format("./dsdgen -dir $DIR -table %s -force Y -scale %d -parallel %d -child %d", table, scale, parallel, i)
+            cmd += String.format("./dsdgen -dir $DIR -table %s -force Y -scale %d -parallel %d -child %d", table, scale, parallel, i);
           }
           if(update != 999999) {
-            cmd += String.format(" -update %d", update)
+            cmd += String.format(" -update %d", update);
           }
-          cmd += "\n"
-          out.writeBytes(cmd)
+          cmd += "\n";
+          out.writeBytes(cmd);
         }
         out.close();
         return in;
