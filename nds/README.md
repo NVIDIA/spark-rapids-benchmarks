@@ -84,12 +84,12 @@ python nds_gen_data.py hdfs 100 100 /data/raw_sf100 --overwrite_output
 ### Convert CSV to Parquet or Other data sources
 
 To do the data conversion, the `nds_transcode.py` need to be submitted as a Spark job. User can leverage
-the [spark-submit-template](./spark-submit-template) utilty to simpify the submission.
-The utility requires a pre-defined [template file](./convert_submit_gpu.template)where user needs to put 
+the [spark-submit-template](./spark-submit-template) utility to simplify the submission.
+The utility requires a pre-defined [template file](./convert_submit_gpu.template) where user needs to put
 necessary Spark configurations. Either user can submit the `nds_transcode.py` directly to spark with
-arbitary Spark parameters.
+arbitrary Spark parameters.
 
-Parquet and Orc are supported for output data foramt at present.
+Parquet and Orc are supported for output data format at present.
 
 User can also specify `--tables` to convert specific table or tables. See argument details below.
 
@@ -99,7 +99,7 @@ otherwise DecimalType will be saved.
 arguments for `nds_transcode.py`:
 ```
 python nds_transcode.py -h
-usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--output_format {parquet,orc,avro}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update] [--iceberg] [--compression COMPRESSION]
+usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--output_format {parquet,orc,avro,iceberg}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update] [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION]
                         input_prefix output_prefix report_file
 
 positional arguments:
@@ -148,7 +148,7 @@ the jars are downloaded to in spark submit templates.
 
 ### Data partitioning
 
-when converting CSV to Parquet data, the script will add data partitioning to some tables:
+When converting CSV to Parquet data, the script will add data partitioning to some tables:
 
 | Table              | Partition Column    |
 | -----------        | -----------         |
@@ -173,7 +173,7 @@ we applied the following changes to original templates released in TPC-DS v3.2.0
 ### Generate Specific Query or Query Streams
 
 ```
-usage: nds_gen_query_stream.py [-h] [--template TEMPLATE] [--streams STREAMS]
+usage: nds_gen_query_stream.py [-h] (--template TEMPLATE | --streams STREAMS)
                                template_dir scale output_dir
 
 positional arguments:
@@ -203,7 +203,7 @@ python nds_gen_query_stream.py $TPCDS_HOME/query_templates 3000 ./query_streams 
 
 ### Power Run
 
-_After_ user generates query streams, Power Run can be executed using one of the them by submitting `nds_power.py` to Spark. 
+_After_ user generates query streams, Power Run can be executed using one of them by submitting `nds_power.py` to Spark.
 
 Arguments supported for `nds_power.py`:
 ```
