@@ -332,7 +332,7 @@ def get_schemas(use_decimal):
         StructField("sr_store_sk", IntegerType()),
         StructField("sr_reason_sk", IntegerType()),
         # Use LongType due to https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1138379596
-        # Databricks is using LongType as well in their accpeted benchmark reports.
+        # Databricks is using LongType as well in their accepeted benchmark reports.
         # See https://www.tpc.org/results/supporting_files/tpcds/databricks~tpcds~100000~databricks_SQL_8.3~sup-1~2021-11-02~v01.zip
         StructField("sr_ticket_number", LongType(), nullable=False),
         StructField("sr_return_quantity", IntegerType()),
@@ -738,7 +738,7 @@ def load(session, filename, schema, delimiter="|", header="false", prefix=""):
     return session.read.option("delimiter", delimiter).option("header", header).csv(data_path, schema=schema)
 
 
-def store(session, df, filename, output_format, output_mode, use_iceberg, compression, prefix=""):
+def store(session, df, filename, output_format, output_mode, iceberg_write_format, compression, prefix=""):
     """Create Iceberg tables by CTAS
 
     Args:
@@ -751,7 +751,7 @@ def store(session, df, filename, output_format, output_mode, use_iceberg, compre
         compression (str): Parquet compression codec when saving Iceberg tables
         prefix (str): output data path when not using Iceberg.
     """
-    if use_iceberg:
+    if output_format == "iceberg":
         if output_mode == 'overwrite':
             session.sql(f"drop table if exists {filename}")
         CTAS = f"create table {filename} using iceberg "
@@ -762,9 +762,12 @@ def store(session, df, filename, output_format, output_mode, use_iceberg, compre
            CTAS += f"partitioned by ({TABLE_PARTITIONING[filename]})"
         else:
             df.coalesce(1).createOrReplaceTempView("temptbl")
-        CTAS += f" tblproperties('write.format.default' = '{output_format}'"
-        # the compression-codec won't panic when output_format is not parquet
-        CTAS += f", 'write.parquet.compression-codec' = '{compression}')"
+        CTAS += f" tblproperties('write.format.default' = '{iceberg_write_format}'"
+        # Iceberg now only support compression codec option for Parquet and Avro write.
+        if iceberg_write_format == "parquet":
+            CTAS += f", 'write.parquet.compression-codec' = '{compression}')"
+        elif iceberg_write_format == "avro":
+             CTAS += f", 'write.avro.compression-codec' = '{compression}')"
         CTAS += " as select * from temptbl"
         session.sql(CTAS)
     else:
@@ -773,10 +776,11 @@ def store(session, df, filename, output_format, output_mode, use_iceberg, compre
             df = df.repartition(
                 col(TABLE_PARTITIONING[filename])).sortWithinPartitions(
                     TABLE_PARTITIONING[filename])
-            df.write.format(output_format).mode(output_mode).partitionBy(
-                TABLE_PARTITIONING[filename]).save(data_path)
+            df.write.option('compression', compression).format(output_format).mode(
+                output_mode).partitionBy(TABLE_PARTITIONING[filename]).save(data_path)
         else:
-            df.coalesce(1).write.format(output_format).mode(output_mode).save(data_path)
+            df.coalesce(1).write.option('compression', compression).format(
+                output_format).mode(output_mode).save(data_path)
 
 def transcode(args):
     session = pyspark.sql.SparkSession.builder \
@@ -810,7 +814,7 @@ def transcode(args):
                           f"{fn}",
                           args.output_format,
                           args.output_mode,
-                          args.iceberg,
+                          args.iceberg_write_format,
                           args.compression,
                           args.output_prefix),
             number=1)
@@ -853,7 +857,7 @@ if __name__ == "__main__":
         default="errorifexists")
     parser.add_argument(
         '--output_format',
-        choices=['parquet', 'orc', 'avro'],
+        choices=['parquet', 'orc', 'avro', 'iceberg'],
         default='parquet',
         help="output data format when converting CSV data sources."
     )
@@ -875,15 +879,20 @@ if __name__ == "__main__":
         help='transcode the source data or update data'
     )
     parser.add_argument(
-        '--iceberg',
-        action='store_true',
-        help='Save converted data into Iceberg tables.'
+        '--iceberg_write_format',
+        choices=['parquet', 'orc', 'avro'],
+        default='parquet',
+        help='File format for the Iceberg table; parquet, avro, or orc'
     )
     parser.add_argument(
         '--compression',
         default='snappy',
-        help='Parquet compression codec. Iceberg is using gzip as default but spark-rapids plugin ' +
-        'does not support it yet, so default it to snappy.'
+        help='Compression codec when saving Parquet Orc or Iceberg data. Iceberg is using gzip as' +
+        ' default but spark-rapids plugin does not support it yet, so default it to snappy.' +
+        ' Please refer to https://iceberg.apache.org/docs/latest/configuration/#write-properties ' +
+        ' for supported codec for different output format such as Parquet or Avro in Iceberg.' +
+        ' Please refer to https://spark.apache.org/docs/latest/sql-data-sources.html' +
+        ' for supported codec when writing Parquet Orc or Avro by Spark. Default is Snappy.'
     )
     args = parser.parse_args()
     transcode(args)

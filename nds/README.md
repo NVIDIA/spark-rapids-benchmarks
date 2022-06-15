@@ -114,16 +114,18 @@ optional arguments:
   --output_mode {overwrite,append,ignore,error,errorifexists,default}
                         save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.
                         default value is errorifexists, which is the Spark default behavior.
-  --output_format {parquet,orc,avro}
+  --output_format {parquet,orc,avro,iceberg}
                         output data format when converting CSV data sources.
   --tables TABLES       specify table names by a comma seprated string. e.g. 'catalog_page,catalog_sales'.
   --log_level LOG_LEVEL
                         set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: INFO)
   --floats              replace DecimalType with DoubleType when saving parquet files. If not specified, decimal data will be saved.
   --update              transcode the source data or update data
-  --iceberg             Save converted data into Iceberg tables.
+  --iceberg_write_format {parquet,orc,avro}
+                        File format for the Iceberg table; parquet, avro, or orc
   --compression COMPRESSION
-                        Parquet compression codec. Iceberg is using gzip as default but spark-rapids plugin does not support it yet, so default it to snappy.
+                        Compression codec when saving Parquet Orc or Iceberg data. Iceberg is using gzip as default but spark-rapids plugin does not support it yet, so default it to snappy. Please refer to https://iceberg.apache.org/docs/latest/configuration/#write-properties for
+                        supported codec for different output format such as Parquet or Avro in Iceberg. Please refer to https://spark.apache.org/docs/latest/sql-data-sources.html for supported codec when writing Parquet Orc or Avro by Spark. Default is Snappy.
 
 ```
 
@@ -281,11 +283,11 @@ otherwise some query application may be in _WAITING_ status(which can be observe
 Yarn Resource Manager UI) until enough resources are released.
 
 ### Data Maintenance
-Data Maintenance performance data update over existed dataset including data INSERT and DELETE. Due
-to the limits of Spark that the update operations are not supported yet in Spark, we use
+Data Maintenance performance data update over existed dataset including data INSERT and DELETE. The
+update operations cannot be done atomically on raw Parquet/Orc files, so we use
 [Iceberg](https://iceberg.apache.org/) as dataset metadata manager to overcome the issue.
 
-To enable Iceberg, user must set proper configurations. Please refer to [Iceberg Spark](https://iceberg.apache.org/docs/latest/getting-started/)
+Enabling Iceberg requires additional configuration. Please refer to [Iceberg Spark](https://iceberg.apache.org/docs/latest/getting-started/)
 for details. We also provide a Spark submit template with necessary Iceberg configs: [convert_submit_cpu_iceberg.template](./convert_submit_cpu_iceberg.template)
 
 The data maintenance queries are in [data_maintenance](./data_maintenance) folder. `DF_*.sql` are

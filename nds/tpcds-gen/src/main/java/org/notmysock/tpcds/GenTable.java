@@ -99,12 +99,12 @@ public class GenTable extends Configured implements Tool {
         }
 
         // use 999999 for default update value to avoid user input conflict.
-        int update = 999999;
+        Integer update = null;
         if(line.hasOption("update")) {
           update = Integer.parseInt(line.getOptionValue("update"));
         }
 
-        if(update < 0) {
+        if(update != null && update < 0) {
           // TPC-DS will error if update is < 0
           System.err.println("The update value cannot be less than 0, your input: " + update);
         }
@@ -184,7 +184,7 @@ public class GenTable extends Configured implements Tool {
       return dst; 
     }
 
-    public Path genInput(String table, int scale, int parallel, int rangeStart, int rangeEnd, int update) throws Exception {
+    public Path genInput(String table, int scale, int parallel, int rangeStart, int rangeEnd, Integer update) throws Exception {
         long epoch = System.currentTimeMillis()/1000;
 
         Path in = new Path("/tmp/"+table+"_"+scale+"-"+epoch);
@@ -197,7 +197,7 @@ public class GenTable extends Configured implements Tool {
           } else {
             cmd += String.format("./dsdgen -dir $DIR -table %s -force Y -scale %d -parallel %d -child %d", table, scale, parallel, i);
           }
-          if(update != 999999) {
+          if(update != null) {
             cmd += String.format(" -update %d", update);
           }
           cmd += "\n";
