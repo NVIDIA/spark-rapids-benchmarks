@@ -156,13 +156,17 @@ def iterate_queries(spark_session: SparkSession,
                     queries: list,
                     use_iterator=False,
                     max_errors=10,
-                    epsilon=0.00001):
+                    epsilon=0.00001,
+                    is_float=False):
     # Iterate each query folder for a Power Run output
     # Providing a list instead of hard-coding all NDS queires is to satisfy the arbitary queries run.
     unmatch_queries = []
     for query in queries:
         if query == 'query65':
             # query65 is skipped due to: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/7#issuecomment-1147077894
+            continue
+        if query == 'query67' and is_float == True:
+            # query67 is skipped due to: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/7#issuecomment-1156214630
             continue
         sub_input1 = input1 + '/' + query
         sub_input2 = input2 + '/' + query
@@ -209,6 +213,9 @@ if __name__ == "__main__":
                         help='When set, use `toLocalIterator` to load one partition at a' +
                         'time into driver memory, reducing memory usage at the cost of performance' +
                         'because processing will be single-threaded.')
+    parser.add_argument('--floats',
+                        action='store_true',
+                        help='whether the input data contains float data or decimal data.')
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
     session_builder = SparkSession.builder.appName("Validate Query Output").getOrCreate()
@@ -220,4 +227,5 @@ if __name__ == "__main__":
                     query_dict.keys(),
                     use_iterator=args.use_iterator,
                     max_errors=args.max_errors,
-                    epsilon=args.epsilon)
+                    epsilon=args.epsilon,
+                    is_float=args.floats)
