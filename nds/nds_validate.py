@@ -1,3 +1,34 @@
+# -*- coding: utf-8 -*-
+#
+# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# -----
+#
+# Certain portions of the contents of this file are derived from TPC-DS version 3.2.0
+# (retrieved from www.tpc.org/tpc_documents_current_versions/current_specifications5.asp).
+# Such portions are subject to copyrights held by Transaction Processing Performance Council (“TPC”)
+# and licensed under the TPC EULA (a copy of which accompanies this file as “TPC EULA” and is also
+# available at http://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp) (the “TPC EULA”).
+#
+# You may not use this file except in compliance with the TPC EULA.
+# DISCLAIMER: Portions of this file is derived from the TPC-DS Benchmark and as such any results
+# obtained using this file are not comparable to published TPC-DS Benchmark results, as the results
+# obtained from using this file do not comply with the TPC-DS Benchmark.
+#
+
 import argparse
 import math
 import sys
@@ -192,10 +223,11 @@ if __name__ == "__main__":
                         help='path of the first input data')
     parser.add_argument('input2',
                         help='path of the second input data')
-    parser.add_argument('input_format',
-                        help='data source type. e.g. parquet, orc')
     parser.add_argument('query_stream_file',
                         help='query stream file that contains NDS queries in specific order.')
+    parser.add_argument('--input_format',
+                        default='parquet',
+                        help='data source type. e.g. parquet, orc. Default is: parquet')
     parser.add_argument('--max_errors',
                         help='Maximum number of differences to report.',
                         type=int,
@@ -203,18 +235,23 @@ if __name__ == "__main__":
     parser.add_argument('--epsilon',
                         type=float,
                         default=0.00001,
-                        help='Allow for differences in precision when comparing floating point values.')
+                        help='Allow for differences in precision when comparing floating point values.' +
+                        ' Given 2 float numbers: 0.000001 and 0.000000, the diff of them is 0.000001' +
+                        ' which is less than 0.00001, so we regard this as acceptable and will not' +
+                        ' report a mismatch.')
     parser.add_argument('--ignore_ordering',
                         action='store_true',
                         help='Sort the data collected from the DataFrames before comparing them.')
     parser.add_argument('--use_iterator',
                         action='store_true',
                         help='When set, use `toLocalIterator` to load one partition at a' +
-                        'time into driver memory, reducing memory usage at the cost of performance' +
-                        'because processing will be single-threaded.')
+                        ' time into driver memory, reducing memory usage at the cost of performance' +
+                        ' because processing will be single-threaded.')
     parser.add_argument('--floats',
                         action='store_true',
-                        help='whether the input data contains float data or decimal data.')
+                        help='whether the input data contains float data or decimal data. There\'re' +
+                        ' some known mismatch issues due to float point, we will do some special' +
+                        ' checks when the input data is float for some queries.')
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
     session_builder = SparkSession.builder.appName("Validate Query Output").getOrCreate()

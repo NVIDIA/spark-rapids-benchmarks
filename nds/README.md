@@ -290,26 +290,28 @@ usage: nds_validate.py [-h] [--max_errors MAX_ERRORS] [--epsilon EPSILON] [--ign
 positional arguments:
   input1                path of the first input data
   input2                path of the second input data
-  input_format          data source type. e.g. parquet, orc
   query_stream_file     query stream file that contains NDS queries in specific order.
 
 optional arguments:
   -h, --help            show this help message and exit
+  --input_format INPUT_FORMAT
+                        data source type. e.g. parquet, orc. Default is: parquet
   --max_errors MAX_ERRORS
                         Maximum number of differences to report.
   --epsilon EPSILON     Allow for differences in precision when comparing floating point values.
+                        Given 2 float numbers: 0.000001 and 0.000000, the diff of them is 0.000001 which is less than the epsilon 0.00001, so we regard this as acceptable and will not report a mismatch.
   --ignore_ordering     Sort the data collected from the DataFrames before comparing them.
-  --use_iterator        When set, use `toLocalIterator` to load one partition at atime into driver memory, reducing
-                        memory usage at the cost of performancebecause processing will be single-threaded.
-  --floats              whether the input data contains float data or decimal data.
+  --use_iterator        When set, use `toLocalIterator` to load one partition at a time into driver memory, reducing
+                        memory usage at the cost of performance because processing will be single-threaded.
+  --floats              whether the input data contains float data or decimal data. There're some known mismatch issues due to float point, we will do some special checks when the input data is float for some queries.
 ```
 
 Example command to compare two query output data:
 ```
-python validate.py \
+python nds_validate.py \
 query_output_cpu \
 query_output_gpu \
-parquet \
+--input_format parquet \
 ./nds_query_streams/query_1.sql \
 --ignore_ordering
 ```
