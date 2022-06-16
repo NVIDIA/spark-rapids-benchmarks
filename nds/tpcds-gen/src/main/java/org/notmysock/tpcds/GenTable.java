@@ -102,12 +102,13 @@ public class GenTable extends Configured implements Tool {
         Integer update = null;
         if(line.hasOption("update")) {
           update = Integer.parseInt(line.getOptionValue("update"));
+          if(update < 0) {
+            // TPC-DS will error if update is < 0
+            System.err.println("The update value cannot be less than 0, your input: " + update);
+          }
         }
 
-        if(update != null && update < 0) {
-          // TPC-DS will error if update is < 0
-          System.err.println("The update value cannot be less than 0, your input: " + update);
-        }
+        
 
         if(parallel == 1 || scale == 1) {
           System.err.println("The MR task does not work for scale=1 or parallel=1");

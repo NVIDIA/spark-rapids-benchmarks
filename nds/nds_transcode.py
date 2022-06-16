@@ -332,7 +332,7 @@ def get_schemas(use_decimal):
         StructField("sr_store_sk", IntegerType()),
         StructField("sr_reason_sk", IntegerType()),
         # Use LongType due to https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1138379596
-        # Databricks is using LongType as well in their accepeted benchmark reports.
+        # Databricks is using LongType as well in their accepted benchmark reports.
         # See https://www.tpc.org/results/supporting_files/tpcds/databricks~tpcds~100000~databricks_SQL_8.3~sup-1~2021-11-02~v01.zip
         StructField("sr_ticket_number", LongType(), nullable=False),
         StructField("sr_return_quantity", IntegerType()),
@@ -748,7 +748,7 @@ def store(session, df, filename, output_format, output_mode, iceberg_write_forma
         output_format (str): parquet, orc or avro
         write_mode (str): save modes as defined by "https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.
         use_iceberg (bool): write data into Iceberg tables
-        compression (str): Parquet compression codec when saving Iceberg tables
+        compression (str): compression codec for converted data when saving to disk
         prefix (str): output data path when not using Iceberg.
     """
     if output_format == "iceberg":
@@ -764,10 +764,12 @@ def store(session, df, filename, output_format, output_mode, iceberg_write_forma
             df.coalesce(1).createOrReplaceTempView("temptbl")
         CTAS += f" tblproperties('write.format.default' = '{iceberg_write_format}'"
         # Iceberg now only support compression codec option for Parquet and Avro write.
-        if iceberg_write_format == "parquet":
-            CTAS += f", 'write.parquet.compression-codec' = '{compression}')"
-        elif iceberg_write_format == "avro":
-             CTAS += f", 'write.avro.compression-codec' = '{compression}')"
+        if compression:
+            if iceberg_write_format == "parquet":
+                CTAS += f", 'write.parquet.compression-codec' = '{compression}'"
+            elif iceberg_write_format == "avro":
+                CTAS += f", 'write.avro.compression-codec' = '{compression}'"
+        CTAS += ")"
         CTAS += " as select * from temptbl"
         session.sql(CTAS)
     else:
@@ -776,11 +778,16 @@ def store(session, df, filename, output_format, output_mode, iceberg_write_forma
             df = df.repartition(
                 col(TABLE_PARTITIONING[filename])).sortWithinPartitions(
                     TABLE_PARTITIONING[filename])
-            df.write.option('compression', compression).format(output_format).mode(
+            writer = df.write
+            if compression:
+                writer = writer.option('compression', compression)
+            writer.format(output_format).mode(
                 output_mode).partitionBy(TABLE_PARTITIONING[filename]).save(data_path)
         else:
-            df.coalesce(1).write.option('compression', compression).format(
-                output_format).mode(output_mode).save(data_path)
+            writer = df.coalesce(1).write
+            if compression:
+                writer = writer.option('compression', compression)
+            writer.format(output_format).mode(output_mode).save(data_path)
 
 def transcode(args):
     session = pyspark.sql.SparkSession.builder \
@@ -886,13 +893,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         '--compression',
-        default='snappy',
-        help='Compression codec when saving Parquet Orc or Iceberg data. Iceberg is using gzip as' +
-        ' default but spark-rapids plugin does not support it yet, so default it to snappy.' +
+        help='Compression codec when saving Parquet Orc or Iceberg data.' +
         ' Please refer to https://iceberg.apache.org/docs/latest/configuration/#write-properties ' +
         ' for supported codec for different output format such as Parquet or Avro in Iceberg.' +
         ' Please refer to https://spark.apache.org/docs/latest/sql-data-sources.html' +
-        ' for supported codec when writing Parquet Orc or Avro by Spark. Default is Snappy.'
+        ' for supported codec when writing Parquet Orc or Avro by Spark.' +
+        ' When not specified, it will use Spark or Iceberg default ones.'
     )
     args = parser.parse_args()
     transcode(args)

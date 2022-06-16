@@ -124,8 +124,8 @@ optional arguments:
   --iceberg_write_format {parquet,orc,avro}
                         File format for the Iceberg table; parquet, avro, or orc
   --compression COMPRESSION
-                        Compression codec when saving Parquet Orc or Iceberg data. Iceberg is using gzip as default but spark-rapids plugin does not support it yet, so default it to snappy. Please refer to https://iceberg.apache.org/docs/latest/configuration/#write-properties for
-                        supported codec for different output format such as Parquet or Avro in Iceberg. Please refer to https://spark.apache.org/docs/latest/sql-data-sources.html for supported codec when writing Parquet Orc or Avro by Spark. Default is Snappy.
+                        Compression codec when saving Parquet Orc or Iceberg data. Please refer to https://iceberg.apache.org/docs/latest/configuration/#write-properties for supported codec for different output format such as Parquet or Avro in Iceberg. Please refer to
+                        https://spark.apache.org/docs/latest/sql-data-sources.html for supported codec when writing Parquet Orc or Avro by Spark. When not specified, it will use Spark or Iceberg default ones.
 
 ```
 
