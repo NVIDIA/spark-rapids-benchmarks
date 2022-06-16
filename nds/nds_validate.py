@@ -184,7 +184,6 @@ def iterate_queries(spark_session: SparkSession,
             unmatch_queries.append(query)
     if len(unmatch_queries) != 0:
         print(f"=== Unmatch Queries: {unmatch_queries} ===")
-        sys.exit(1)
 
 
 if __name__ == "__main__":

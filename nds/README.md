@@ -301,6 +301,7 @@ optional arguments:
   --ignore_ordering     Sort the data collected from the DataFrames before comparing them.
   --use_iterator        When set, use `toLocalIterator` to load one partition at atime into driver memory, reducing
                         memory usage at the cost of performancebecause processing will be single-threaded.
+  --floats              whether the input data contains float data or decimal data.
 ```
 
 Example command to compare two query output data:
