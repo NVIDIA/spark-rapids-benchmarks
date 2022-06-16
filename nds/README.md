@@ -311,7 +311,6 @@ Example command to compare two query output data:
 python nds_validate.py \
 query_output_cpu \
 query_output_gpu \
---input_format parquet \
 ./nds_query_streams/query_1.sql \
 --ignore_ordering
 ```
