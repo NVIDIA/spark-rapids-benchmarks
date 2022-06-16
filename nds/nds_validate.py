@@ -137,6 +137,7 @@ def collect_results(df: DataFrame,
 def rowEqual(row1, row2, epsilon, is_q78):
     # only simple types in a row for NDS results
     if is_q78:
+        # TODO: make the special compare for q78 more common and make it apply to other queries that contain round function
         # TODO: remove this special case after we resolve https://github.com/NVIDIA/spark-rapids/issues/1573
         # see example error case: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/7#issue-1247422850
         # Pop the 4th column value in q78, compare it alone.
