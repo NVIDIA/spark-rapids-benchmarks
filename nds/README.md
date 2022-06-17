@@ -201,7 +201,7 @@ python nds_gen_query_stream.py $TPCDS_HOME/query_templates 3000 ./query_streams 
 
 _After_ user generates query streams, Power Run can be executed using one of the them by submitting `nds_power.py` to Spark. 
 
-Arguments supported for `nds_power.py`:
+Arguments supported by `nds_power.py`:
 ```
 usage: nds_power.py [-h] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT]
                     input_prefix query_stream_file time_log
@@ -279,34 +279,34 @@ otherwise some query application may be in _WAITING_ status(which can be observe
 Yarn Resource Manager UI) until enough resources are released.
 
 ## Data Validation
-To validate query output between Power Runs w/o GPU, we providing [nds_validate.py](nds_validate.py) to do
+To validate query output between Power Runs w/o GPU, we provide [nds_validate.py](nds_validate.py) to do
 the job.
 
-Arguments supported for `nds_validate.py`:
+Arguments supported by `nds_validate.py`:
 ```
 usage: nds_validate.py [-h] [--max_errors MAX_ERRORS] [--epsilon EPSILON] [--ignore_ordering] [--use_iterator]
                        input1 input2 input_format query_stream_file
 
 positional arguments:
-  input1                path of the first input data
-  input2                path of the second input data
+  input1                path of the first input data.
+  input2                path of the second input data.
   query_stream_file     query stream file that contains NDS queries in specific order.
 
 optional arguments:
-  -h, --help            show this help message and exit
+  -h, --help            show this help message and exit.
   --input_format INPUT_FORMAT
-                        data source type. e.g. parquet, orc. Default is: parquet
+                        data source type. e.g. parquet, orc. Default is: parquet.
   --max_errors MAX_ERRORS
                         Maximum number of differences to report.
   --epsilon EPSILON     Allow for differences in precision when comparing floating point values.
                         Given 2 float numbers: 0.000001 and 0.000000, the diff of them is 0.000001 which is less than the epsilon 0.00001, so we regard this as acceptable and will not report a mismatch.
   --ignore_ordering     Sort the data collected from the DataFrames before comparing them.
-  --use_iterator        When set, use `toLocalIterator` to load one partition at a time into driver memory, reducing
+  --use_iterator        When set, use `toLocalIterator` to load one partition at a time into driver memory, reducing.
                         memory usage at the cost of performance because processing will be single-threaded.
   --floats              whether the input data contains float data or decimal data. There're some known mismatch issues due to float point, we will do some special checks when the input data is float for some queries.
 ```
 
-Example command to compare two query output data:
+Example command to compare output data of two queries:
 ```
 python nds_validate.py \
 query_output_cpu \

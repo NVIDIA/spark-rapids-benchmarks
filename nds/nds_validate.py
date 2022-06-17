@@ -31,7 +31,6 @@
 
 import argparse
 import math
-import sys
 import time
 from decimal import *
 from pyspark.sql import DataFrame, SparkSession
@@ -197,7 +196,7 @@ def iterate_queries(spark_session: SparkSession,
         if query == 'query65':
             # query65 is skipped due to: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/7#issuecomment-1147077894
             continue
-        if query == 'query67' and is_float == True:
+        if query == 'query67' and is_float:
             # query67 is skipped due to: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/7#issuecomment-1156214630
             continue
         sub_input1 = input1 + '/' + query
@@ -221,14 +220,14 @@ def iterate_queries(spark_session: SparkSession,
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
     parser.add_argument('input1',
-                        help='path of the first input data')
+                        help='path of the first input data.')
     parser.add_argument('input2',
-                        help='path of the second input data')
+                        help='path of the second input data.')
     parser.add_argument('query_stream_file',
                         help='query stream file that contains NDS queries in specific order.')
     parser.add_argument('--input_format',
                         default='parquet',
-                        help='data source type. e.g. parquet, orc. Default is: parquet')
+                        help='data source type. e.g. parquet, orc. Default is: parquet.')
     parser.add_argument('--max_errors',
                         help='Maximum number of differences to report.',
                         type=int,
