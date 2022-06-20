@@ -33,6 +33,7 @@ import argparse
 import math
 import time
 from decimal import *
+
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import *
 from pyspark.sql.functions import col
@@ -202,16 +203,16 @@ def iterate_queries(spark_session: SparkSession,
         sub_input1 = input1 + '/' + query
         sub_input2 = input2 + '/' + query
         print(f"=== Comparing Query: {query} ===")
-        compare_result = compare_results(spark_session,
-                        sub_input1,
-                        sub_input2,
-                        input_format,
-                        ignore_ordering,
-                        query == 'query78',
-                        use_iterator=use_iterator,
-                        max_errors=max_errors,
-                        epsilon=epsilon)
-        if compare_result == False:
+        result_equal = compare_results(spark_session,
+                                         sub_input1,
+                                         sub_input2,
+                                         input_format,
+                                         ignore_ordering,
+                                         query == 'query78',
+                                         use_iterator=use_iterator,
+                                         max_errors=max_errors,
+                                         epsilon=epsilon)
+        if result_equal == False:
             unmatch_queries.append(query)
     if len(unmatch_queries) != 0:
         print(f"=== Unmatch Queries: {unmatch_queries} ===")
