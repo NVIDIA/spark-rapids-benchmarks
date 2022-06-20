@@ -293,6 +293,11 @@ for details. We also provide a Spark submit template with necessary Iceberg conf
 The data maintenance queries are in [data_maintenance](./data_maintenance) folder. `DF_*.sql` are
 DELETE queries while `LF_*.sql` are INSERT queries.
 
+Note: The Delete functions in Data Maintenance cannot run successfully in Spark 3.2.0 and 3.2.1 due 
+to a known Spark [issue](https://issues.apache.org/jira/browse/SPARK-39454). User can run it in Spark 3.2.2
+or later. More details including work-around for version 3.2.0 and 3.2.1 could be found in this 
+[link](https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1141956487)
+
 Arguments supported for data maintenance:
 ```
 usage: nds_maintenance.py [-h] [--maintenance_queries MAINTENANCE_QUERIES] maintenance_queries_folder time_log
