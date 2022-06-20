@@ -279,8 +279,8 @@ otherwise some query application may be in _WAITING_ status(which can be observe
 Yarn Resource Manager UI) until enough resources are released.
 
 ## Data Validation
-To validate query output between Power Runs w/o GPU, we provide [nds_validate.py](nds_validate.py) to do
-the job.
+To validate query output between Power Runs with and without GPU, we provide [nds_validate.py](nds_validate.py)
+to do the job.
 
 Arguments supported by `nds_validate.py`:
 ```
