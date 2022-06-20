@@ -284,8 +284,8 @@ the job.
 
 Arguments supported by `nds_validate.py`:
 ```
-usage: nds_validate.py [-h] [--max_errors MAX_ERRORS] [--epsilon EPSILON] [--ignore_ordering] [--use_iterator]
-                       input1 input2 input_format query_stream_file
+usage: nds_validate.py [-h] [--input_format INPUT_FORMAT] [--max_errors MAX_ERRORS] [--epsilon EPSILON]
+                       [--ignore_ordering] [--use_iterator] [--floats] input1 input2 query_stream_file
 
 positional arguments:
   input1                path of the first input data.
