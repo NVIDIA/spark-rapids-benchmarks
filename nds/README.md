@@ -83,12 +83,12 @@ python nds_gen_data.py hdfs 100 100 /data/raw_sf100 --overwrite_output
 ### Convert CSV to Parquet or Other data sources
 
 To do the data conversion, the `nds_transcode.py` need to be submitted as a Spark job. User can leverage
-the [spark-submit-template](./spark-submit-template) utilty to simpify the submission.
-The utility requires a pre-defined [template file](./convert_submit_gpu.template)where user needs to put 
+the [spark-submit-template](./spark-submit-template) utility to simplify the submission.
+The utility requires a pre-defined [template file](./convert_submit_gpu.template) where user needs to put
 necessary Spark configurations. Either user can submit the `nds_transcode.py` directly to spark with
-arbitary Spark parameters.
+arbitrary Spark parameters.
 
-Parquet, Orc, Avro, and JSON are supported for output data foramt at present.
+Parquet, Orc, and JSON are supported for output data format at present.
 
 User can also specify `--tables` to convert specific table or tables. See argument details below.
 
@@ -98,7 +98,7 @@ otherwise DecimalType will be saved.
 arguments for `nds_transcode.py`:
 ```
 python nds_transcode.py -h
-usage: nds_transcode.py [-h] [--output_mode OUTPUT_MODE] [--input_suffix INPUT_SUFFIX]
+usage: nds_transcode.py [-h] [--output_mode OUTPUT_MODE]
                         [--log_level LOG_LEVEL] [--floats]
                         input_prefix output_prefix report_file
 
@@ -116,8 +116,6 @@ optional arguments:
   --output_format {parquet,orc}
                         output data format when converting CSV data sources. Now supports parquet, orc, avro, and json.
   --tables TABLES       specify table names by a comma seprated string. e.g. 'catalog_page,catalog_sales'.
-  --input_suffix INPUT_SUFFIX
-                        text to append to every input filename (e.g., ".dat"; the default is empty)
   --log_level LOG_LEVEL
                         set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: INFO)
   --floats              replace DecimalType with DoubleType when saving parquet files. If not specified,
@@ -144,7 +142,7 @@ the jars are downloaded to in spark submit templates.
 
 ### Data partitioning
 
-when converting CSV to Parquet data, the script will add data partitioning to some tables:
+When converting CSV to Parquet data, the script will add data partitioning to some tables:
 
 | Table              | Partition Column    |
 | -----------        | -----------         |
@@ -199,9 +197,9 @@ python nds_gen_query_stream.py $TPCDS_HOME/query_templates 3000 ./query_streams 
 
 ### Power Run
 
-_After_ user generates query streams, Power Run can be executed using one of the them by submitting `nds_power.py` to Spark. 
+_After_ user generates query streams, Power Run can be executed using one of them by submitting `nds_power.py` to Spark.
 
-Arguments supported for `nds_power.py`:
+Arguments supported by `nds_power.py`:
 ```
 usage: nds_power.py [-h] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT]
                     input_prefix query_stream_file time_log
@@ -277,5 +275,42 @@ When providing `spark-submit-template` to Throughput Run, please do consider the
 in your environment to make sure all Spark job can get necessary resources to run at the same time,
 otherwise some query application may be in _WAITING_ status(which can be observed from Spark UI or 
 Yarn Resource Manager UI) until enough resources are released.
+
+## Data Validation
+To validate query output between Power Runs with and without GPU, we provide [nds_validate.py](nds_validate.py)
+to do the job.
+
+Arguments supported by `nds_validate.py`:
+```
+usage: nds_validate.py [-h] [--input_format INPUT_FORMAT] [--max_errors MAX_ERRORS] [--epsilon EPSILON]
+                       [--ignore_ordering] [--use_iterator] [--floats] input1 input2 query_stream_file
+
+positional arguments:
+  input1                path of the first input data.
+  input2                path of the second input data.
+  query_stream_file     query stream file that contains NDS queries in specific order.
+
+optional arguments:
+  -h, --help            show this help message and exit.
+  --input_format INPUT_FORMAT
+                        data source type. e.g. parquet, orc. Default is: parquet.
+  --max_errors MAX_ERRORS
+                        Maximum number of differences to report.
+  --epsilon EPSILON     Allow for differences in precision when comparing floating point values.
+                        Given 2 float numbers: 0.000001 and 0.000000, the diff of them is 0.000001 which is less than the epsilon 0.00001, so we regard this as acceptable and will not report a mismatch.
+  --ignore_ordering     Sort the data collected from the DataFrames before comparing them.
+  --use_iterator        When set, use `toLocalIterator` to load one partition at a time into driver memory, reducing.
+                        memory usage at the cost of performance because processing will be single-threaded.
+  --floats              whether the input data contains float data or decimal data. There're some known mismatch issues due to float point, we will do some special checks when the input data is float for some queries.
+```
+
+Example command to compare output data of two queries:
+```
+python nds_validate.py \
+query_output_cpu \
+query_output_gpu \
+./nds_query_streams/query_1.sql \
+--ignore_ordering
+```
 
 ### NDS2.0 is using source code from TPC-DS Tool V3.2.0
