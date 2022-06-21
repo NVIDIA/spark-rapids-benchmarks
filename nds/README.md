@@ -88,7 +88,8 @@ The utility requires a pre-defined [template file](./convert_submit_gpu.template
 necessary Spark configurations. Either user can submit the `nds_transcode.py` directly to spark with
 arbitrary Spark parameters.
 
-Parquet, Orc, and JSON are supported for output data format at present.
+Parquet, Orc, and JSON are supported for output data format at present with CPU. For GPU conversion, only Parquet 
+and Orc are supported.
 
 User can also specify `--tables` to convert specific table or tables. See argument details below.
 
