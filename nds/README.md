@@ -201,8 +201,7 @@ _After_ user generates query streams, Power Run can be executed using one of the
 
 Arguments supported by `nds_power.py`:
 ```
-usage: nds_power.py [-h] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT]
-                    input_prefix query_stream_file time_log
+usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] input_prefix query_stream_file time_log
 
 positional arguments:
   input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data")
@@ -211,12 +210,15 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+  --input_format {parquet,orc,avro,csv,json}
+                        type for input data source, e.g. parquet, orc, json, csv. Certain types are not fully supported by GPU reading, please refer to https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md for more details.
   --output_prefix OUTPUT_PREFIX
                         text to prepend to every output file (e.g., "hdfs:///ds-parquet")
   --output_format OUTPUT_FORMAT
                         type of query output
   --property_file PROPERTY_FILE
                         property file for Spark configuration.
+  --floats              When loading Text files like json and csv, schemas are required to determine if certain parts of the data are read as decimal type or not. If specified, float data will be used.
 
 ```
 
