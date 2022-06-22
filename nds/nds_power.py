@@ -78,13 +78,25 @@ def gen_sql_from_stream(query_stream_file_path):
         extended_queries[q_name] = '-- start' + q_content
     return extended_queries
 
-def setup_tables(spark_session, input_prefix, execution_time_list):
+def setup_tables(spark_session, input_prefix, input_format, use_decimal, execution_time_list):
+    """set up data tables in Spark before running the Power Run queries.
+
+    Args:
+        spark_session (SparkSession): a SparkSession instance to run queries.
+        input_prefix (str): path of input data.
+        input_format (str): type of input data source, e.g. parquet, orc, csv, json.
+        use_decimal (bool): use decimal type for certain columns when loading data of text type.
+        execution_time_list ([(str, str, int)]): a list to record query and its execution time.
+
+    Returns:
+        execution_time_list: a list recording query execution time.
+    """
     spark_app_id = spark_session.sparkContext.applicationId
     # Create TempView for tables
     for table_name in get_schemas(False).keys():
         start = int(time.time() * 1000)
         table_path = input_prefix + '/' + table_name
-        spark_session.read.parquet(
+        spark_session.read.format(input_format).schema(get_schemas(use_decimal)['table_name']).load(
             table_path).createOrReplaceTempView(table_name)
         end = int(time.time() * 1000)
         print("====== Creating TempView for table {} ======".format(table_name))
@@ -149,18 +161,22 @@ def run_query_stream(input_prefix,
                      property_file,
                      query_dict,
                      time_log_output_path,
+                     input_format="parquet",
+                     use_decimal=True,
                      output_path=None,
                      output_format="parquet"):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
-    for easy accesibility. TempView Creation time is also recorded
+    for easy accesibility. TempView Creation time is also recorded.
 
     Args:
         input_prefix (str): path of input data
         query_dict (OrderedDict): ordered dict {query_name: query_content} of all TPC-DS queries runnable in Spark
         time_log_output_path (str): path of the log that contains query execution time, both local
                                     and HDFS path are supported.
+        input_format (str, optional): type of input data source.
+        use_deciaml(bool, optional): use decimal type for certain columns when loading data of text type.
         output_path (str, optional): path of query output, optinal. If not specified, collect()
-                                     action will be applied to each query . Defaults to None.
+                                     action will be applied to each query. Defaults to None.
         output_format (str, optional): query output format, choices are csv, orc, parquet. Defaults
         to "parquet".
     """
@@ -181,7 +197,8 @@ def run_query_stream(input_prefix,
     spark_session = session_builder.appName(
         app_name).getOrCreate()
     spark_app_id = spark_session.sparkContext.applicationId
-    execution_time_list = setup_tables(spark_session, input_prefix, execution_time_list)
+    execution_time_list = setup_tables(spark_session, input_prefix, input_format, use_decimal,
+                                       execution_time_list)
 
     # Run query
     power_start = time.time()
@@ -238,6 +255,13 @@ if __name__ == "__main__":
     parser.add_argument('time_log',
                         help='path to execution time log, only support local path.',
                         default="")
+    parser.add_argument('--input_format',
+                        help='type for input data source, e.g. parquet, orc, json, csv. ' +
+                        'Certain types are not fully supported by GPU reading, please refer to ' +
+                        'https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md ' +
+                        'for more details.',
+                        choices=['parquet', 'orc', 'avro', 'csv', 'json'],
+                        default='parquet')
     parser.add_argument('--output_prefix',
                         help='text to prepend to every output file (e.g., "hdfs:///ds-parquet")')
     parser.add_argument('--output_format',
@@ -245,6 +269,11 @@ if __name__ == "__main__":
                         default='parquet')
     parser.add_argument('--property_file',
                         help='property file for Spark configuration.')
+    parser.add_argument('--floats',
+                        action='store_true',
+                        help='When loading Text files like json and csv, schemas are required to ' +
+                        'determine if certain parts of the data are read as decimal type or not. '+
+                        'If specified, float data will be used.')
 
 
     args = parser.parse_args()
@@ -253,5 +282,7 @@ if __name__ == "__main__":
                      args.property_file,
                      query_dict,
                      args.time_log,
+                     args.input_format,
+                     not args.floats,
                      args.output_prefix,
                      args.output_format)
