@@ -63,12 +63,6 @@ def get_schemas(use_decimal):
         dict: {table_name: schema}
     """
     SCHEMAS = {}
-    SCHEMAS["dbgen_version"] = StructType([
-        StructField("dv_version", VarcharType(16)),
-        StructField("dv_create_date", DateType()),
-        StructField("dv_create_time", TimestampType()),
-        StructField("dv_cmdline_args", VarcharType(200))
-    ])
 
     SCHEMAS["customer_address"] = StructType([
         StructField("ca_address_sk", IntegerType(), nullable=False),
