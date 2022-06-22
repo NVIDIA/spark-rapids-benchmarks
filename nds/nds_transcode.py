@@ -664,7 +664,7 @@ if __name__ == "__main__":
         default="errorifexists")
     parser.add_argument(
         '--output_format',
-        choices=['parquet', 'orc', 'avro'],
+        choices=['parquet', 'orc', 'avro', 'json'],
         default='parquet',
         help="output data format when converting CSV data sources."
     )
