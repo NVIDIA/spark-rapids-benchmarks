@@ -222,17 +222,17 @@ def run_query_stream(input_prefix,
         q_report.write_summary(query_name, prefix=summary_prefix)
     spark_session.sparkContext.stop()
     total_time_end = time.time()
-    power_elapse = total_time_end - power_start
-    total_elapse = total_time_end - total_time_start
-    print("====== Power Test Time: {} s ======".format(power_elapse))
-    print("====== Total Time: {} s ======".format(total_elapse))
+    power_elapse = int((total_time_end - power_start)*1000)
+    total_elapse = int((total_time_end - total_time_start)*1000)
+    print("====== Power Test Time: {} milliseconds ======".format(power_elapse))
+    print("====== Total Time: {} milliseconds ======".format(total_elapse))
     execution_time_list.append(
         (spark_app_id, "Power Test Time", power_elapse))
     execution_time_list.append(
-        (spark_app_id, "Total Time", total_time_end - total_time_start))
+        (spark_app_id, "Total Time", total_elapse))
 
     # write to local csv file
-    header = ["application_id", "query", "time/s"]
+    header = ["application_id", "query", "time/milliseconds"]
     with open(time_log_output_path, 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
         writer.writerow(header)
