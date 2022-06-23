@@ -59,6 +59,7 @@ public class GenTable extends Configured implements Tool {
         options.addOption("p", "parallel", true, "parallel");
         options.addOption("r", "range", true, "child range in one data generation run");
         options.addOption("o", "overwrite", false, "overwrite existing data");
+        options.addOption("u", "update", false, "generate data for Data Maintenance");
         CommandLine line = parser.parse(options, remainingArgs);
 
         if(!(line.hasOption("scale") && line.hasOption("dir"))) {
@@ -97,12 +98,24 @@ public class GenTable extends Configured implements Tool {
             }
         }
 
+        // use 999999 for default update value to avoid user input conflict.
+        Integer update = null;
+        if(line.hasOption("update")) {
+          update = Integer.parseInt(line.getOptionValue("update"));
+          if(update < 0) {
+            // TPC-DS will error if update is < 0
+            System.err.println("The update value cannot be less than 0, your input: " + update);
+          }
+        }
+
+        
+
         if(parallel == 1 || scale == 1) {
           System.err.println("The MR task does not work for scale=1 or parallel=1");
           return 1;
         }
 
-        Path in = genInput(table, scale, parallel, rangeStart, rangeEnd);
+        Path in = genInput(table, scale, parallel, rangeStart, rangeEnd, update);
 
         Path dsdgen = copyJar(new File("target/lib/dsdgen.jar"));
         URI dsuri = dsdgen.toUri();
@@ -172,18 +185,24 @@ public class GenTable extends Configured implements Tool {
       return dst; 
     }
 
-    public Path genInput(String table, int scale, int parallel, int rangeStart, int rangeEnd) throws Exception {
+    public Path genInput(String table, int scale, int parallel, int rangeStart, int rangeEnd, Integer update) throws Exception {
         long epoch = System.currentTimeMillis()/1000;
 
         Path in = new Path("/tmp/"+table+"_"+scale+"-"+epoch);
         FileSystem fs = FileSystem.get(getConf());
         FSDataOutputStream out = fs.create(in);
+        String cmd = "";
         for(int i = rangeStart; i <= rangeEnd; i++) {
           if(table.equals("all")) {
-            out.writeBytes(String.format("./dsdgen -dir $DIR -force Y -scale %d -parallel %d -child %d\n", scale, parallel, i));
+            cmd += String.format("./dsdgen -dir $DIR -force Y -scale %d -parallel %d -child %d", scale, parallel, i);
           } else {
-            out.writeBytes(String.format("./dsdgen -dir $DIR -table %s -force Y -scale %d -parallel %d -child %d\n", table, scale, parallel, i));
+            cmd += String.format("./dsdgen -dir $DIR -table %s -force Y -scale %d -parallel %d -child %d", table, scale, parallel, i);
           }
+          if(update != null) {
+            cmd += String.format(" -update %d", update);
+          }
+          cmd += "\n";
+          out.writeBytes(cmd);
         }
         out.close();
         return in;

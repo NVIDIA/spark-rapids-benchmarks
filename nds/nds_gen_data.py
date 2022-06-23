@@ -38,7 +38,7 @@ from check import check_build, check_version, get_abs_path, get_dir_size, parall
 
 check_version()
 
-table_names = [
+source_table_names = [
     'call_center',
     'catalog_page',
     'catalog_returns',
@@ -66,6 +66,18 @@ table_names = [
     'web_site',
 ]
 
+maintenance_table_names = [
+    's_catalog_order',
+    's_catalog_order_lineitem',
+    's_catalog_returns',
+    's_inventory',
+    's_purchase',
+    's_purchase_lineitem',
+    's_store_returns',
+    's_web_order',
+    's_web_order_lineitem',
+    's_web_returns'
+]
 
 def clean_temp_data(temp_data_path):
     cmd = ['hadoop', 'fs', '-rm', '-r', '-skipTrash', temp_data_path]
@@ -73,7 +85,7 @@ def clean_temp_data(temp_data_path):
     subprocess.run(cmd)
 
 
-def merge_temp_tables(temp_data_path, parent_data_path):
+def merge_temp_tables(temp_data_path, parent_data_path, update):
     """Helper functions for incremental data generation. Move data in temporary child range path to
     parent directory.
 
@@ -81,6 +93,10 @@ def merge_temp_tables(temp_data_path, parent_data_path):
         temp_data_path (str): temorary child range data path
         parent_data_path (str): parent data path
     """
+    if update:
+        table_names = maintenance_table_names
+    else:
+        table_names = source_table_names
     for table_name in table_names:
         # manually create table sub-folders
         # redundant step if it's not the first range part.
@@ -123,6 +139,8 @@ def generate_data_hdfs(args, jar_path):
     tpcds_gen_path = jar_path.parent.parent.absolute()
     if args.overwrite_output:
         cmd += ['-o']
+    if args.update:
+            cmd += ["-u", args.update]
     if args.range:
         # use a temp folder to save the specific range data.
         # will move the content to parent folder afterwards.
@@ -179,6 +197,8 @@ def generate_data_local(args, range_start, range_end, tool_path):
                        "-verbose", "Y"]
         if args.overwrite_output:
             dsdgen_args += ["-force", "Y"]
+        if args.update:
+            dsdgen_args += ["-update", args.update]
         procs.append(subprocess.Popen(
             ["./dsdgen"] + dsdgen_args, cwd=str(work_dir)))
     # wait for data generation to complete
@@ -188,6 +208,10 @@ def generate_data_local(args, range_start, range_end, tool_path):
             print("dsdgen failed with return code {}".format(p.returncode))
             raise Exception("dsdgen failed")
     # move multi-partition files into table folders
+    if args.update:
+        table_names = maintenance_table_names
+    else:
+        table_names = source_table_names
     for table in table_names:
         print('mkdir -p {}/{}'.format(data_dir, table))
         subprocess.run(['mkdir', '-p', data_dir + '/' + table])
@@ -235,6 +259,9 @@ if __name__ == "__main__":
     parser.add_argument("--replication",
                         help="the number of replication factor when generating data to HDFS. " +
                         "if not set, the Hadoop job will use the setting in the Hadoop cluster.")
+    parser.add_argument("--update",
+                        help="generate update dataset <n>. <n> is identical to the number of " +
+                        "streams used in the Throughput Tests of the benchmark")
 
 
     args = parser.parse_args()

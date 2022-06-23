@@ -72,6 +72,7 @@ optional arguments:
   --overwrite_output  overwrite if there has already existing data in the path provided.
   --replication REPLICATION
                       the number of replication factor when generating data to HDFS. if not set, the Hadoop job will use the setting in the Hadoop cluster.
+  --update UPDATE     generate update dataset <n>. <n> is identical to the number of streams used in the Throughput Tests of the benchmark
 ```
 
 Example command:
@@ -99,28 +100,31 @@ otherwise DecimalType will be saved.
 arguments for `nds_transcode.py`:
 ```
 python nds_transcode.py -h
-usage: nds_transcode.py [-h] [--output_mode OUTPUT_MODE]
-                        [--log_level LOG_LEVEL] [--floats]
-                        input_prefix output_prefix report_file
+usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--output_format {parquet,orc,avro,iceberg}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update] [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION] input_prefix output_prefix report_file
 
 positional arguments:
   input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"; the
                         default is empty)
-  output_prefix         text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is
-                        empty)
+  output_prefix         text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is empty).
+                        This positional arguments will not take effect if "--iceberg" is specified and user needs to set Iceberg table path in their Spark submit templates/configs.
   report_file           location to store a performance report(local)
 
 optional arguments:
   -h, --help            show this help message and exit
-  --output_mode {overwrite,append,ignore,error,errorifexists,default}
-                        save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modesdefault value is errorifexists, which is the Spark default behavior
-  --output_format {parquet,orc}
-                        output data format when converting CSV data sources. Now supports parquet, orc, avro, and json.
+  --output_mode {overwrite,append,ignore,error,errorifexists}
+                        save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.default value is errorifexists, which is the Spark default behavior.
+  --output_format {parquet,orc,avro,json,iceberg}
+                        output data format when converting CSV data sources.
   --tables TABLES       specify table names by a comma seprated string. e.g. 'catalog_page,catalog_sales'.
   --log_level LOG_LEVEL
                         set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: INFO)
-  --floats              replace DecimalType with DoubleType when saving parquet files. If not specified,
-                        decimal data will be saved.
+  --floats              replace DecimalType with DoubleType when saving parquet files. If not specified, decimal data will be saved.
+  --update              transcode the source data or update data
+  --iceberg_write_format {parquet,orc,avro}
+                        File format for the Iceberg table; parquet, avro, or orc
+  --compression COMPRESSION
+                        Compression codec to use when saving data. See https://iceberg.apache.org/docs/latest/configuration/#write-properties for supported codecs in Iceberg. See
+                        https://spark.apache.org/docs/latest/sql-data-sources.html for supported codecs for Spark built-in formats. When not specified, the default for the requested output format will be used.
 
 ```
 
@@ -278,6 +282,46 @@ When providing `spark-submit-template` to Throughput Run, please do consider the
 in your environment to make sure all Spark job can get necessary resources to run at the same time,
 otherwise some query application may be in _WAITING_ status(which can be observed from Spark UI or 
 Yarn Resource Manager UI) until enough resources are released.
+
+### Data Maintenance
+Data Maintenance performance data update over existed dataset including data INSERT and DELETE. The
+update operations cannot be done atomically on raw Parquet/Orc files, so we use
+[Iceberg](https://iceberg.apache.org/) as dataset metadata manager to overcome the issue.
+
+Enabling Iceberg requires additional configuration. Please refer to [Iceberg Spark](https://iceberg.apache.org/docs/latest/getting-started/)
+for details. We also provide a Spark submit template with necessary Iceberg configs: [convert_submit_cpu_iceberg.template](./convert_submit_cpu_iceberg.template)
+
+The data maintenance queries are in [data_maintenance](./data_maintenance) folder. `DF_*.sql` are
+DELETE queries while `LF_*.sql` are INSERT queries.
+
+Note: The Delete functions in Data Maintenance cannot run successfully in Spark 3.2.0 and 3.2.1 due 
+to a known Spark [issue](https://issues.apache.org/jira/browse/SPARK-39454). User can run it in Spark 3.2.2
+or later. More details including work-around for version 3.2.0 and 3.2.1 could be found in this 
+[link](https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1141956487)
+
+Arguments supported for data maintenance:
+```
+usage: nds_maintenance.py [-h] [--maintenance_queries MAINTENANCE_QUERIES] maintenance_queries_folder time_log
+
+positional arguments:
+  maintenance_queries_folder
+                        folder contains all NDS Data Maintenance queries. If "--maintenance_queries"
+                        is not set, all queries under the folder will beexecuted.
+  time_log              path to execution time log in csv format, only support local path.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --maintenance_queries MAINTENANCE_QUERIES
+                        specify Data Maintenance query names by a comma seprated string. e.g. "LF_CR,LF_CS"
+```
+
+An example command to run only _LF_CS_ and _DF_CS_ functions:
+```
+./spark-submit-template convert_submit_cpu_iceberg.template \
+nds_maintenance.py \
+./data_maintenance \
+time.csv \
+--maintenance_queries LF_CS,DF_CS
 
 ## Data Validation
 To validate query output between Power Runs with and without GPU, we provide [nds_validate.py](nds_validate.py)
