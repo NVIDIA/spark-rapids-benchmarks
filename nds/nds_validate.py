@@ -30,7 +30,10 @@
 #
 
 import argparse
+import glob
+import json
 import math
+import os
 import time
 from decimal import *
 
@@ -216,7 +219,35 @@ def iterate_queries(spark_session: SparkSession,
             unmatch_queries.append(query)
     if len(unmatch_queries) != 0:
         print(f"=== Unmatch Queries: {unmatch_queries} ===")
+    return unmatch_queries
 
+def update_summary(prefix, unmatch_queries):
+    """update the queryStatus field in json summary file.
+    If the queryStatus is 'Completed' or 'CompletedWithTaskFailures' but validation failed,
+    update the status to NotValid.
+
+    Args:
+        prefix (str): folder of the json summary files
+        unmatch_queries ([str]): list of queries that failed validation
+    """
+    if not os.path.exists(args.json_summary_folder):
+        raise Exception("The json summary folder doesn't exist.")
+    if unmatch_queries == []:
+        pass
+    else:
+        print("Updating queryStatus.")
+        for query_name in unmatch_queries:
+            summary_wildcard = prefix + f'/*{query_name}*.json'
+            file_glob = glob.glob(summary_wildcard)
+            if len(file_glob) > 1:
+                raise Exception(f"More than one summary file found for query {query_name}")
+            for filename in glob.glob(summary_wildcard):
+                with open(filename, 'r') as f:
+                    summary = json.load(f)
+                    if 'Completed' in summary['queryStatus'] or 'CompletedWithTaskFailures' in summary['queryStatus']:
+                        summary['queryStatus'] = ['NotValid']
+                with open(filename, 'w') as f:
+                    json.dump(summary, f, indent=4)
 
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
@@ -253,16 +284,20 @@ if __name__ == "__main__":
                         help='whether the input data contains float data or decimal data. There\'re' +
                         ' some known mismatch issues due to float point, we will do some special' +
                         ' checks when the input data is float for some queries.')
+    parser.add_argument('--json_summary_folder',
+                        required=True,
+                        help='path of a folder that contains json summary file for each query.')
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
     session_builder = SparkSession.builder.appName("Validate Query Output").getOrCreate()
-    iterate_queries(session_builder,
-                    args.input1,
-                    args.input2,
-                    args.input_format,
-                    args.ignore_ordering,
-                    query_dict.keys(),
-                    use_iterator=args.use_iterator,
-                    max_errors=args.max_errors,
-                    epsilon=args.epsilon,
-                    is_float=args.floats)
+    unmatch_queries = iterate_queries(session_builder,
+                                      args.input1,
+                                      args.input2,
+                                      args.input_format,
+                                      args.ignore_ordering,
+                                      query_dict.keys(),
+                                      use_iterator=args.use_iterator,
+                                      max_errors=args.max_errors,
+                                      epsilon=args.epsilon,
+                                      is_float=args.floats)
+    update_summary(args.json_summary_folder, unmatch_queries)

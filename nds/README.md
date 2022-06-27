@@ -224,6 +224,8 @@ optional arguments:
   --property_file PROPERTY_FILE
                         property file for Spark configuration.
   --floats              When loading Text files like json and csv, schemas are required to determine if certain parts of the data are read as decimal type or not. If specified, float data will be used.
+  --json_summary_folder JSON_SUMMARY_FOLDER
+                        path of a folder to save json summary file for each query.
 
 ```
 
@@ -349,6 +351,9 @@ optional arguments:
   --use_iterator        When set, use `toLocalIterator` to load one partition at a time into driver memory, reducing.
                         memory usage at the cost of performance because processing will be single-threaded.
   --floats              whether the input data contains float data or decimal data. There're some known mismatch issues due to float point, we will do some special checks when the input data is float for some queries.
+  --json_summary_folder JSON_SUMMARY_FOLDER
+                        path of a folder that contains json summary file for each query.
+
 ```
 
 Example command to compare output data of two queries:
