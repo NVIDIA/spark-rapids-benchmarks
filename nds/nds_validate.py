@@ -241,13 +241,13 @@ def update_summary(prefix, unmatch_queries):
             file_glob = glob.glob(summary_wildcard)
             if len(file_glob) > 1:
                 raise Exception(f"More than one summary file found for query {query_name}")
-            for filename in glob.glob(summary_wildcard):
+            for filename in file_glob:
                 with open(filename, 'r') as f:
                     summary = json.load(f)
                     if 'Completed' in summary['queryStatus'] or 'CompletedWithTaskFailures' in summary['queryStatus']:
                         summary['queryStatus'] = ['NotValid']
                 with open(filename, 'w') as f:
-                    json.dump(summary, f, indent=4)
+                    json.dump(summary, f, indent=2)
 
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()

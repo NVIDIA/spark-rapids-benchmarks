@@ -284,7 +284,7 @@ if __name__ == "__main__":
                         'If specified, float data will be used.')
     parser.add_argument('--json_summary_folder',
                         default='json_summary',
-                        help='path of a folder to save json summary file for each query.')
+                        help='Empty folder/path (will create if not exist) to save JSON summary file for each query.')
 
 
     args = parser.parse_args()
