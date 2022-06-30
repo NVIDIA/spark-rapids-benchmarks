@@ -21,5 +21,4 @@ object Manager {
   def notifyAll(message: String): Unit = {
     for { (_, listener) <- listeners } listener.notify(message)
   }
-
 }
