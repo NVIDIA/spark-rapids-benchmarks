@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-export CUDF_JAR=cudf-22.02.0.jar
-export SPARK_RAPIDS_PLUGIN_JAR=rapids-4-spark_2.12-22.02.0.jar
+export SPARK_RAPIDS_PLUGIN_JAR=rapids-4-spark_2.12-22.06.0.jar
+export NDS_LISTENER_JAR=NDSBenchmarkListener-22.06.0-SNAPSHOT.jar
 export SPARK_HOME=/usr/lib/spark
 export SPARK_CONF=("--master" "yarn"
                    "--conf" "spark.rapids.memory.gpu.pool=ARENA"
@@ -36,5 +36,7 @@ export SPARK_CONF=("--master" "yarn"
                    "--conf" "spark.sql.adaptive.enabled=true"
                    "--conf" "spark.plugins=com.nvidia.spark.SQLPlugin"
                    "--conf" "spark.rapids.memory.pinnedPool.size=8g"
+                   "--conf" "spark.extraListeners=com.nvidia.spark.rapids.PythonTaskFailureListener"
                    "--conf" "spark.executor.resource.gpu.discoveryScript=./getGpusResources.sh"
-                   "--files" "$SPARK_HOME/examples/src/main/scripts/getGpusResources.sh")
+                   "--files" "$SPARK_HOME/examples/src/main/scripts/getGpusResources.sh"
+                   "--jars" "$SPARK_RAPIDS_PLUGIN_JAR,$NDS_LISTENER_JAR"))

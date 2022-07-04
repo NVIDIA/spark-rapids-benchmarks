@@ -1,10 +1,16 @@
-package com.nvidia.spark
+package com.nvidia.spark.rapids
 
 
 object Manager {
+  /* Manager class to manage all extra customized listeners.
+  */
   var listeners: Map[String, Listener] = Map()
 
   def register(listener: Listener): String = {
+    /* Note this register method has nothing to do with SparkContext.addSparkListener method.
+    * This method is only to provide an interface to developers to have a better control over
+    * all customized listeners.
+    */
     this.synchronized {
       val uuid = java.util.UUID.randomUUID().toString
       listeners = listeners + (uuid -> listener)

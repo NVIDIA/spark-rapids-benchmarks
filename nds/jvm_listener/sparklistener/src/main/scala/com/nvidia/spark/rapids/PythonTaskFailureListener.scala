@@ -6,9 +6,8 @@ import scala.collection.mutable.ListBuffer
 
 
 /* A simple listener which captures SparkListenerTaskEnd,
- * extracts numbers of records written by the task
- * and converts to JSON. You can of course add handlers 
- * for other events as well.
+ * extracts "reason" of the task. If the reason is not "Success",
+ * send this reason to python side.
  */
 class PythonTaskFailureListener extends SparkListener {
   val taskFailures = ListBuffer[TaskEndReason]()

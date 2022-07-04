@@ -34,8 +34,8 @@ import os
 import time
 from typing import Callable
 from pyspark.sql import SparkSession
-from pyspark_spy.PythonListener import PythonListener
-# import pyspark_spy
+
+import python_listener
 
 class PysparkBenchReport:
     """Class to generate json summary report for a benchmark
@@ -71,13 +71,9 @@ class PysparkBenchReport:
         self.summary['env']['envVars'] = filtered_env_vars
         self.summary['env']['sparkConf'] = spark_conf
         self.summary['env']['sparkVersion'] = self.spark_session.version
-        # listener = pyspark_spy.TaskFailureListener()
-        listener = PythonListener()
+        listener = python_listener.PythonListener()
         listener.register()
-        print("============= register =============")
         try:
-            # pyspark_spy.register_listener(self.spark_session.sparkContext, listener)
-            print("=========== before start time==============")
             start_time = int(time.time() * 1000)
             fn(*args)
             end_time = int(time.time() * 1000)
@@ -92,7 +88,6 @@ class PysparkBenchReport:
         finally:
             self.summary['startTime'] = start_time
             self.summary['queryTimes'].append(end_time - start_time)
-            # self.spark_session.sparkContext._jsc.sc().removeSparkListener(listener)
             return self.summary
             
     def write_summary(self, query_name, prefix=""):
