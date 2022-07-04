@@ -44,7 +44,6 @@ from pyspark.sql.functions import col
 from check import check_version
 from nds_gen_query_stream import split_special_query
 from nds_transcode import get_schemas
-import pyspark_spy
 
 check_version()
 

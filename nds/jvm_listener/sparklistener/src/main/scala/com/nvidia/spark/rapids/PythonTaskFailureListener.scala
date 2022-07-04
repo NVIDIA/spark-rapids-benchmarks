@@ -1,4 +1,4 @@
-package com.nvidia.spark
+package com.nvidia.spark.rapids
 
 import org.apache.spark.{Success, TaskEndReason}
 import org.apache.spark.scheduler.{SparkListener, SparkListenerTaskEnd}
