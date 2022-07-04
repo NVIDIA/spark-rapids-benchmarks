@@ -224,10 +224,6 @@ def run_query_stream(input_prefix,
         q_report.write_summary(query_name, prefix=summary_prefix)
     power_end = time.time()
     power_elapse = int((power_end - power_start)*1000)
-    # Sleep for 60 seconds to ensure threads for listener event processing are done.
-    # See more details here:https://github.com/NVIDIA/spark-rapids-benchmarks/issues/37
-    # TODO: use better JVM way to add listener.
-    # time.sleep(60)
     spark_session.sparkContext.stop()
     total_time_end = time.time()
     total_elapse = int((total_time_end - total_time_start)*1000)
