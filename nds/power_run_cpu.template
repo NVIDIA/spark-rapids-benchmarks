@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-export NDS_LISTENER_JAR=NDSBenchmarkListener-22.06.0-SNAPSHOT.jar
+export NDS_LISTENER_JAR=NDSBenchmarkListener-1.0-SNAPSHOT.jar
 export SPARK_HOME=/usr/lib/spark
 export SPARK_CONF=("--master" "yarn"
                    "--conf" "spark.rapids.sql.enabled=false"
@@ -30,5 +30,5 @@ export SPARK_CONF=("--master" "yarn"
                    "--conf" "spark.sql.autoBroadcastJoinThreshold=10m"
                    "--conf" "spark.scheduler.minRegisteredResourcesRatio=1.0"
                    "--conf" "spark.sql.broadcastTimeout=1200"
-                   "--conf" "spark.extraListeners=com.nvidia.spark.rapids.PythonTaskFailureListener"
+                   "--conf" "spark.extraListeners=com.nvidia.spark.rapids.listener.TaskFailureListener"
                    "--jars" "$NDS_LISTENER_JAR")
