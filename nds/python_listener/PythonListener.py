@@ -2,7 +2,7 @@ from pyspark import SparkContext
 from pyspark.java_gateway import ensure_callback_server_started
 
 class PythonListener(object):
-    package = "com.nvidia.spark.rapids"
+    package = "com.nvidia.spark.rapids.listener"
 
     @staticmethod
     def get_manager():
@@ -32,4 +32,4 @@ class PythonListener(object):
         self.uuid = None
 
     class Java:
-        implements = ["com.nvidia.spark.rapids.Listener"]
+        implements = ["com.nvidia.spark.rapids.listener.Listener"]

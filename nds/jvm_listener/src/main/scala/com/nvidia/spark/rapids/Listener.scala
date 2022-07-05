@@ -1,4 +1,4 @@
-package com.nvidia.spark.rapids
+package com.nvidia.spark.rapids.listener
 
 trait Listener {
   /* Listener interface to be implemented at Python side
