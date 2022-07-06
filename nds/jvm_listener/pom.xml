@@ -19,7 +19,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.nvidia</groupId>
-    <artifactId>NDSBenchmarkListener</artifactId>
+    <artifactId>nds-benchmark-listener</artifactId>
     <packaging>jar</packaging>
     <version>1.0-SNAPSHOT</version>
 
