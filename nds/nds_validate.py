@@ -222,9 +222,13 @@ def iterate_queries(spark_session: SparkSession,
     return unmatch_queries
 
 def update_summary(prefix, unmatch_queries):
-    """update the queryStatus field in json summary file.
+    """set the queryValidationStatus field in json summary file.
     If the queryStatus is 'Completed' or 'CompletedWithTaskFailures' but validation failed,
-    update the status to NotValid.
+    set to 'Fail'.
+    If the queryStatus is 'Completed' or 'CompletedWithTaskFailures' and validation passed,
+    set to 'Pass'.
+    If the queryStatus is 'Failed',
+    set to 'NotAttempted'.
 
     Args:
         prefix (str): folder of the json summary files
@@ -235,8 +239,8 @@ def update_summary(prefix, unmatch_queries):
     if unmatch_queries == []:
         pass
     else:
-        print("Updating queryStatus.")
-        for query_name in unmatch_queries:
+        print("Updating queryValidationStatus.")
+        for query_name in query_dict.keys():
             summary_wildcard = prefix + f'/*{query_name}*.json'
             file_glob = glob.glob(summary_wildcard)
             if len(file_glob) > 1:
@@ -244,8 +248,13 @@ def update_summary(prefix, unmatch_queries):
             for filename in file_glob:
                 with open(filename, 'r') as f:
                     summary = json.load(f)
-                    if 'Completed' in summary['queryStatus'] or 'CompletedWithTaskFailures' in summary['queryStatus']:
-                        summary['queryStatus'] = ['NotValid']
+                    if query_name in unmatch_queries:
+                        if 'Completed' in summary['queryStatus'] or 'CompletedWithTaskFailures' in summary['queryStatus']:
+                            summary['queryValidationStatus'] = ['Fail']
+                        else:
+                            summary['queryValidationStatus'] = ['NotAttempted']
+                    else:
+                        summary['queryValidationStatus'] = ['Pass']
                 with open(filename, 'w') as f:
                     json.dump(summary, f, indent=2)
 
