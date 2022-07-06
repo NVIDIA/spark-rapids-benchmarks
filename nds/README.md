@@ -225,7 +225,6 @@ optional arguments:
                         property file for Spark configuration.
   --floats              When loading Text files like json and csv, schemas are required to determine if certain parts of the data are read as decimal type or not. If specified, float data will be used.
 
-
 ```
 
 Example command to submit nds_power.py by spark-submit-template utility:
