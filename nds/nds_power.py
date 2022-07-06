@@ -199,8 +199,9 @@ def run_query_stream(input_prefix,
     spark_session = session_builder.appName(
         app_name).getOrCreate()
     spark_app_id = spark_session.sparkContext.applicationId
-    execution_time_list = setup_tables(spark_session, input_prefix, input_format, use_decimal,
-                                       execution_time_list)
+    if input_format != 'iceberg':
+        execution_time_list = setup_tables(spark_session, input_prefix, input_format, use_decimal,
+                                           execution_time_list)
 
     # Run query
     power_start = time.time()
@@ -256,18 +257,20 @@ def load_properties(filename):
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
     parser.add_argument('input_prefix',
-                        help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data")')
+                        help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"). ' +
+                        'If input_format is "iceberg", this argument will not take effect. ' +
+                        'User needs to set Iceberg table path in their Spark submit templates/configs.')
     parser.add_argument('query_stream_file',
                         help='query stream file that contains NDS queries in specific order')
     parser.add_argument('time_log',
                         help='path to execution time log, only support local path.',
                         default="")
     parser.add_argument('--input_format',
-                        help='type for input data source, e.g. parquet, orc, json, csv. ' +
+                        help='type for input data source, e.g. parquet, orc, json, csv or iceberg. ' +
                         'Certain types are not fully supported by GPU reading, please refer to ' +
                         'https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md ' +
                         'for more details.',
-                        choices=['parquet', 'orc', 'avro', 'csv', 'json'],
+                        choices=['parquet', 'orc', 'avro', 'csv', 'json', 'iceberg'],
                         default='parquet')
     parser.add_argument('--output_prefix',
                         help='text to prepend to every output file (e.g., "hdfs:///ds-parquet")')
