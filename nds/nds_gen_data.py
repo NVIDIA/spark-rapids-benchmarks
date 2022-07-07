@@ -76,7 +76,9 @@ maintenance_table_names = [
     's_store_returns',
     's_web_order',
     's_web_order_lineitem',
-    's_web_returns'
+    's_web_returns',
+    'delete',
+    'inventory_delete'
 ]
 
 def clean_temp_data(temp_data_path):
@@ -218,6 +220,9 @@ def generate_data_local(args, range_start, range_end, tool_path):
         for i in range(range_start, range_end + 1):
             subprocess.run(['mv', f'{data_dir}/{table}_{i}_{args.parallel}.dat',
                             f'{data_dir}/{table}/'], stderr=subprocess.DEVNULL)
+        # delete date file has no parallel number suffix in the file name, move separately
+        subprocess.run(['mv', f'{data_dir}/{table}_1.dat',
+                        f'{data_dir}/{table}/'], stderr=subprocess.DEVNULL)
     # show summary
     subprocess.run(['du', '-h', '-d1', data_dir])
 
