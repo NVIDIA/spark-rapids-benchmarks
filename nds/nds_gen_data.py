@@ -163,9 +163,9 @@ def generate_data_hdfs(args, jar_path):
         subprocess.run(cmd, check=True, cwd=str(tpcds_gen_path))
 
     # delete date table are special, move them separately
-    mkdir_delete = ['hadoop', 'fs', '-mkdir', args.data_dir + '/' + 'delete']
+    mkdir_delete = ['hadoop', 'fs', '-mkdir', args.data_dir + '/delete']
     move_delete = ['hadoop', 'fs', '-mv', args.data_dir  + '/delete_1.dat-m-00000', args.data_dir + '/delete/']
-    mkdir_inv_delete = ['hadoop', 'fs', '-mkdir', args.data_dir + '/' + 'inventory_delete']
+    mkdir_inv_delete = ['hadoop', 'fs', '-mkdir', args.data_dir + '/inventory_delete']
     move_inv_delete = ['hadoop', 'fs', '-mv', args.data_dir  + '/inventory_delete_1.dat-m-00000', args.data_dir + '/inventory_delete/']
     subprocess.run(mkdir_delete, check=True)
     subprocess.run(move_delete, check=True)
@@ -229,6 +229,9 @@ def generate_data_local(args, range_start, range_end, tool_path):
         for i in range(range_start, range_end + 1):
             subprocess.run(['mv', f'{data_dir}/{table}_{i}_{args.parallel}.dat',
                             f'{data_dir}/{table}/'], stderr=subprocess.DEVNULL)
+        # delete date file has no parallel number suffix in the file name, move separately
+        subprocess.run(['mv', f'{data_dir}/{table}_1.dat',
+                        f'{data_dir}/{table}/'], stderr=subprocess.DEVNULL)
     # show summary
     subprocess.run(['du', '-h', '-d1', data_dir])
 
