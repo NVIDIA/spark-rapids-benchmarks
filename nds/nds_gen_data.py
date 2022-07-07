@@ -163,14 +163,12 @@ def generate_data_hdfs(args, jar_path):
         subprocess.run(cmd, check=True, cwd=str(tpcds_gen_path))
 
     # delete date table are special, move them separately
-    mkdir_delete = ['hadoop', 'fs', '-mkdir', args.data_dir + '/delete']
-    move_delete = ['hadoop', 'fs', '-mv', args.data_dir  + '/delete_1.dat-m-00000', args.data_dir + '/delete/']
-    mkdir_inv_delete = ['hadoop', 'fs', '-mkdir', args.data_dir + '/inventory_delete']
-    move_inv_delete = ['hadoop', 'fs', '-mv', args.data_dir  + '/inventory_delete_1.dat-m-00000', args.data_dir + '/inventory_delete/']
-    subprocess.run(mkdir_delete, check=True)
-    subprocess.run(move_delete, check=True)
-    subprocess.run(mkdir_inv_delete, check=True)
-    subprocess.run(move_inv_delete, check=True)
+    for delete_table in ['delete', 'inventory_delete']:
+        mkdir = ['hadoop', 'fs', '-mkdir', args.data_dir + '/' + delete_table]
+        move = ['hadoop', 'fs', '-mv', args.data_dir  + '/' + delete_table + '_1.dat-m-00000', args.data_dir + '/' + delete_table + '/']
+        subprocess.run(mkdir, check=True)
+        subprocess.run(move, check=True)
+
 
 def generate_data_local(args, range_start, range_end, tool_path):
     """Generate data to local file system. TPC-DS tool will generate all table data under target
