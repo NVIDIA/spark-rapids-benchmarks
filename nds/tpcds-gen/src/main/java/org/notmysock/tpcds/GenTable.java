@@ -59,7 +59,7 @@ public class GenTable extends Configured implements Tool {
         options.addOption("p", "parallel", true, "parallel");
         options.addOption("r", "range", true, "child range in one data generation run");
         options.addOption("o", "overwrite", false, "overwrite existing data");
-        options.addOption("u", "update", false, "generate data for Data Maintenance");
+        options.addOption("u", "update", true, "generate data for Data Maintenance");
         CommandLine line = parser.parse(options, remainingArgs);
 
         if(!(line.hasOption("scale") && line.hasOption("dir"))) {
@@ -98,7 +98,6 @@ public class GenTable extends Configured implements Tool {
             }
         }
 
-        // use 999999 for default update value to avoid user input conflict.
         Integer update = null;
         if(line.hasOption("update")) {
           update = Integer.parseInt(line.getOptionValue("update"));
@@ -261,7 +260,7 @@ public class GenTable extends Configured implements Tool {
 
         FilenameFilter tables = new FilenameFilter() {
           public boolean accept(File dir, String name) {
-            return name.endsWith(suffix);
+            return name.endsWith(suffix) || name.startsWith("delete") || name.startsWith("inventory_delete");
           }
         };
 
