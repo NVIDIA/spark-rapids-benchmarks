@@ -71,13 +71,17 @@ class PysparkBenchReport:
         self.summary['env']['envVars'] = filtered_env_vars
         self.summary['env']['sparkConf'] = spark_conf
         self.summary['env']['sparkVersion'] = self.spark_session.version
-        listener = python_listener.PythonListener()
-        listener.register()
+        listener = None
+        spark_env = dict(self.spark_session.sparkContext.getConf().getAll())
+        if 'spark.extraListeners' in spark_env.keys() and 'com.nvidia.spark.rapids.listener.TaskFailureListener' in spark_env['spark.extraListeners']:
+            listener = python_listener.PythonListener()
+            listener.register()
         try:
             start_time = int(time.time() * 1000)
             fn(*args)
             end_time = int(time.time() * 1000)
-            if len(listener.failures) != 0:
+            if listener and len(listener.failures) != 0:
+                # NOTE: when listener is not used, the queryStatus field will always be "Completed" in json summary
                 self.summary['queryStatus'].append("CompletedWithTaskFailures")
             else:
                 self.summary['queryStatus'].append("Completed")
