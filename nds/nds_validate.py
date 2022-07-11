@@ -236,27 +236,26 @@ def update_summary(prefix, unmatch_queries):
     """
     if not os.path.exists(args.json_summary_folder):
         raise Exception("The json summary folder doesn't exist.")
-    if unmatch_queries == []:
-        pass
-    else:
-        print("Updating queryValidationStatus.")
-        for query_name in query_dict.keys():
-            summary_wildcard = prefix + f'/*{query_name}*.json'
-            file_glob = glob.glob(summary_wildcard)
-            if len(file_glob) > 1:
-                raise Exception(f"More than one summary file found for query {query_name}")
-            for filename in file_glob:
-                with open(filename, 'r') as f:
-                    summary = json.load(f)
-                    if query_name in unmatch_queries:
-                        if 'Completed' in summary['queryStatus'] or 'CompletedWithTaskFailures' in summary['queryStatus']:
-                            summary['queryValidationStatus'] = ['Fail']
-                        else:
-                            summary['queryValidationStatus'] = ['NotAttempted']
+    print(f"Updating queryValidationStatus in folder {prefix}.")
+    for query_name in query_dict.keys():
+        summary_wildcard = prefix + f'/*{query_name}-*.json'
+        file_glob = glob.glob(summary_wildcard)
+        if len(file_glob) > 1:
+            raise Exception(f"More than one summary file found for query {query_name} in folder {prefix}.")
+        if len(file_glob) == 0:
+            raise Exception(f"No summary file found for query {query_name} in folder {prefix}.")
+        for filename in file_glob:
+            with open(filename, 'r') as f:
+                summary = json.load(f)
+                if query_name in unmatch_queries:
+                    if 'Completed' in summary['queryStatus'] or 'CompletedWithTaskFailures' in summary['queryStatus']:
+                        summary['queryValidationStatus'] = ['Fail']
                     else:
-                        summary['queryValidationStatus'] = ['Pass']
-                with open(filename, 'w') as f:
-                    json.dump(summary, f, indent=2)
+                        summary['queryValidationStatus'] = ['NotAttempted']
+                else:
+                    summary['queryValidationStatus'] = ['Pass']
+            with open(filename, 'w') as f:
+                json.dump(summary, f, indent=2)
 
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
