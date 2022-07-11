@@ -118,7 +118,7 @@ def merge_temp_tables(temp_data_path, parent_data_path, update):
 def move_delete_date_tables(base_path):
     # delete date table are special, move them separately
     for delete_table in ['delete', 'inventory_delete']:
-        mkdir = ['hadoop', 'fs', '-mkdir', base_path + '/' + delete_table]
+        mkdir = ['hadoop', 'fs', '-mkdir', '-p', base_path + '/' + delete_table]
         move = ['hadoop', 'fs', '-mv', base_path  + '/' + delete_table + '_1.dat-m-00000', base_path + '/' + delete_table + '/']
         subprocess.run(mkdir, check=True)
         subprocess.run(move, check=True)
