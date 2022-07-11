@@ -238,7 +238,7 @@ def update_summary(prefix, unmatch_queries):
         raise Exception("The json summary folder doesn't exist.")
     print("Updating queryValidationStatus.")
     for query_name in query_dict.keys():
-        summary_wildcard = prefix + f'/*{query_name}*.json'
+        summary_wildcard = prefix + f'/*{query_name}-*.json'
         file_glob = glob.glob(summary_wildcard)
         if len(file_glob) > 1:
             raise Exception(f"More than one summary file found for query {query_name}")
