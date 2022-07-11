@@ -236,12 +236,14 @@ def update_summary(prefix, unmatch_queries):
     """
     if not os.path.exists(args.json_summary_folder):
         raise Exception("The json summary folder doesn't exist.")
-    print("Updating queryValidationStatus.")
+    print(f"Updating queryValidationStatus in folder {prefix}.")
     for query_name in query_dict.keys():
         summary_wildcard = prefix + f'/*{query_name}-*.json'
         file_glob = glob.glob(summary_wildcard)
         if len(file_glob) > 1:
-            raise Exception(f"More than one summary file found for query {query_name}")
+            raise Exception(f"More than one summary file found for query {query_name} in folder {prefix}.")
+        if len(file_glob) == 0:
+            raise Exception(f"No summary file found for query {query_name} in folder {prefix}.")
         for filename in file_glob:
             with open(filename, 'r') as f:
                 summary = json.load(f)
