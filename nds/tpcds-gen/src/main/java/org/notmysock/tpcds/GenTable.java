@@ -104,6 +104,7 @@ public class GenTable extends Configured implements Tool {
           if(update < 0) {
             // TPC-DS will error if update is < 0
             System.err.println("The update value cannot be less than 0, your input: " + update);
+            return 1;
           }
         }
 
