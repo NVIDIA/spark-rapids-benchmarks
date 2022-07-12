@@ -266,11 +266,12 @@ public class GenTable extends Configured implements Tool {
         };
 
         for(File f: cwd.listFiles(tables)) {
-          BufferedReader br = new BufferedReader(new FileReader(f));          
+          final String baseOutputPath = f.getName().replace(suffix, String.format("/data_%s_%s", child, parallel));
+          BufferedReader br = new BufferedReader(new FileReader(f));
           String line;
           while ((line = br.readLine()) != null) {
             // process the line.
-            mos.write("text", line, null, f.getName().replace(suffix, String.format("/data_%s_%s", child, parallel)));
+            mos.write("text", line, null, baseOutputPath);
           }
           br.close();
           f.deleteOnExit();
