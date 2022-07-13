@@ -191,8 +191,8 @@ public class GenTable extends Configured implements Tool {
         Path in = new Path("/tmp/"+table+"_"+scale+"-"+epoch);
         FileSystem fs = FileSystem.get(getConf());
         FSDataOutputStream out = fs.create(in);
-        String cmd = "";
         for(int i = rangeStart; i <= rangeEnd; i++) {
+          String cmd = "";
           if(table.equals("all")) {
             cmd += String.format("./dsdgen -dir $DIR -force Y -scale %d -parallel %d -child %d", scale, parallel, i);
           } else {
