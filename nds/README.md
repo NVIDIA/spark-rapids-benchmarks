@@ -206,7 +206,7 @@ _After_ user generates query streams, Power Run can be executed using one of the
 
 Arguments supported by `nds_power.py`:
 ```
-usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] input_prefix query_stream_file time_log
+usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] [--json_summary_folder JSON_SUMMARY_FOLDER] input_prefix query_stream_file time_log
 
 positional arguments:
   input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data")
@@ -225,7 +225,8 @@ optional arguments:
                         property file for Spark configuration.
   --floats              When loading Text files like json and csv, schemas are required to determine if certain parts of the data are read as decimal type or not. If specified, float data will be used.
   --json_summary_folder JSON_SUMMARY_FOLDER
-                        path of a folder to save json summary file for each query.
+                        Empty folder/path (will create if not exist) to save JSON summary file for each query. If not specified, no JSON summary file will be generated.
+
 
 ```
 
