@@ -201,14 +201,13 @@ def run_query_stream(input_prefix,
 
     # Run query
     # prepare a folder to save json summaries of query results
-    if args.json_summary_folder:
-        if not os.path.exists(args.json_summary_folder):
-            os.makedirs(args.json_summary_folder)
-        else:
-            if os.listdir(args.json_summary_folder):
-                raise Exception(f"json_summary_folder {args.json_summary_folder} is not empty. " +
-                                "There may be already some json files there. Please clean the folder " +
-                                "or specify another one.")
+    if not os.path.exists(args.json_summary_folder):
+        os.makedirs(args.json_summary_folder)
+    else:
+        if os.listdir(args.json_summary_folder):
+            raise Exception(f"json_summary_folder {args.json_summary_folder} is not empty. " +
+                            "There may be already some json files there. Please clean the folder " +
+                            "or specify another one.")
     power_start = time.time()
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
@@ -223,13 +222,12 @@ def run_query_stream(input_prefix,
         print(f"Time taken: {summary['queryTimes']} millis for {query_name}")
         execution_time_list.append((spark_app_id, query_name, summary['queryTimes']))
         # property_file e.g.: "property/aqe-on.properties" or just "aqe-off.properties"
-        if args.json_summary_folder:
-            if property_file:
-                summary_prefix = os.path.join(
-                    args.json_summary_folder, os.path.basename(property_file).split('.')[0])
-            else:
-                summary_prefix =  os.path.join(args.json_summary_folder, '')
-            q_report.write_summary(query_name, prefix=summary_prefix)
+        if property_file:
+            summary_prefix = os.path.join(
+                args.json_summary_folder, os.path.basename(property_file).split('.')[0])
+        else:
+            summary_prefix =  os.path.join(args.json_summary_folder, '')
+        q_report.write_summary(query_name, prefix=summary_prefix)
     power_end = time.time()
     power_elapse = int((power_end - power_start)*1000)
     # Sleep for 60 seconds to ensure threads for listener event processing are done.
@@ -290,8 +288,8 @@ if __name__ == "__main__":
                         'determine if certain parts of the data are read as decimal type or not. '+
                         'If specified, float data will be used.')
     parser.add_argument('--json_summary_folder',
-                        help='Empty folder/path (will create if not exist) to save JSON summary file for each query. ' +
-                        'If not specified, no JSON summary file will be generated.')
+                        default='json_summary',
+                        help='Empty folder/path (will create if not exist) to save JSON summary file for each query.')
 
 
     args = parser.parse_args()
