@@ -209,7 +209,7 @@ Arguments supported by `nds_power.py`:
 usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json,iceberg}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] input_prefix query_stream_file time_log
 
 positional arguments:
-  input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"). If input_format is "iceberg", this argument will not take effect. User needs to set Iceberg table path in their Spark submit templates/configs.
+  input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"). If input_format is "iceberg", this argument will be regarded as the value of property "spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog session name "spark_catalog" is supported now, customized catalog is not yet supported.
   query_stream_file     query stream file that contains NDS queries in specific order
   time_log              path to execution time log, only support local path.
 

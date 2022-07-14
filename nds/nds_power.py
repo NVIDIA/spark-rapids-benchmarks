@@ -171,7 +171,7 @@ def run_query_stream(input_prefix,
     for easy accesibility. TempView Creation time is also recorded.
 
     Args:
-        input_prefix (str): path of input data
+        input_prefix (str): path of input data or warehouse if input_format is "iceberg".
         query_dict (OrderedDict): ordered dict {query_name: query_content} of all TPC-DS queries runnable in Spark
         time_log_output_path (str): path of the log that contains query execution time, both local
                                     and HDFS path are supported.
@@ -196,6 +196,8 @@ def run_query_stream(input_prefix,
         spark_properties = load_properties(property_file)
         for k,v in spark_properties.items():
             session_builder = session_builder.config(k,v)
+    if input_format == 'iceberg':
+        session_builder.config("spark.sql.catalog.spark_catalog.warehouse", input_prefix)
     spark_session = session_builder.appName(
         app_name).getOrCreate()
     spark_app_id = spark_session.sparkContext.applicationId
@@ -258,8 +260,10 @@ if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
     parser.add_argument('input_prefix',
                         help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"). ' +
-                        'If input_format is "iceberg", this argument will not take effect. ' +
-                        'User needs to set Iceberg table path in their Spark submit templates/configs.')
+                        'If input_format is "iceberg", this argument will be regarded as the value of property ' +
+                        '"spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog ' +
+                        'session name "spark_catalog" is supported now, customized catalog is not ' +
+                        'yet supported.')
     parser.add_argument('query_stream_file',
                         help='query stream file that contains NDS queries in specific order')
     parser.add_argument('time_log',
