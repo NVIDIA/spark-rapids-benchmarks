@@ -76,6 +76,9 @@ class PysparkBenchReport:
         if 'spark.extraListeners' in spark_env.keys() and 'com.nvidia.spark.rapids.listener.TaskFailureListener' in spark_env['spark.extraListeners']:
             listener = python_listener.PythonListener()
             listener.register()
+            print("TaskFailureListener is registered.")
+        else:
+            print("TaskFailureListener is not registered. The 'queryStatus' field in the summary will not be valid but always be 'Completed'.")
         try:
             start_time = int(time.time() * 1000)
             fn(*args)
