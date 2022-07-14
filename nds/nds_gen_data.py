@@ -76,7 +76,9 @@ maintenance_table_names = [
     's_store_returns',
     's_web_order',
     's_web_order_lineitem',
-    's_web_returns'
+    's_web_returns',
+    'delete',
+    'inventory_delete'
 ]
 
 def clean_temp_data(temp_data_path):
@@ -113,6 +115,13 @@ def merge_temp_tables(temp_data_path, parent_data_path, update):
         subprocess.run(cmd)
     clean_temp_data(temp_data_path)
 
+def move_delete_date_tables(base_path):
+    # delete date table are special, move them separately
+    for delete_table in ['delete', 'inventory_delete']:
+        mkdir = ['hadoop', 'fs', '-mkdir', '-p', base_path + '/' + delete_table]
+        move = ['hadoop', 'fs', '-mv', base_path  + '/' + delete_table + '_1.dat-m-00000', base_path + '/' + delete_table + '/']
+        subprocess.run(mkdir, check=True)
+        subprocess.run(move, check=True)
 
 def generate_data_hdfs(args, jar_path):
     """generate data to hdfs using TPC-DS dsdgen tool. Support incremental generation: due to the
@@ -153,12 +162,14 @@ def generate_data_hdfs(args, jar_path):
         cmd.extend(["-d", temp_data_path])
         try:
             subprocess.run(cmd, check=True, cwd=str(tpcds_gen_path))
-            merge_temp_tables(temp_data_path, args.data_dir)
+            move_delete_date_tables(temp_data_path)
+            merge_temp_tables(temp_data_path, args.data_dir, args.update)
         finally:
             clean_temp_data(temp_data_path)
     else:
         cmd.extend(["-d", args.data_dir])
         subprocess.run(cmd, check=True, cwd=str(tpcds_gen_path))
+        move_delete_date_tables(args.data_dir)
 
 
 def generate_data_local(args, range_start, range_end, tool_path):
@@ -218,6 +229,9 @@ def generate_data_local(args, range_start, range_end, tool_path):
         for i in range(range_start, range_end + 1):
             subprocess.run(['mv', f'{data_dir}/{table}_{i}_{args.parallel}.dat',
                             f'{data_dir}/{table}/'], stderr=subprocess.DEVNULL)
+        # delete date file has no parallel number suffix in the file name, move separately
+        subprocess.run(['mv', f'{data_dir}/{table}_1.dat',
+                        f'{data_dir}/{table}/'], stderr=subprocess.DEVNULL)
     # show summary
     subprocess.run(['du', '-h', '-d1', data_dir])
 
