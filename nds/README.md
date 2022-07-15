@@ -331,8 +331,7 @@ to do the job.
 
 Arguments supported by `nds_validate.py`:
 ```
-usage: nds_validate.py [-h] [--input_format INPUT_FORMAT] [--max_errors MAX_ERRORS] [--epsilon EPSILON]
-                       [--ignore_ordering] [--use_iterator] [--floats] input1 input2 query_stream_file
+usage: nds_validate.py [-h] [--input1_format INPUT1_FORMAT] [--input2_format INPUT2_FORMAT] [--max_errors MAX_ERRORS] [--epsilon EPSILON] [--ignore_ordering] [--use_iterator] [--floats] --json_summary_folder JSON_SUMMARY_FOLDER input1 input2 query_stream_file
 
 positional arguments:
   input1                path of the first input data.
@@ -340,9 +339,11 @@ positional arguments:
   query_stream_file     query stream file that contains NDS queries in specific order.
 
 optional arguments:
-  -h, --help            show this help message and exit.
-  --input_format INPUT_FORMAT
-                        data source type. e.g. parquet, orc. Default is: parquet.
+  -h, --help            show this help message and exit
+  --input1_format INPUT1_FORMAT
+                        data source type for the first input data. e.g. parquet, orc. Default is: parquet.
+  --input2_format INPUT2_FORMAT
+                        data source type for the second input data. e.g. parquet, orc. Default is: parquet.
   --max_errors MAX_ERRORS
                         Maximum number of differences to report.
   --epsilon EPSILON     Allow for differences in precision when comparing floating point values.

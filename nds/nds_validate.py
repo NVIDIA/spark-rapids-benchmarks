@@ -46,7 +46,8 @@ from nds_power import gen_sql_from_stream
 def compare_results(spark_session: SparkSession,
                     input1: str,
                     input2: str,
-                    input_format: str,
+                    input1_format: str,
+                    input2_format: str,
                     ignore_ordering: bool,
                     is_q78: bool,
                     use_iterator=False,
@@ -59,7 +60,8 @@ def compare_results(spark_session: SparkSession,
         spark_session (SparkSession): Spark Session to hold the comparison
         input1 (str): path for the first input data
         input2 (str): path for the second input data
-        input_format (str): data source format, e.g. parquet, orc
+        input1_format (str): data source format for input1, e.g. parquet, orc
+        input2_format (str): data source format for input2, e.g. parquet, orc
         ignore_ordering (bool): whether ignoring the order of input data.
             If true, we will order by ourselves.
         is_q78 (bool): whether the query is query78.
@@ -73,8 +75,8 @@ def compare_results(spark_session: SparkSession,
     Returns:
         bool: True if result matches otherwise False
     """
-    df1 = spark_session.read.format(input_format).load(input1)
-    df2 = spark_session.read.format(input_format).load(input2)
+    df1 = spark_session.read.format(input1_format).load(input1)
+    df2 = spark_session.read.format(input2_format).load(input2)
     count1 = df1.count()
     count2 = df2.count()
 
@@ -186,7 +188,8 @@ def compare(expected, actual, epsilon=0.00001):
 def iterate_queries(spark_session: SparkSession,
                     input1: str,
                     input2: str,
-                    input_format: str,
+                    input1_format: str,
+                    input2_format: str,
                     ignore_ordering: bool,
                     queries: list,
                     use_iterator=False,
@@ -209,7 +212,8 @@ def iterate_queries(spark_session: SparkSession,
         result_equal = compare_results(spark_session,
                                          sub_input1,
                                          sub_input2,
-                                         input_format,
+                                         input1_format,
+                                         input2_format,
                                          ignore_ordering,
                                          query == 'query78',
                                          use_iterator=use_iterator,
@@ -265,9 +269,12 @@ if __name__ == "__main__":
                         help='path of the second input data.')
     parser.add_argument('query_stream_file',
                         help='query stream file that contains NDS queries in specific order.')
-    parser.add_argument('--input_format',
+    parser.add_argument('--input1_format',
                         default='parquet',
-                        help='data source type. e.g. parquet, orc. Default is: parquet.')
+                        help='data source type for the first input data. e.g. parquet, orc. Default is: parquet.')
+    parser.add_argument('--input2_format',
+                        default='parquet',
+                        help='data source type for the second input data. e.g. parquet, orc. Default is: parquet.')
     parser.add_argument('--max_errors',
                         help='Maximum number of differences to report.',
                         type=int,
@@ -301,7 +308,8 @@ if __name__ == "__main__":
     unmatch_queries = iterate_queries(session_builder,
                                       args.input1,
                                       args.input2,
-                                      args.input_format,
+                                      args.input1_format,
+                                      args.input2_format,
                                       args.ignore_ordering,
                                       query_dict.keys(),
                                       use_iterator=args.use_iterator,
