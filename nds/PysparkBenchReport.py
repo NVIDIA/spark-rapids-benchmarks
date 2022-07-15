@@ -78,13 +78,14 @@ class PysparkBenchReport:
             listener.register()
             print("TaskFailureListener is registered.")
         else:
+            # NOTE: when listener is not used, the queryStatus field will always be "Completed" in json summary
+            # A message will be printed to the console to indicate that the queryStatus field is not valid.
             print("TaskFailureListener is not registered. The 'queryStatus' field in the summary will not be valid but always be 'Completed'.")
         try:
             start_time = int(time.time() * 1000)
             fn(*args)
             end_time = int(time.time() * 1000)
             if listener and len(listener.failures) != 0:
-                # NOTE: when listener is not used, the queryStatus field will always be "Completed" in json summary
                 self.summary['queryStatus'].append("CompletedWithTaskFailures")
             else:
                 self.summary['queryStatus'].append("Completed")
