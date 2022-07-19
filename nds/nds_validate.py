@@ -293,7 +293,6 @@ if __name__ == "__main__":
                         ' some known mismatch issues due to float point, we will do some special' +
                         ' checks when the input data is float for some queries.')
     parser.add_argument('--json_summary_folder',
-                        required=True,
                         help='path of a folder that contains json summary file for each query.')
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
@@ -308,4 +307,5 @@ if __name__ == "__main__":
                                       max_errors=args.max_errors,
                                       epsilon=args.epsilon,
                                       is_float=args.floats)
-    update_summary(args.json_summary_folder, unmatch_queries)
+    if args.json_summary_folder:
+        update_summary(args.json_summary_folder, unmatch_queries)
