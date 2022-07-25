@@ -89,8 +89,11 @@ The utility requires a pre-defined [template file](./convert_submit_gpu.template
 necessary Spark configurations. Either user can submit the `nds_transcode.py` directly to spark with
 arbitrary Spark parameters.
 
-Parquet, Orc, Avro, and JSON are supported for output data format at present with CPU. For GPU conversion, only Parquet 
-and Orc are supported.
+Parquet, Orc, Avro, JSON and Iceberg are supported for output data format at present with CPU. For GPU conversion,
+only Parquet and Orc are supported.
+
+Note: when exporting data from CSV to Iceberg, user needs to set necessary configs for Iceberg in submit template.
+e.g. [convert_submit_cpu_iceberg.template](./convert_submit_cpu_iceberg.template)
 
 User can also specify `--tables` to convert specific table or tables. See argument details below.
 
@@ -137,13 +140,12 @@ nds_transcode.py  raw_sf3k  parquet_sf3k report.txt
 User can also use `spark-submit` to submit `nds_transcode.py` directly.
 
 We provide two basic templates for GPU run(convert_submit_gpu.template) and CPU run(convert_submit_cpu.template).
-To enable GPU run, user need to download two jars in advance to use spark-rapids plugin.
+To enable GPU run, user needs to download the following jar.
 
-- cuDF jar: https://repo1.maven.org/maven2/ai/rapids/cudf/22.02.0/cudf-22.02.0.jar
-- spark-rapids jar: https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.02.0/rapids-4-spark_2.12-22.02.0.jar
+- spark-rapids jar: https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.06.0/rapids-4-spark_2.12-22.06.0.jar
 
-After that, please set environment variable `CUDF_JAR` and `SPARK_RAPIDS_PLUGIN_JAR` to the path where
-the jars are downloaded to in spark submit templates.
+After that, please set environment variable `SPARK_RAPIDS_PLUGIN_JAR` to the path where the jars are
+downloaded to in spark submit templates.
 
 ### Data partitioning
 
@@ -324,6 +326,7 @@ nds_maintenance.py \
 ./data_maintenance \
 time.csv \
 --maintenance_queries LF_CS,DF_CS
+```
 
 ## Data Validation
 To validate query output between Power Runs with and without GPU, we provide [nds_validate.py](nds_validate.py)
