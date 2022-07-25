@@ -34,7 +34,8 @@ import os
 import time
 from typing import Callable
 from pyspark.sql import SparkSession
-import pyspark_spy
+
+import python_listener
 
 class PysparkBenchReport:
     """Class to generate json summary report for a benchmark
@@ -70,13 +71,21 @@ class PysparkBenchReport:
         self.summary['env']['envVars'] = filtered_env_vars
         self.summary['env']['sparkConf'] = spark_conf
         self.summary['env']['sparkVersion'] = self.spark_session.version
-        listener = pyspark_spy.TaskFailureListener()
+        listener = None
+        spark_env = dict(self.spark_session.sparkContext.getConf().getAll())
+        if 'spark.extraListeners' in spark_env.keys() and 'com.nvidia.spark.rapids.listener.TaskFailureListener' in spark_env['spark.extraListeners']:
+            listener = python_listener.PythonListener()
+            listener.register()
+            print("TaskFailureListener is registered.")
+        else:
+            # NOTE: when listener is not used, the queryStatus field will always be "Completed" in json summary
+            # A message will be printed to the console to indicate that the queryStatus field is not valid.
+            print("TaskFailureListener is not registered. The 'queryStatus' field in the summary will not be valid but always be 'Completed'.")
         try:
-            pyspark_spy.register_listener(self.spark_session.sparkContext, listener)
             start_time = int(time.time() * 1000)
             fn(*args)
             end_time = int(time.time() * 1000)
-            if len(listener.failures) != 0:
+            if listener and len(listener.failures) != 0:
                 self.summary['queryStatus'].append("CompletedWithTaskFailures")
             else:
                 self.summary['queryStatus'].append("Completed")
@@ -87,7 +96,6 @@ class PysparkBenchReport:
         finally:
             self.summary['startTime'] = start_time
             self.summary['queryTimes'].append(end_time - start_time)
-            self.spark_session.sparkContext._jsc.sc().removeSparkListener(listener)
             return self.summary
             
     def write_summary(self, query_name, prefix=""):
