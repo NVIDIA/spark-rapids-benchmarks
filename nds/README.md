@@ -18,7 +18,7 @@ You may not use NDS except in compliance with the Apache License, Version 2.0 an
 
 ## prerequisites:
 
-1. python > 3.6
+1. python >= 3.6
 2. Necessary libraries 
     ```
     sudo apt install openjdk-8-jdk-headless gcc make flex bison byacc maven
