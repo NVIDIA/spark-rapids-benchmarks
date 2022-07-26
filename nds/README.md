@@ -50,9 +50,6 @@ Then two jars will be built at:
 
 ### Generate data
 
-
-Note: please make sure you have `Hadoop binary` locally.
-
 How to generate data to local or HDFS:
 ```
 $ python nds_gen_data.py -h
