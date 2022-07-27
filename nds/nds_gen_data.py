@@ -115,11 +115,14 @@ def merge_temp_tables(temp_data_path, parent_data_path, update):
         subprocess.run(cmd)
     clean_temp_data(temp_data_path)
 
-def move_delete_date_tables(base_path):
+def move_delete_date_tables(base_path, update):
     # delete date table are special, move them separately
+    # with --update 2, it'll generate the files named like delete_2.dat-m-00000, delete_2.dat-m-00001...
+    # the number of files is decided by the parallel value, and they all have same content
+    # So we just copy the first one
     for delete_table in ['delete', 'inventory_delete']:
         mkdir = ['hadoop', 'fs', '-mkdir', '-p', base_path + '/' + delete_table]
-        move = ['hadoop', 'fs', '-mv', base_path  + '/' + delete_table + '_1.dat-m-00000', base_path + '/' + delete_table + '/']
+        move = ['hadoop', 'fs', '-mv', base_path  + '/' + delete_table + f'_{update}.dat-m-00000', base_path + '/' + delete_table + '/']
         subprocess.run(mkdir, check=True)
         subprocess.run(move, check=True)
 
@@ -149,7 +152,7 @@ def generate_data_hdfs(args, jar_path):
     if args.overwrite_output:
         cmd += ['-o']
     if args.update:
-            cmd += ["-u", args.update]
+        cmd += ["-u", args.update]
     if args.range:
         # use a temp folder to save the specific range data.
         # will move the content to parent folder afterwards.
@@ -162,14 +165,18 @@ def generate_data_hdfs(args, jar_path):
         cmd.extend(["-d", temp_data_path])
         try:
             subprocess.run(cmd, check=True, cwd=str(tpcds_gen_path))
-            move_delete_date_tables(temp_data_path)
+            # only move delete table for data maintenance
+            if args.update:
+                move_delete_date_tables(temp_data_path, args.update)
             merge_temp_tables(temp_data_path, args.data_dir, args.update)
         finally:
             clean_temp_data(temp_data_path)
     else:
         cmd.extend(["-d", args.data_dir])
         subprocess.run(cmd, check=True, cwd=str(tpcds_gen_path))
-        move_delete_date_tables(args.data_dir)
+        # only move delete table for data maintenance
+        if args.update:
+            move_delete_date_tables(args.data_dir, args.update)
 
 
 def generate_data_local(args, range_start, range_end, tool_path):
