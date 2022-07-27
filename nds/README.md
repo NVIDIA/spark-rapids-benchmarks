@@ -18,7 +18,7 @@ You may not use NDS except in compliance with the Apache License, Version 2.0 an
 
 ## prerequisites:
 
-1. python > 3.6
+1. python >= 3.6
 2. Necessary libraries 
     ```
     sudo apt install openjdk-8-jdk-headless gcc make flex bison byacc maven
@@ -49,9 +49,6 @@ Then two jars will be built at:
 ```
 
 ### Generate data
-
-
-Note: please make sure you have `Hadoop binary` locally.
 
 How to generate data to local or HDFS:
 ```
@@ -89,8 +86,11 @@ The utility requires a pre-defined [template file](./convert_submit_gpu.template
 necessary Spark configurations. Either user can submit the `nds_transcode.py` directly to spark with
 arbitrary Spark parameters.
 
-Parquet, Orc, Avro, and JSON are supported for output data format at present with CPU. For GPU conversion, only Parquet 
-and Orc are supported.
+Parquet, Orc, Avro, JSON and Iceberg are supported for output data format at present with CPU. For GPU conversion,
+only Parquet and Orc are supported.
+
+Note: when exporting data from CSV to Iceberg, user needs to set necessary configs for Iceberg in submit template.
+e.g. [convert_submit_cpu_iceberg.template](./convert_submit_cpu_iceberg.template)
 
 User can also specify `--tables` to convert specific table or tables. See argument details below.
 
@@ -137,13 +137,12 @@ nds_transcode.py  raw_sf3k  parquet_sf3k report.txt
 User can also use `spark-submit` to submit `nds_transcode.py` directly.
 
 We provide two basic templates for GPU run(convert_submit_gpu.template) and CPU run(convert_submit_cpu.template).
-To enable GPU run, user need to download two jars in advance to use spark-rapids plugin.
+To enable GPU run, user needs to download the following jar.
 
-- cuDF jar: https://repo1.maven.org/maven2/ai/rapids/cudf/22.02.0/cudf-22.02.0.jar
-- spark-rapids jar: https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.02.0/rapids-4-spark_2.12-22.02.0.jar
+- spark-rapids jar: https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.06.0/rapids-4-spark_2.12-22.06.0.jar
 
-After that, please set environment variable `CUDF_JAR` and `SPARK_RAPIDS_PLUGIN_JAR` to the path where
-the jars are downloaded to in spark submit templates.
+After that, please set environment variable `SPARK_RAPIDS_PLUGIN_JAR` to the path where the jars are
+downloaded to in spark submit templates.
 
 ### Data partitioning
 
@@ -206,17 +205,17 @@ _After_ user generates query streams, Power Run can be executed using one of the
 
 Arguments supported by `nds_power.py`:
 ```
-usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] input_prefix query_stream_file time_log
+usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json,iceberg}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] input_prefix query_stream_file time_log
 
 positional arguments:
-  input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data")
+  input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"). If input_format is "iceberg", this argument will be regarded as the value of property "spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog session name "spark_catalog" is supported now, customized catalog is not yet supported.
   query_stream_file     query stream file that contains NDS queries in specific order
   time_log              path to execution time log, only support local path.
 
 optional arguments:
   -h, --help            show this help message and exit
-  --input_format {parquet,orc,avro,csv,json}
-                        type for input data source, e.g. parquet, orc, json, csv. Certain types are not fully supported by GPU reading, please refer to https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md for more details.
+  --input_format {parquet,orc,avro,csv,json,iceberg}
+                        type for input data source, e.g. parquet, orc, json, csv or iceberg. Certain types are not fully supported by GPU reading, please refer to https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md for more details.
   --output_prefix OUTPUT_PREFIX
                         text to prepend to every output file (e.g., "hdfs:///ds-parquet")
   --output_format OUTPUT_FORMAT
@@ -224,6 +223,8 @@ optional arguments:
   --property_file PROPERTY_FILE
                         property file for Spark configuration.
   --floats              When loading Text files like json and csv, schemas are required to determine if certain parts of the data are read as decimal type or not. If specified, float data will be used.
+  --json_summary_folder JSON_SUMMARY_FOLDER
+                        path of a folder to save json summary file for each query.
 
 ```
 
@@ -322,6 +323,7 @@ nds_maintenance.py \
 ./data_maintenance \
 time.csv \
 --maintenance_queries LF_CS,DF_CS
+```
 
 ## Data Validation
 To validate query output between Power Runs with and without GPU, we provide [nds_validate.py](nds_validate.py)
@@ -349,6 +351,9 @@ optional arguments:
   --use_iterator        When set, use `toLocalIterator` to load one partition at a time into driver memory, reducing.
                         memory usage at the cost of performance because processing will be single-threaded.
   --floats              whether the input data contains float data or decimal data. There're some known mismatch issues due to float point, we will do some special checks when the input data is float for some queries.
+  --json_summary_folder JSON_SUMMARY_FOLDER
+                        path of a folder that contains json summary file for each query.
+
 ```
 
 Example command to compare output data of two queries:
