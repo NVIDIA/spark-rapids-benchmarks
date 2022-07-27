@@ -108,9 +108,10 @@ def get_maintenance_queries(folder, spec_queries):
     for q in DM_FUNCS:
         with open(folder_abs_path + '/' + q + '.sql', 'r') as f:
             # file content e.g.
+            # " LICENSE CONTENT ... ;"
             # " CREATE view ..... ; INSERT into .... ;"
             # " DELETE from ..... ; DELETE FROM .... ;"
-            q_content = [ c + ';' for c in f.read().split(';')[:-1]]
+            q_content = [ c + ';' for c in f.read().split(';')[1:-1]]
             if q in DELETE_FUNCS:
                 # There're 3 date tuples to be replace for one DELETE function
                 # according to TPC-DS Spec 5.3.11
