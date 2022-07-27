@@ -27,4 +27,9 @@ object Manager {
   def notifyAll(message: String): Unit = {
     for { (_, listener) <- listeners } listener.notify(message)
   }
+
+  def registerSparkListener() : Unit = {
+    val listener = new TaskFailureListener
+    SparkContext.getOrCreate().addSparkListener(listener)
+  }
 }
