@@ -59,7 +59,7 @@ public class GenTable extends Configured implements Tool {
         options.addOption("p", "parallel", true, "parallel");
         options.addOption("r", "range", true, "child range in one data generation run");
         options.addOption("o", "overwrite", false, "overwrite existing data");
-        options.addOption("u", "update", false, "generate data for Data Maintenance");
+        options.addOption("u", "update", true, "generate data for Data Maintenance");
         CommandLine line = parser.parse(options, remainingArgs);
 
         if(!(line.hasOption("scale") && line.hasOption("dir"))) {
@@ -98,13 +98,13 @@ public class GenTable extends Configured implements Tool {
             }
         }
 
-        // use 999999 for default update value to avoid user input conflict.
         Integer update = null;
         if(line.hasOption("update")) {
           update = Integer.parseInt(line.getOptionValue("update"));
           if(update < 0) {
             // TPC-DS will error if update is < 0
             System.err.println("The update value cannot be less than 0, your input: " + update);
+            return 1;
           }
         }
 
@@ -191,8 +191,8 @@ public class GenTable extends Configured implements Tool {
         Path in = new Path("/tmp/"+table+"_"+scale+"-"+epoch);
         FileSystem fs = FileSystem.get(getConf());
         FSDataOutputStream out = fs.create(in);
-        String cmd = "";
         for(int i = rangeStart; i <= rangeEnd; i++) {
+          String cmd = "";
           if(table.equals("all")) {
             cmd += String.format("./dsdgen -dir $DIR -force Y -scale %d -parallel %d -child %d", scale, parallel, i);
           } else {
@@ -261,16 +261,17 @@ public class GenTable extends Configured implements Tool {
 
         FilenameFilter tables = new FilenameFilter() {
           public boolean accept(File dir, String name) {
-            return name.endsWith(suffix);
+            return name.endsWith(suffix) || name.startsWith("delete") || name.startsWith("inventory_delete");
           }
         };
 
         for(File f: cwd.listFiles(tables)) {
-          BufferedReader br = new BufferedReader(new FileReader(f));          
+          final String baseOutputPath = f.getName().replace(suffix, String.format("/data_%s_%s", child, parallel));
+          BufferedReader br = new BufferedReader(new FileReader(f));
           String line;
           while ((line = br.readLine()) != null) {
             // process the line.
-            mos.write("text", line, null, f.getName().replace(suffix, String.format("/data_%s_%s", child, parallel)));
+            mos.write("text", line, null, baseOutputPath);
           }
           br.close();
           f.deleteOnExit();

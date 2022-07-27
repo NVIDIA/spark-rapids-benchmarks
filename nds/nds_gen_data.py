@@ -76,7 +76,9 @@ maintenance_table_names = [
     's_store_returns',
     's_web_order',
     's_web_order_lineitem',
-    's_web_returns'
+    's_web_returns',
+    'delete',
+    'inventory_delete'
 ]
 
 def clean_temp_data(temp_data_path):
@@ -113,6 +115,16 @@ def merge_temp_tables(temp_data_path, parent_data_path, update):
         subprocess.run(cmd)
     clean_temp_data(temp_data_path)
 
+def move_delete_date_tables(base_path, update):
+    # delete date table are special, move them separately
+    # with --update 2, it'll generate the files named like delete_2.dat-m-00000, delete_2.dat-m-00001...
+    # the number of files is decided by the parallel value, and they all have same content
+    # So we just copy the first one
+    for delete_table in ['delete', 'inventory_delete']:
+        mkdir = ['hadoop', 'fs', '-mkdir', '-p', base_path + '/' + delete_table]
+        move = ['hadoop', 'fs', '-mv', base_path  + '/' + delete_table + f'_{update}.dat-m-00000', base_path + '/' + delete_table + '/']
+        subprocess.run(mkdir, check=True)
+        subprocess.run(move, check=True)
 
 def generate_data_hdfs(args, jar_path):
     """generate data to hdfs using TPC-DS dsdgen tool. Support incremental generation: due to the
@@ -140,7 +152,7 @@ def generate_data_hdfs(args, jar_path):
     if args.overwrite_output:
         cmd += ['-o']
     if args.update:
-            cmd += ["-u", args.update]
+        cmd += ["-u", args.update]
     if args.range:
         # use a temp folder to save the specific range data.
         # will move the content to parent folder afterwards.
@@ -153,12 +165,18 @@ def generate_data_hdfs(args, jar_path):
         cmd.extend(["-d", temp_data_path])
         try:
             subprocess.run(cmd, check=True, cwd=str(tpcds_gen_path))
-            merge_temp_tables(temp_data_path, args.data_dir)
+            # only move delete table for data maintenance
+            if args.update:
+                move_delete_date_tables(temp_data_path, args.update)
+            merge_temp_tables(temp_data_path, args.data_dir, args.update)
         finally:
             clean_temp_data(temp_data_path)
     else:
         cmd.extend(["-d", args.data_dir])
         subprocess.run(cmd, check=True, cwd=str(tpcds_gen_path))
+        # only move delete table for data maintenance
+        if args.update:
+            move_delete_date_tables(args.data_dir, args.update)
 
 
 def generate_data_local(args, range_start, range_end, tool_path):
@@ -218,6 +236,9 @@ def generate_data_local(args, range_start, range_end, tool_path):
         for i in range(range_start, range_end + 1):
             subprocess.run(['mv', f'{data_dir}/{table}_{i}_{args.parallel}.dat',
                             f'{data_dir}/{table}/'], stderr=subprocess.DEVNULL)
+        # delete date file has no parallel number suffix in the file name, move separately
+        subprocess.run(['mv', f'{data_dir}/{table}_1.dat',
+                        f'{data_dir}/{table}/'], stderr=subprocess.DEVNULL)
     # show summary
     subprocess.run(['du', '-h', '-d1', data_dir])
 
