@@ -223,7 +223,11 @@ def run_query_stream(input_prefix,
                                                    output_path,
                                                    output_format)
         print(f"Time taken: {summary['queryTimes']} millis for {query_name}")
-        execution_time_list.append((spark_app_id, query_name, summary['queryTimes']))
+        query_times = summary['queryTimes']
+        num_iterations = len(query_times)
+        if num_iterations != 1:
+            raise Exception(f"Query {query_name} had {num_iterations} iterations but 1 expected.")
+        execution_time_list.append((spark_app_id, query_name, query_times[0]))
         # property_file e.g.: "property/aqe-on.properties" or just "aqe-off.properties"
         if property_file:
             summary_prefix = os.path.join(
