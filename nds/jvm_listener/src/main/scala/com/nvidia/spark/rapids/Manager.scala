@@ -1,5 +1,6 @@
 package com.nvidia.spark.rapids.listener
 
+import org.apache.spark.SparkContext
 
 object Manager {
   /* Manager class to manage all extra customized listeners.
