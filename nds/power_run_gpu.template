@@ -39,4 +39,4 @@ export SPARK_CONF=("--master" "yarn"
                    "--conf" "spark.extraListeners=com.nvidia.spark.rapids.listener.TaskFailureListener"
                    "--conf" "spark.executor.resource.gpu.discoveryScript=./getGpusResources.sh"
                    "--files" "$SPARK_HOME/examples/src/main/scripts/getGpusResources.sh"
-                   "--jars" "$SPARK_RAPIDS_PLUGIN_JAR,$NDS_LISTENER_JAR"))
+                   "--jars" "$SPARK_RAPIDS_PLUGIN_JAR,$NDS_LISTENER_JAR")
