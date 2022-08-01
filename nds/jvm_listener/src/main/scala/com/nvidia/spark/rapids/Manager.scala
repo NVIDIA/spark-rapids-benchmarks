@@ -1,10 +1,12 @@
 package com.nvidia.spark.rapids.listener
 
+import org.apache.spark.SparkContext
 
 object Manager {
   /* Manager class to manage all extra customized listeners.
   */
   var listeners: Map[String, Listener] = Map()
+  val spark_listener : SparkListener = new TaskFailureListener()
 
   def register(listener: Listener): String = {
     /* Note this register method has nothing to do with SparkContext.addSparkListener method.
@@ -26,5 +28,13 @@ object Manager {
 
   def notifyAll(message: String): Unit = {
     for { (_, listener) <- listeners } listener.notify(message)
+  }
+
+  def registerSparkListener() : Unit = {
+    SparkContext.getOrCreate().addSparkListener(spark_listener)
+  }
+
+  def unregisterSparkListener() : Unit = {
+    SparkContext.getOrCreate().removeSparkListener(spark_listener)
   }
 }

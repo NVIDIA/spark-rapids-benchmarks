@@ -73,14 +73,10 @@ class PysparkBenchReport:
         self.summary['env']['sparkVersion'] = self.spark_session.version
         listener = None
         spark_env = dict(self.spark_session.sparkContext.getConf().getAll())
-        if 'spark.extraListeners' in spark_env.keys() and 'com.nvidia.spark.rapids.listener.TaskFailureListener' in spark_env['spark.extraListeners']:
-            listener = python_listener.PythonListener()
-            listener.register()
-            print("TaskFailureListener is registered.")
-        else:
-            # NOTE: when listener is not used, the queryStatus field will always be "Completed" in json summary
-            # A message will be printed to the console to indicate that the queryStatus field is not valid.
-            print("TaskFailureListener is not registered. The 'queryStatus' field in the summary will not be valid but always be 'Completed'.")
+        listener = python_listener.PythonListener()
+        listener.register()
+        listener.register_spark_listener()
+        print("TaskFailureListener is registered.")
         try:
             start_time = int(time.time() * 1000)
             fn(*args)

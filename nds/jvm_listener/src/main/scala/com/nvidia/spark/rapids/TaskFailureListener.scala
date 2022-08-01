@@ -10,7 +10,6 @@ import scala.collection.mutable.ListBuffer
  * send this reason to python side.
  */
 class TaskFailureListener extends SparkListener {
-  val taskFailures = ListBuffer[TaskEndReason]()
   override def onTaskEnd(taskEnd: SparkListenerTaskEnd) {
     taskEnd.reason match {
       case Success =>
