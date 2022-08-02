@@ -6,7 +6,7 @@ object Manager {
   /* Manager class to manage all extra customized listeners.
   */
   var listeners: Map[String, Listener] = Map()
-  val spark_listener : SparkListener = new TaskFailureListener()
+  val spark_listener = new TaskFailureListener()
 
   def register(listener: Listener): String = {
     /* Note this register method has nothing to do with SparkContext.addSparkListener method.

@@ -73,10 +73,15 @@ class PysparkBenchReport:
         self.summary['env']['sparkVersion'] = self.spark_session.version
         listener = None
         spark_env = dict(self.spark_session.sparkContext.getConf().getAll())
-        listener = python_listener.PythonListener()
-        listener.register()
-        listener.register_spark_listener()
-        print("TaskFailureListener is registered.")
+        try:
+            listener = python_listener.PythonListener()
+            listener.register()
+            listener.register_spark_listener()
+        except TypeError as e:
+            print("Not found com.nvidia.spark.rapids.listener.Manager", str(e))
+            listener = None
+        if listener is not None:
+            print("TaskFailureListener is registered.")
         try:
             start_time = int(time.time() * 1000)
             fn(*args)
