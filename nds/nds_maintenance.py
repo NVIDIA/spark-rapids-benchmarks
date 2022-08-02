@@ -31,6 +31,7 @@
 
 import argparse
 import csv
+from datetime import datetime
 import time
 
 from pyspark.sql import SparkSession
@@ -162,11 +163,18 @@ def run_query(spark_session, query_dict, time_log_output_path):
         execution_time_list.append((spark_app_id, query_name, summary['queryTimes']))
         q_report.write_summary(query_name, prefix="")
     spark_session.sparkContext.stop()
-    DM_end = time.time()
-    DM_elapse = DM_end - DM_start
-    total_elapse = DM_end - total_time_start
-    print("====== Data Maintenance Time: {} s ======".format(DM_elapse))
-    print("====== Total Time: {} s ======".format(total_elapse))
+    DM_end = datetime.now()
+    DM_elapse = (DM_end - DM_start).total_seconds()
+    total_elapse = (DM_end - total_time_start).total_seconds()
+    print(f"====== Data Maintenance Start Time: {DM_start}")
+    print(f"====== Data Maintenance Time: {DM_elapse} s ======")
+    print(f"====== Total Time: {total_elapse} s ======")
+    execution_time_list.append(
+        (spark_app_id, "Data Maintenance Start Time", DM_start)
+    )
+    execution_time_list.append(
+        (spark_app_id, "Data Maintenance End Time", DM_end)
+    )
     execution_time_list.append(
         (spark_app_id, "Data Maintenance Time", DM_elapse))
     execution_time_list.append(

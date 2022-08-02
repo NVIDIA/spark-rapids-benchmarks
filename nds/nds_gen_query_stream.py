@@ -115,6 +115,8 @@ if __name__ == "__main__":
     group.add_argument('--streams',
                         help='generate how many query streams. ' +
                         'If not specified, only one query will be produced.')
+    parser.add_argument('--rngseed',
+                        help='seed the random generation seed.')
 
 
     args = parser.parse_args()

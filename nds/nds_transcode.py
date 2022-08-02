@@ -34,6 +34,8 @@ import timeit
 import pyspark
 import os
 
+from datetime import datetime
+
 from pyspark.sql.types import *
 from pyspark.sql.functions import col
 
@@ -804,7 +806,10 @@ def transcode(args):
             if t not in trans_tables.keys() :
                 raise Exception(f"invalid table name: {t}. Valid tables are: {schemas.keys()}")
         trans_tables = {t: trans_tables[t] for t in args.tables if t in trans_tables}
-        
+    
+    
+    start_time = datetime.now()
+    print(f"Load Test Start Time: {start_time}")
     for fn, schema in trans_tables.items():
         results[fn] = timeit.timeit(
             lambda: store(session,
@@ -819,9 +824,20 @@ def transcode(args):
                           args.compression,
                           args.output_prefix),
             number=1)
+        
+    end_time = datetime.now()
+    delta = (end_time - start_time).total_seconds()
+    print(f"Load Test Finished at: {end_time}")
+    print(f"Load Test Time: {delta} seconds")
+    # format required at TPC-DS Spec 4.3.1
+    end_time_formatted = end_time.strftime("%m%d%H%M%S%f")[:-5]
+    print(f"RNGSEED used :{end_time_formatted}")
+    
+    report_text = ""
+    report_text += f"Load Test Time: {delta} seconds\n"
+    report_text += f"Load Test Finished at: {end_time}\n"
+    report_text += f"RNGSEED used: {end_time_formatted}\n"
 
-    report_text = "Total conversion time for %d tables was %.02fs\n" % (
-        len(results.values()), sum(results.values()))
     for table, duration in results.items():
         report_text += "Time to convert '%s' was %.04fs\n" % (table, duration)
 

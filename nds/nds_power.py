@@ -163,7 +163,8 @@ def run_query_stream(input_prefix,
                      input_format="parquet",
                      use_decimal=True,
                      output_path=None,
-                     output_format="parquet"):
+                     output_format="parquet",
+                     json_summary_folder=None):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
 
@@ -228,13 +229,14 @@ def run_query_stream(input_prefix,
         if num_iterations != 1:
             raise Exception(f"Query {query_name} had {num_iterations} iterations but 1 expected.")
         execution_time_list.append((spark_app_id, query_name, query_times[0]))
-        # property_file e.g.: "property/aqe-on.properties" or just "aqe-off.properties"
-        if property_file:
-            summary_prefix = os.path.join(
-                args.json_summary_folder, os.path.basename(property_file).split('.')[0])
-        else:
-            summary_prefix =  os.path.join(args.json_summary_folder, '')
-        q_report.write_summary(query_name, prefix=summary_prefix)
+        if json_summary_folder:
+            # property_file e.g.: "property/aqe-on.properties" or just "aqe-off.properties"
+            if property_file:
+                summary_prefix = os.path.join(
+                    args.json_summary_folder, os.path.basename(property_file).split('.')[0])
+            else:
+                summary_prefix =  os.path.join(args.json_summary_folder, '')
+            q_report.write_summary(query_name, prefix=summary_prefix)
     power_end = time.time()
     power_elapse = int((power_end - power_start)*1000)
     spark_session.sparkContext.stop()
@@ -242,6 +244,10 @@ def run_query_stream(input_prefix,
     total_elapse = int((total_time_end - total_time_start)*1000)
     print("====== Power Test Time: {} milliseconds ======".format(power_elapse))
     print("====== Total Time: {} milliseconds ======".format(total_elapse))
+    execution_time_list.append(
+        (spark_app_id, "Power Start Time", power_start))
+    execution_time_list.append(
+        (spark_app_id, "Power End Time", power_end))
     execution_time_list.append(
         (spark_app_id, "Power Test Time", power_elapse))
     execution_time_list.append(
@@ -308,4 +314,5 @@ if __name__ == "__main__":
                      args.input_format,
                      not args.floats,
                      args.output_prefix,
-                     args.output_format)
+                     args.output_format,
+                     args.json_summary_folder)
