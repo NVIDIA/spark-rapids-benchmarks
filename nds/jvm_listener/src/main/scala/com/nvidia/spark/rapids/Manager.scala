@@ -5,8 +5,9 @@ import org.apache.spark.SparkContext
 object Manager {
   /* Manager class to manage all extra customized listeners.
   */
-  var listeners: Map[String, Listener] = Map()
-  val spark_listener = new TaskFailureListener()
+  private var listeners: Map[String, Listener] = Map()
+  private val spark_listener = new TaskFailureListener()
+  private var isRegistered = false
 
   def register(listener: Listener): String = {
     /* Note this register method has nothing to do with SparkContext.addSparkListener method.
@@ -31,10 +32,16 @@ object Manager {
   }
 
   def registerSparkListener() : Unit = {
-    SparkContext.getOrCreate().addSparkListener(spark_listener)
+    if (!isRegistered) {
+      SparkContext.getOrCreate().addSparkListener(spark_listener)
+      isRegistered = true
+    }
   }
 
   def unregisterSparkListener() : Unit = {
-    SparkContext.getOrCreate().removeSparkListener(spark_listener)
+    if (isRegistered) {
+      SparkContext.getOrCreate().removeSparkListener(spark_listener)
+      isRegistered = false
+    }
   }
 }

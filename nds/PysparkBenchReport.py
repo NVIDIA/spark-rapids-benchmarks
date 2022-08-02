@@ -97,6 +97,9 @@ class PysparkBenchReport:
         finally:
             self.summary['startTime'] = start_time
             self.summary['queryTimes'].append(end_time - start_time)
+            if listener is not None:
+                listener.unregister()
+                listener.unregister_spark_listener()
             return self.summary
             
     def write_summary(self, query_name, prefix=""):
