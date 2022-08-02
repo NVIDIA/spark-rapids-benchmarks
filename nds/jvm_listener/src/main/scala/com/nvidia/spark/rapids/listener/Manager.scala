@@ -15,6 +15,11 @@ object Manager {
     * all customized listeners.
     */
     this.synchronized {
+      // We register to the spark listener when the first listener is registered.
+      if (!isRegistered) {
+        SparkContext.getOrCreate().addSparkListener(spark_listener)
+        isRegistered = true
+      }
       val uuid = java.util.UUID.randomUUID().toString
       listeners = listeners + (uuid -> listener)
       uuid

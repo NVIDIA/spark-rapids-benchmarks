@@ -76,7 +76,6 @@ class PysparkBenchReport:
         try:
             listener = python_listener.PythonListener()
             listener.register()
-            listener.register_spark_listener()
         except TypeError as e:
             print("Not found com.nvidia.spark.rapids.listener.Manager", str(e))
             listener = None
@@ -99,7 +98,6 @@ class PysparkBenchReport:
             self.summary['queryTimes'].append(end_time - start_time)
             if listener is not None:
                 listener.unregister()
-                listener.unregister_spark_listener()
             return self.summary
             
     def write_summary(self, query_name, prefix=""):
