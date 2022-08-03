@@ -31,5 +31,14 @@ class PythonListener(object):
         manager.unregister(self.uuid)
         self.uuid = None
 
+    # should call after register
+    def register_spark_listener(self):
+        manager = PythonListener.get_manager()
+        manager.registerSparkListener()
+
+    def unregister_spark_listener(self):
+        manager = PythonListener.get_manager()
+        manager.unregisterSparkListener()
+
     class Java:
         implements = ["com.nvidia.spark.rapids.listener.Listener"]
