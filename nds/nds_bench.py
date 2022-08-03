@@ -29,9 +29,9 @@
 # obtained from using this file do not comply with the TPC-DS Benchmark.
 #
 
-# This script starts from Load Tests and will not generate raw data. 
+# This script starts from Load Tests and will not generate raw data.
 # We assume raw CSV data including "Maintenance data" is already generated.
-# 
+#
 # 1. run nds_transcode.py to load data to Iceberg. => get "TLoad" and "timestamp" for 2.
 # 2. run nds_gen_query_stream.py to generate query streams with RNDSEED = "timestamp" from 1.
 #    TPC-DS specification requires Sq >= 4, but this script allow Sq >= 1 for test purpose.
@@ -41,8 +41,20 @@
 # 6. run nds-throughput to do Throughput Test 2. => get "Ttt2"
 # 7. run nds_maintenance.py to do Maintenance Test 2. => get "Tdm2"
 
+import argparse
 import math
 import subprocess
+import yaml
+
+
+def get_yaml_params(yaml_file):
+    with open(yaml_file, 'r') as f:
+        try:
+            params = yaml.safe_load(f)
+            return params
+        except yaml.YAMLError as exc:
+            print(exc)
+            return None
 
 
 def get_load_end_timestamp(load_report_file):
@@ -56,7 +68,9 @@ def get_load_end_timestamp(load_report_file):
     if rngseed:
         return rngseed
     else:
-        raise Exception(f"RNGSEED not found in Load Test report file: {load_report_file}")
+        raise Exception(
+            f"RNGSEED not found in Load Test report file: {load_report_file}")
+
 
 def get_load_time(load_report_file):
     """get the load test elapse time in str format from the load report file"""
@@ -69,7 +83,9 @@ def get_load_time(load_report_file):
     if load_elapse:
         return load_elapse
     else:
-        raise Exception(f"Load Test Time not found in Load Test report file: {load_report_file}.")
+        raise Exception(
+            f"Load Test Time not found in Load Test report file: {load_report_file}.")
+
 
 def get_power_time(power_report_file):
     """get the total elapse time for Power Test in str format from the power report file"""
@@ -82,7 +98,9 @@ def get_power_time(power_report_file):
     if power_elapse:
         return power_elapse
     else:
-        raise Exception(f"Power Test Time not found in Power Test report file: {power_report_file}.")
+        raise Exception(
+            f"Power Test Time not found in Power Test report file: {power_report_file}.")
+
 
 def get_start_end_time(report_file):
     """get the start timestamp in str format from the Power Test report file"""
@@ -99,13 +117,15 @@ def get_start_end_time(report_file):
     if start_time and end_time:
         return start_time, end_time
     else:
-        raise Exception(f"Start or End time not found in Power Test report file: {report_file}")
+        raise Exception(
+            f"Start or End time not found in Power Test report file: {report_file}")
+
 
 def get_throughput_time(throughput_report_file_base, num_streams, first_or_second):
     """get Throughput elapse time according to Spec 7.4.7.4. 
     Filter all Throughput reports and get the start timestamp and end timestamp to calculate the 
     elapse time of Throughput Test
-    
+
     num_streams (int): number of streams in total including Power Stream
     first_or_second (int): 1 for first throughput test, 2 for second throughput test 
     """
@@ -115,9 +135,10 @@ def get_throughput_time(throughput_report_file_base, num_streams, first_or_secon
         stream_range = [x for x in range(1, num_streams//2+1)]
     else:
         stream_range = [x for x in range(num_streams//2+1, num_streams+1)]
-        
+
     for stream_num in stream_range:
-        report_file = throughput_report_file_base.replace("'{}'",str(stream_num))
+        report_file = throughput_report_file_base.replace(
+            "'{}'", str(stream_num))
         sub_start_time, sub_end_time = get_start_end_time(report_file)
         start_time.append(float(sub_start_time))
         end_time.append(float(sub_end_time))
@@ -126,25 +147,32 @@ def get_throughput_time(throughput_report_file_base, num_streams, first_or_secon
     elapse = round_up_to_nearest_10_percent(end_time - start_time)
     return elapse
 
-def get_maintenance_time(maintenance_report_file):
+
+def get_maintenance_time(maintenance_report_file, maintenance_load_report_file):
     """get Maintenance elapse time from report"""
+    maintenance_load_time = None
     maintenance_elapse = None
     with open(maintenance_report_file, "r") as f:
         for line in f:
             if "Data Maintenance Time" in line:
                 # e.g. "app-20220715143743-0007,Data Maintenance Time,11838"
                 maintenance_elapse = line.split(",")[2].strip()
+
+    # refresh data load time is counted as a part in the maintenance time
+    maintenance_load_time = get_load_time(maintenance_load_report_file)
     if maintenance_elapse:
-        return maintenance_elapse
+        return float(maintenance_elapse) + float(maintenance_load_time)
     else:
         raise Exception("Data Maintenance Time not found in Data Maintenance report file: " +
                         f"{maintenance_report_file}.")
+
 
 def get_throughput_stream_nums(num_streams, first_or_second):
     if first_or_second == 1:
         return ",".join([x for x in range(1, num_streams//2+1)])
     else:
         return ",".join([x for x in range(num_streams//2+1, num_streams+1)])
+
 
 def round_up_to_nearest_10_percent(num):
     return math.ceil(num * 10) / 10
@@ -155,13 +183,13 @@ def run_load_test(template_path,
                   output_path,
                   load_report_file):
     load_test_cmd = ["./spark-submit-template",
-                 template_path, 
-                 "nds_transcode.py",
-                 input_path,
-                 output_path,
-                 load_report_file,
-                 "--output_format", "iceberg",
-                 '--output_mode', "overwrite"]
+                     template_path,
+                     "nds_transcode.py",
+                     input_path,
+                     output_path,
+                     load_report_file,
+                     "--output_format", "iceberg",
+                     '--output_mode', "overwrite"]
     subprocess.run(load_test_cmd, check=True)
 
 
@@ -171,15 +199,15 @@ def gen_streams(num_streams,
                 stream_output_path,
                 RNGSEED):
     gen_stream_cmd = ["python3",
-                  "nds_gen_query_stream.py",
-                  template_dir,
-                  scale_factor,
-                  stream_output_path,
-                  "--rndseed", RNGSEED,
-                  "--streams", num_streams]
+                      "nds_gen_query_stream.py",
+                      template_dir,
+                      scale_factor,
+                      stream_output_path,
+                      "--rndseed", RNGSEED,
+                      "--streams", num_streams]
     subprocess.run(gen_stream_cmd, check=True)
-    
-    
+
+
 def power_test(template_path,
                input_path,
                stream_path,
@@ -204,131 +232,144 @@ def throughput_test(num_streams,
                     report_base_path,
                     property_path):
     throughput_cmd = ["./nds-throughput",
-                        get_throughput_stream_nums(num_streams, first_or_second),
-                        "./spark-submit-template",
-                        template_path,
-                        "nds_power.py",
-                        input_path,
-                        stream_base_path,
-                        report_base_path,
-                        "--input_format", "iceberg",
-                        "--property_file", property_path]
+                      get_throughput_stream_nums(num_streams, first_or_second),
+                      "./spark-submit-template",
+                      template_path,
+                      "nds_power.py",
+                      input_path,
+                      stream_base_path,
+                      report_base_path,
+                      "--input_format", "iceberg",
+                      "--property_file", property_path]
     subprocess.run(throughput_cmd, check=True)
 
 
 def maintenance_test(num_streams,
                      first_or_second,
                      template_path,
-                     maintenance_data_base_path,
+                     maintenance_raw_data_base_path,
+                     maintenance_parquet_data_base_path,
                      maintenance_query_path,
+                     maintenance_load_report_base_path,
                      maintenance_report_base_path):
     if first_or_second == 1:
         refresh_nums = [i for i in range(1, num_streams//2+1)]
     else:
         refresh_nums = [i for i in range(num_streams//2+1, num_streams+1)]
-        
+
     Tdm = 0
     # refresh run for each stream in Throughput Test 1.
     for i in refresh_nums:
-        maintenance_report_path = maintenance_report_base_path + f"_{i}" + ".csv"
+        maintenance_raw_path = maintenance_raw_data_base_path + f"_{i}"
+        maintenance_parquet_path = maintenance_parquet_data_base_path + f"_{i}"
+        maintenance_load_report_path = maintenance_load_report_base_path + \
+            f"_{i}" + ".txt"
+        maintenance_report_path = maintenance_report_base_path + \
+            f"_{i}" + ".csv"
+
+        # the load time of refresh data is counted as a part in the maintenance time
+        maintenance_load_cmd = ["./spark-submit-template",
+                                template_path,
+                                "nds_transcode.py",
+                                maintenance_raw_path,
+                                maintenance_parquet_path,
+                                maintenance_load_report_path,
+                                "--output_format", "parquet",
+                                '--output_mode', "overwrite"]
+        subprocess.run(maintenance_load_cmd, check=True)
+        Tdm += float(get_load_time(maintenance_load_report_path))
         maintenance_cmd = ["./spark-submit-template",
-                            template_path,
-                            "nds_maintenance.py",
-                            maintenance_data_base_path + "_" + str(i + 1),
-                            maintenance_query_path,
-                            maintenance_report_path]
+                           template_path,
+                           "nds_maintenance.py",
+                           maintenance_parquet_path,
+                           maintenance_query_path,
+                           maintenance_report_path]
         subprocess.run(maintenance_cmd, check=True)
         Tdm += float(get_maintenance_time(maintenance_report_path))
 
+def run_full_bench(yaml_params):
+    template_path = yaml_params['load_test']['spark_template_path']
+    input_path = yaml_params['load_test']['input_path']
+    iceberg_output_path = yaml_params['load_test']['output_path']
+    load_report_path = yaml_params['load_test']['report_path']
+    num_streams = yaml_params['generate_query_stream']['num_streams']
+    query_template_dir = yaml_params['generate_query_stream']['query_template_dir']
+    scale_factor = yaml_params['generate_query_stream']['scale_factor']
+    stream_output_path = yaml_params['generate_query_stream']['stream_output_path']
+    power_stream_path = stream_output_path + "/query_0.sql"
+    power_report_path = yaml_params['power_test']['report_path']
+    power_property_path = yaml_params['power_test']['property_path']
+    throughput_report_base = yaml_params['throughput_test']['report_base_path']
+    maintenance_raw_data_base_path = yaml_params['maintenance_test']['maintenance_raw_data_base_path']
+    maintenance_parquet_data_base_path = yaml_params['maintenance_test']['maintenance_output_data']
+    maintenance_query_dir = yaml_params['maintenance_test']['maintenance_query_dir']
+    maintenance_report_base_path = yaml_params['maintenance_test']['report_base_path']
+    
+    
+    # 1.
+    run_load_test(template_path,
+                  input_path,
+                  iceberg_output_path,
+                  load_report_path)
+    Tld = float(get_load_time(load_report_path))
+    # 2.
+    RNGSEED = get_load_end_timestamp(load_report_path)
+    gen_streams(num_streams, query_template_dir, scale_factor, stream_output_path, RNGSEED)
+    # 3.
+    power_test(template_path,
+               iceberg_output_path,
+               power_stream_path,
+               power_report_path,
+               power_property_path)
 
-# TODO: get via command line args or yaml file
-convert_template_path = ""
-raw_input_path = ""
-iceberg_output_path = ""
-load_report_file = ""
+    # TPower is in milliseconds
+    # But Spec 7.1.16: Elapsed time is measured in seconds rounded up to the nearest 0.1 second.
+    # Convert it to seconds.
+    TPower = round_up_to_nearest_10_percent(
+        float(get_power_time(power_report_path)) / 1000)
 
-template_dir = ""
-scale_factor = 3000
-stream_output_path = ""
-# only odd numbers, query_0.sql is for Power Test
-# if stream_num = 5 then:
-# query_{1,2}.sql are for Throughput Test 1
-# query_{3,4}.sql are for Throughput Test 2
-# if stream_num = 3 then:
-# query_{1}.sql are for Throughput Test 1
-# query_{2}.sql are for Throughput Test 2
-# TPC-DS spec requires stream_num >= 9, but this script allow stream_num >= 3 for test purpose.
-num_streams = 3
-
-power_template_path = ""
-power_input_path = ""
-power_stream_path = stream_output_path + "/query_0.sql"
-power_report_path = "time.csv"
-power_property_path = ""
-
-throughput_stream_base = stream_output_path + "/query_'{}'.sql"
-throughput_report_base = "time_'{}'.csv"
-
-maintenance_query_folder = "./data_maintenance"
-
-# assume : refresh_data_1 , refresh_data_2 etc..
-maintenance_data_base_folder = "refresh_data"
-maintenance_report_base_path = "maintenance"
-
-# 1.
-run_load_test(convert_template_path,
-              raw_input_path,
-              iceberg_output_path,
-              load_report_file)
-Tld = float(get_load_time(load_report_file))
-# 2.
-RNGSEED = get_load_end_timestamp(load_report_file)
-# 3.
-power_test(power_template_path,
-           power_input_path,
-           power_stream_path,
-           power_report_path,
-           power_property_path)
-
-# TPower is in milliseconds
-# But Spec 7.1.16: Elapsed time is measured in seconds rounded up to the nearest 0.1 second.
-# Convert it to seconds.
-TPower = round_up_to_nearest_10_percent(float(get_power_time(power_report_path)) / 1000)
-
-# 4.
-throughput_test(num_streams,
-                1,
-                template_dir,
-                power_input_path,
-                throughput_stream_base,
-                throughput_report_base,
-                power_property_path)
-
-Ttt1 = get_throughput_time(throughput_report_base, num_streams, 1)
-
-Tdm1 = maintenance_test(num_streams,
-                        1,
-                        power_template_path,
-                        maintenance_data_base_folder,
-                        maintenance_query_folder,
-                        maintenance_report_base_path)
-
-throughput_test(num_streams,
-                2,
-                template_dir,
-                power_input_path,
-                throughput_stream_base,
-                throughput_report_base,
-                power_property_path)
-
-Ttt2 = get_throughput_time(throughput_report_base,  num_streams, 2)
-
-Tdm1 = maintenance_test(num_streams,
-                        2,
-                        power_template_path,
-                        maintenance_data_base_folder,
-                        maintenance_query_folder,
-                        maintenance_report_base_path)
+    # 4.
+    throughput_test(num_streams,
+                    1,
+                    template_path,
+                    iceberg_output_path,
+                    stream_output_path,
+                    throughput_report_base,
+                    power_property_path)
+    Ttt1 = get_throughput_time(throughput_report_base,
+                               num_streams, 1)
+    # 5
+    Tdm1 = maintenance_test(num_streams,
+                            1,
+                            template_path,
+                            maintenance_raw_data_base_path,
+                            maintenance_parquet_data_base_path,
+                            maintenance_query_dir,
+                            maintenance_report_base_path)
+    # 6
+    throughput_test(num_streams,
+                    2,
+                    template_path,
+                    iceberg_output_path,
+                    stream_output_path,
+                    throughput_report_base,
+                    power_property_path)
+    Ttt2 = get_throughput_time(throughput_report_base,
+                               num_streams, 2)
+    # 7
+    Tdm1 = maintenance_test(num_streams,
+                            2,
+                            template_path,
+                            maintenance_raw_data_base_path,
+                            maintenance_parquet_data_base_path,
+                            maintenance_query_dir,
+                            maintenance_report_base_path)
 
 
-
+if __name__ == "__main__":
+    parser = parser = argparse.ArgumentParser()
+    parser.add_argument('yaml_config',
+                        help='yaml config file for the benchmark')
+    args = parser.parse_args()
+    params = get_yaml_params(args.yaml_config)    
+    run_full_bench(params)
