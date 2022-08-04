@@ -1,0 +1,21 @@
+  load_test:
+    spark_template_path: # template to submit Spark App
+    input_path: # raw NDS csv data
+    output_path: # warehouse location for Iceberg
+    report_path: # execution report path
+  generate_query_stream:
+    num_streams: # how many streams to be generated
+    query_template_dir: # template dir contains all query templates to generate Spark compatible queries
+    stream_output_path:
+    scale_factor:
+  power_test: # use load test output as input to avoid duplication
+    spark_template_path:
+    report_path:
+    property_path: # property file contains some Spark configs as a addition to spark template file
+  throughput_test: # use most parameters from power test to avoid duplication
+    report_base_path:
+  maintenance_test:
+    maintenance_raw_data_base_path:  # raw refresh data in csv format
+    maintenance_output_data: # refresh data in parquet format
+    maintenance_query_dir: # folder that contains all data maintenance queries
+    report_base_path:
