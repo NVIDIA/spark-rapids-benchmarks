@@ -37,6 +37,7 @@ from pyspark.sql import SparkSession
 from PysparkBenchReport import PysparkBenchReport
 
 from check import get_abs_path
+from nds_transcode import get_maintenance_schemas
 
 INSERT_FUNCS = [
     'LF_CR',
@@ -135,7 +136,7 @@ def run_dm_query(spark, query_list):
     for q in query_list:
         spark.sql(q)
 
-def run_query(query_dict, time_log_output_path):
+def run_query(query_dict, time_log_output_path, refresh_data_path, refresh_data_format):
     # TODO: Duplicate code in nds_power.py. Refactor this part, make it general.
     execution_time_list = []
     total_time_start = time.time()
@@ -147,6 +148,7 @@ def run_query(query_dict, time_log_output_path):
     spark_session = SparkSession.builder.appName(
         app_name).getOrCreate()
     spark_app_id = spark_session.sparkContext.applicationId
+    register_temp_views(spark_session, refresh_data_path, refresh_data_format)
     DM_start = time.time()
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
@@ -176,9 +178,16 @@ def run_query(query_dict, time_log_output_path):
         writer.writerow(header)
         writer.writerows(execution_time_list)
     
+def register_temp_views(spark_session, refresh_data_path, data_format):
+    refresh_tables = get_maintenance_schemas(True).keys()
+    for table in refresh_tables:
+        spark_session.read.format(data_format).load(
+            refresh_data_path + '/' + table).createOrReplaceTempView(table)
 
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
+    parser.add_argument('refresh_data_path',
+                        help='path to refresh data')
     parser.add_argument('maintenance_queries_folder',
                         help='folder contains all NDS Data Maintenance queries. If ' +
                         '"--maintenance_queries" is not set, all queries under the folder will be' +
@@ -190,8 +199,11 @@ if __name__ == "__main__":
                         type=lambda s: s.split(','),
                         help='specify Data Maintenance query names by a comma seprated string.' +
                         ' e.g. "LF_CR,LF_CS"')
+    parser.add_argument('--data_format',
+                        help='data format for refresh data, e.g. parquet, orc, avro',
+                        default="parquet")
 
     args = parser.parse_args()
     query_dict = get_maintenance_queries(args.maintenance_queries_folder,
                                          args.maintenance_queries)
-    run_query(query_dict, args.time_log)
+    run_query(query_dict, args.time_log, args.refresh_data_path, args.data_format)

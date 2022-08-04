@@ -302,9 +302,10 @@ or later. More details including work-around for version 3.2.0 and 3.2.1 could b
 
 Arguments supported for data maintenance:
 ```
-usage: nds_maintenance.py [-h] [--maintenance_queries MAINTENANCE_QUERIES] maintenance_queries_folder time_log
+usage: nds_maintenance.py [-h] [--maintenance_queries MAINTENANCE_QUERIES] [--data_format DATA_FORMAT] refresh_data_path maintenance_queries_folder time_log
 
 positional arguments:
+  refresh_data_path     path to refresh data
   maintenance_queries_folder
                         folder contains all NDS Data Maintenance queries. If "--maintenance_queries"
                         is not set, all queries under the folder will beexecuted.
@@ -314,15 +315,20 @@ optional arguments:
   -h, --help            show this help message and exit
   --maintenance_queries MAINTENANCE_QUERIES
                         specify Data Maintenance query names by a comma seprated string. e.g. "LF_CR,LF_CS"
+  --data_format DATA_FORMAT
+                        data format for refresh data, e.g. parquet, orc, avro
+
 ```
 
 An example command to run only _LF_CS_ and _DF_CS_ functions:
 ```
 ./spark-submit-template convert_submit_cpu_iceberg.template \
 nds_maintenance.py \
+update_data_sf3k \
 ./data_maintenance \
 time.csv \
---maintenance_queries LF_CS,DF_CS
+--maintenance_queries LF_CS,DF_CS \
+--data_format orc
 ```
 
 ## Data Validation
