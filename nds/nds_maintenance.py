@@ -85,7 +85,7 @@ def replace_date(query_list, date_tuple_list):
             q_updated.append(c)
     return q_updated
 
-def get_maintenance_queries(folder, spec_queries):
+def get_maintenance_queries(folder, spec_queries, refresh_data_path, refresh_data_format):
     """get query content from DM query files
 
     Args:
@@ -96,7 +96,7 @@ def get_maintenance_queries(folder, spec_queries):
     """
     # need a spark session to get delete date
     spark = SparkSession.builder.appName("GET DELETE DATES").getOrCreate()
-    delete_date_dict = get_delete_date(spark)
+    delete_date_dict = get_delete_date(spark, refresh_data_path, refresh_data_format)
     # exclude this "get_delte_date" step from main DM process.
     spark.stop()
     global DM_FUNCS
@@ -206,5 +206,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     query_dict = get_maintenance_queries(args.maintenance_queries_folder,
-                                         args.maintenance_queries)
+                                         args.maintenance_queries,
+                                         args.refresh_data_path,
+                                         args.data_format)
     run_query(query_dict, args.time_log, args.refresh_data_path, args.data_format)
