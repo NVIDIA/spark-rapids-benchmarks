@@ -16,7 +16,7 @@
 #
 export SPARK_RAPIDS_PLUGIN_JAR=rapids-4-spark_2.12-22.06.0.jar
 export NDS_LISTENER_JAR=NDSBenchmarkListener-1.0-SNAPSHOT.jar
-export SPARK_HOME=/usr/lib/spark
+export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
 export SPARK_CONF=("--master" "yarn"
                    "--conf" "spark.rapids.memory.gpu.pool=ARENA"
                    "--conf" "spark.driver.maxResultSize=2GB"
@@ -29,9 +29,6 @@ export SPARK_CONF=("--master" "yarn"
                    "--conf" "spark.executor.memory=16G"
                    "--conf" "spark.driver.memory=50G"
                    "--conf" "spark.sql.files.maxPartitionBytes=2gb"
-                   "--conf" "spark.driver.extraClassPath=$SPARK_RAPIDS_PLUGIN_JAR:$CUDF_JAR"
-                   "--conf" "spark.executor.extraClassPath=$SPARK_RAPIDS_PLUGIN_JAR:$CUDF_JAR"
-                   "--conf" "spark.executor.extraJavaOptions=-Dai.rapids.cudf.nvtx.enabled=true"
                    "--conf" "spark.rapids.memory.host.spillStorageSize=32G"
                    "--conf" "spark.sql.adaptive.enabled=true"
                    "--conf" "spark.plugins=com.nvidia.spark.SQLPlugin"

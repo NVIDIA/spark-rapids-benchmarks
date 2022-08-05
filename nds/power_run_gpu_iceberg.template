@@ -21,13 +21,12 @@
 #    see `spark.sql.catalog.spark_catalog.warehouse`.
 
 export SPARK_RAPIDS_PLUGIN_JAR=rapids-4-spark_2.12-22.06.0.jar
-export SPARK_HOME=/usr/lib/spark
+export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
 export SPARK_CONF=("--master" "yarn"
                    "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.2_2.12:0.13.1"
                    "--conf" "spark.driver.maxResultSize=2GB"
                    "--conf" "spark.driver.memory=50G"
                    "--conf" "spark.executor.cores=16"
-                   "--conf" "spark.executor.extraJavaOptions=-Dai.rapids.cudf.nvtx.enabled=true"
                    "--conf" "spark.executor.instances=8"
                    "--conf" "spark.executor.memory=16G"
                    "--conf" "spark.executor.resource.gpu.amount=1"
