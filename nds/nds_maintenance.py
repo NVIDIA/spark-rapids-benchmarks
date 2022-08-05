@@ -54,7 +54,7 @@ DELETE_FUNCS = [
 INVENTORY_DELETE_FUNC = ['DF_I']
 DM_FUNCS = INSERT_FUNCS + DELETE_FUNCS + INVENTORY_DELETE_FUNC
 
-def get_delete_date(spark_session):
+def get_delete_date(spark_session, refresh_data_path, refresh_data_format):
     """get delete dates for Data Maintenance. Each delete functions requires 3 tuples: (date1, date2)
 
     Args:
@@ -62,6 +62,7 @@ def get_delete_date(spark_session):
     Returns:
         delete_dates_dict ({str: list[(date1, date2)]}): a dict contains date tuples for each delete functions
     """
+    register_temp_views(spark_session, refresh_data_path, refresh_data_format)
     delete_dates = spark_session.sql("select * from delete").collect()
     inventory_delete_dates = spark_session.sql("select * from inventory_delete").collect()
     date_dict = {}
