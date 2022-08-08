@@ -1,6 +1,11 @@
+  data_gen:
+    scale_factor:
+    parallel:
+    raw_data_path: # raw NDS csv data
+    local_or_hdfs:
+    skip: False
   load_test:
     spark_template_path: # template to submit Spark App
-    input_path: # raw NDS csv data
     output_path: # warehouse location for Iceberg
     report_path: # execution report path
   generate_query_stream:

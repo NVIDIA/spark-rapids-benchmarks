@@ -178,6 +178,17 @@ def round_up_to_nearest_10_percent(num):
     return math.ceil(num * 10) / 10
 
 
+def run_data_gen(scale, parallel, data_path, local_or_hdfs):
+    gen_data_cmd = ["python3",
+                    "data_gen.py",
+                    local_or_hdfs,
+                    scale,
+                    parallel,
+                    data_path,
+                    "--overwrite_output"]
+    subprocess.run(gen_data_cmd, check=True)
+
+
 def run_load_test(template_path,
                   input_path,
                   output_path,
@@ -288,13 +299,16 @@ def maintenance_test(num_streams,
         Tdm += float(get_maintenance_time(maintenance_report_path))
 
 def run_full_bench(yaml_params):
+    skip_data_gen = yaml_params['data_gen']['skip']
+    scale_factor = yaml_params['data_gen']['scale_factor']
+    parallel = yaml_params['data_gen']['parallel']
+    raw_data_path = yaml_params['data_gen']['raw_data_path']
+    local_or_hdfs = yaml_params['data_gen']['local_or_hdfs']
     template_path = yaml_params['load_test']['spark_template_path']
-    input_path = yaml_params['load_test']['input_path']
     iceberg_output_path = yaml_params['load_test']['output_path']
     load_report_path = yaml_params['load_test']['report_path']
     num_streams = yaml_params['generate_query_stream']['num_streams']
     query_template_dir = yaml_params['generate_query_stream']['query_template_dir']
-    scale_factor = yaml_params['generate_query_stream']['scale_factor']
     stream_output_path = yaml_params['generate_query_stream']['stream_output_path']
     power_stream_path = stream_output_path + "/query_0.sql"
     power_report_path = yaml_params['power_test']['report_path']
@@ -306,9 +320,12 @@ def run_full_bench(yaml_params):
     maintenance_report_base_path = yaml_params['maintenance_test']['report_base_path']
     
     
+    # 0.
+    if not skip_data_gen:
+        run_data_gen(scale_factor, parallel, raw_data_path, local_or_hdfs)
     # 1.
     run_load_test(template_path,
-                  input_path,
+                  raw_data_path,
                   iceberg_output_path,
                   load_report_path)
     Tld = float(get_load_time(load_report_path))
