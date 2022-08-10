@@ -54,7 +54,7 @@ DELETE_FUNCS = [
 INVENTORY_DELETE_FUNC = ['DF_I']
 DM_FUNCS = INSERT_FUNCS + DELETE_FUNCS + INVENTORY_DELETE_FUNC
 
-def get_delete_date(spark_session, refresh_data_path, refresh_data_format):
+def get_delete_date(spark_session):
     """get delete dates for Data Maintenance. Each delete functions requires 3 tuples: (date1, date2)
 
     Args:
@@ -62,7 +62,6 @@ def get_delete_date(spark_session, refresh_data_path, refresh_data_format):
     Returns:
         delete_dates_dict ({str: list[(date1, date2)]}): a dict contains date tuples for each delete functions
     """
-    register_temp_views(spark_session, refresh_data_path, refresh_data_format)
     delete_dates = spark_session.sql("select * from delete").collect()
     inventory_delete_dates = spark_session.sql("select * from inventory_delete").collect()
     date_dict = {}
@@ -85,7 +84,7 @@ def replace_date(query_list, date_tuple_list):
             q_updated.append(c)
     return q_updated
 
-def get_maintenance_queries(folder, spec_queries, refresh_data_path, refresh_data_format):
+def get_maintenance_queries(spark_session, folder, spec_queries):
     """get query content from DM query files
 
     Args:
@@ -94,11 +93,8 @@ def get_maintenance_queries(folder, spec_queries, refresh_data_path, refresh_dat
     Returns:
         dict{str: list[str]}: a dict contains Data Maintenance query name and its content.
     """
-    # need a spark session to get delete date
-    spark = SparkSession.builder.appName("GET DELETE DATES").getOrCreate()
-    delete_date_dict = get_delete_date(spark, refresh_data_path, refresh_data_format)
-    # exclude this "get_delte_date" step from main DM process.
-    spark.stop()
+    delete_date_dict = get_delete_date(spark_session)
+    spark_session.stop()
     global DM_FUNCS
     if spec_queries:
         for q in spec_queries:
@@ -137,19 +133,12 @@ def run_dm_query(spark, query_list):
     for q in query_list:
         spark.sql(q)
 
-def run_query(query_dict, time_log_output_path, refresh_data_path, refresh_data_format):
+def run_query(spark_session, query_dict, time_log_output_path):
     # TODO: Duplicate code in nds_power.py. Refactor this part, make it general.
     execution_time_list = []
     total_time_start = time.time()
-    if len(query_dict) == 1:
-        app_name = "NDS - Data Maintenance - " + list(query_dict.keys())[0]
-    else:
-        app_name = "NDS - Data Maintenance"
-    
-    spark_session = SparkSession.builder.appName(
-        app_name).getOrCreate()
     spark_app_id = spark_session.sparkContext.applicationId
-    register_temp_views(spark_session, refresh_data_path, refresh_data_format)
+
     DM_start = time.time()
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
@@ -205,8 +194,15 @@ if __name__ == "__main__":
                         default="parquet")
 
     args = parser.parse_args()
-    query_dict = get_maintenance_queries(args.maintenance_queries_folder,
-                                         args.maintenance_queries,
-                                         args.refresh_data_path,
-                                         args.data_format)
-    run_query(query_dict, args.time_log, args.refresh_data_path, args.data_format)
+    get_delete_date_spark = SparkSession.builder.appName("GET DELETE DATES").getOrCreate()
+    query_dict = get_maintenance_queries(get_delete_date_spark,
+                                         args.maintenance_queries_folder,
+                                         args.maintenance_queries)
+    if len(query_dict) == 1:
+        app_name = "NDS - Data Maintenance - " + list(query_dict.keys())[0]
+    else:
+        app_name = "NDS - Data Maintenance"
+    spark_session = SparkSession.builder.appName(
+        app_name).getOrCreate()
+    register_temp_views(spark_session, args.refresh_data_path, args.data_format)
+    run_query(spark_session, query_dict, args.time_log)
