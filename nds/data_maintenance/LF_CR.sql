@@ -29,7 +29,7 @@
 --
 
 DROP VIEW IF EXISTS crv;
-CREATE VIEW crv as
+CREATE TEMP VIEW crv as
 SELECT d_date_sk cr_returned_date_sk
  ,t_time_sk cr_returned_time_sk
  ,i_item_sk cr_item_sk

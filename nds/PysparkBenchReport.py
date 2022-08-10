@@ -90,6 +90,8 @@ class PysparkBenchReport:
             else:
                 self.summary['queryStatus'].append("Completed")
         except Exception as e:
+            # print the exception to ease debugging
+            print(e)
             end_time = int(time.time() * 1000)
             self.summary['queryStatus'].append("Failed")
             self.summary['exceptions'].append(str(e))

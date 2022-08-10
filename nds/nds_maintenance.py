@@ -84,7 +84,25 @@ def replace_date(query_list, date_tuple_list):
             q_updated.append(c)
     return q_updated
 
-def get_maintenance_queries(spark_session, folder, spec_queries):
+def get_valid_query_names(spec_queries):
+    global DM_FUNCS
+    if spec_queries:
+        for q in spec_queries:
+            if q not in DM_FUNCS:
+                raise Exception(f"invalid Data Maintenance query: {q}. Valid  are: {DM_FUNCS}")
+        DM_FUNCS = [q for q in spec_queries if q in DM_FUNCS]
+    return DM_FUNCS
+
+def create_spark_session(valid_queries):
+    if len(valid_queries) == 1:
+        app_name = "NDS - Data Maintenance - " + valid_queries[0]
+    else:
+        app_name = "NDS - Data Maintenance"
+    spark_session = SparkSession.builder.appName(
+        app_name).getOrCreate()
+    return spark_session
+
+def get_maintenance_queries(spark_session, folder, valid_queries):
     """get query content from DM query files
 
     Args:
@@ -94,16 +112,9 @@ def get_maintenance_queries(spark_session, folder, spec_queries):
         dict{str: list[str]}: a dict contains Data Maintenance query name and its content.
     """
     delete_date_dict = get_delete_date(spark_session)
-    spark_session.stop()
-    global DM_FUNCS
-    if spec_queries:
-        for q in spec_queries:
-            if q not in DM_FUNCS:
-                raise Exception(f"invalid Data Maintenance query: {q}. Valid  are: {DM_FUNCS}")
-        DM_FUNCS = [q for q in spec_queries if q in DM_FUNCS]
     folder_abs_path = get_abs_path(folder)
     q_dict = {}
-    for q in DM_FUNCS:
+    for q in valid_queries:
         with open(folder_abs_path + '/' + q + '.sql', 'r') as f:
             # file content e.g.
             # " LICENSE CONTENT ... ;"
@@ -171,7 +182,7 @@ def run_query(spark_session, query_dict, time_log_output_path):
 def register_temp_views(spark_session, refresh_data_path, data_format):
     refresh_tables = get_maintenance_schemas(True).keys()
     for table in refresh_tables:
-        spark_session.read.format(data_format).load(
+        df = spark_session.read.format(data_format).load(
             refresh_data_path + '/' + table).createOrReplaceTempView(table)
 
 if __name__ == "__main__":
@@ -194,15 +205,10 @@ if __name__ == "__main__":
                         default="parquet")
 
     args = parser.parse_args()
-    get_delete_date_spark = SparkSession.builder.appName("GET DELETE DATES").getOrCreate()
-    query_dict = get_maintenance_queries(get_delete_date_spark,
-                                         args.maintenance_queries_folder,
-                                         args.maintenance_queries)
-    if len(query_dict) == 1:
-        app_name = "NDS - Data Maintenance - " + list(query_dict.keys())[0]
-    else:
-        app_name = "NDS - Data Maintenance"
-    spark_session = SparkSession.builder.appName(
-        app_name).getOrCreate()
+    valid_queries = get_valid_query_names(args.maintenance_queries)
+    spark_session = create_spark_session(valid_queries)
     register_temp_views(spark_session, args.refresh_data_path, args.data_format)
+    query_dict = get_maintenance_queries(spark_session,
+                                         args.maintenance_queries_folder,
+                                         valid_queries)
     run_query(spark_session, query_dict, args.time_log)

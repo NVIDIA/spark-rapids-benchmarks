@@ -331,6 +331,10 @@ time.csv \
 --data_format orc
 ```
 
+Note: to make the maintenance query compatible in Spark, we made the following changes:
+1. change `CREATE VIEW` to `CREATE TEMP VIEW` in all INSERT queries due to [[SPARK-29630]](https://github.com/apache/spark/pull/26361)
+2. change data type for column `sret_ticket_number` in table `s_store_returns` from `char(20)` to `bigint` due to [known issue](https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1138379596)
+
 ## Data Validation
 To validate query output between Power Runs with and without GPU, we provide [nds_validate.py](nds_validate.py)
 to do the job.

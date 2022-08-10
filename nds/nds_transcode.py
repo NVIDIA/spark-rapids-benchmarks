@@ -644,7 +644,7 @@ def get_maintenance_schemas(use_decimal):
         StructField("sret_customer_id", CharType(16)),
         StructField("sret_return_date", CharType(10)),
         StructField("sret_return_time", CharType(10)),
-        StructField("sret_ticket_number", CharType(20)),
+        StructField("sret_ticket_number", LongType()),
         StructField("sret_return_qty", IntegerType()),
         StructField("sret_return_amt", decimalType(use_decimal, 7,2)),
         StructField("sret_return_tax", decimalType(use_decimal, 7,2)),
@@ -692,7 +692,7 @@ def get_maintenance_schemas(use_decimal):
          StructField("wret_return_fee", decimalType(use_decimal,7,2)),
          StructField("wret_return_ship_cost", decimalType(use_decimal,7,2)),
          StructField("wret_refunded_cash", decimalType(use_decimal,7,2)),
-         StructField("wret_reversed_CharTypege", decimalType(use_decimal,7,2)),
+         StructField("wret_reversed_charge", decimalType(use_decimal,7,2)),
          StructField("wret_account_credit", decimalType(use_decimal,7,2)),
          StructField("wret_reason_id", CharType(16)),
     ])

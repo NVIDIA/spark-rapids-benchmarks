@@ -29,7 +29,7 @@
 --
 
 DROP VIEW IF EXISTS csv;
-CREATE view csv as
+CREATE TEMP view csv as
 SELECT d1.d_date_sk cs_sold_date_sk 
  ,t_time_sk cs_sold_time_sk 
  ,d2.d_date_sk cs_ship_date_sk

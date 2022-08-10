@@ -29,7 +29,7 @@
 --
 
 DROP VIEW IF EXISTS ssv;
-CREATE view ssv as
+CREATE TEMP view ssv as
 SELECT d_date_sk ss_sold_date_sk, 
  t_time_sk ss_sold_time_sk, 
  i_item_sk ss_item_sk, 
