@@ -29,7 +29,7 @@
 --
 
 DROP VIEW IF EXISTS wsv;
-CREATE VIEW wsv AS
+CREATE TEMP VIEW wsv AS
 SELECT d1.d_date_sk ws_sold_date_sk, 
  t_time_sk ws_sold_time_sk, 
  d2.d_date_sk ws_ship_date_sk,

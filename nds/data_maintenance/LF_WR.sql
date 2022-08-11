@@ -29,7 +29,7 @@
 --
 
 DROP VIEW IF EXISTS wrv;
-CREATE VIEW wrv AS
+CREATE TEMP VIEW wrv AS
 SELECT d_date_sk wr_return_date_sk
  ,t_time_sk wr_return_time_sk
  ,i_item_sk wr_item_sk
