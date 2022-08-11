@@ -90,7 +90,7 @@ def get_valid_query_names(spec_queries):
         for q in spec_queries:
             if q not in DM_FUNCS:
                 raise Exception(f"invalid Data Maintenance query: {q}. Valid  are: {DM_FUNCS}")
-        DM_FUNCS = [q for q in spec_queries if q in DM_FUNCS]
+        DM_FUNCS = spec_queries
     return DM_FUNCS
 
 def create_spark_session(valid_queries):
@@ -182,7 +182,7 @@ def run_query(spark_session, query_dict, time_log_output_path):
 def register_temp_views(spark_session, refresh_data_path, data_format):
     refresh_tables = get_maintenance_schemas(True).keys()
     for table in refresh_tables:
-        df = spark_session.read.format(data_format).load(
+        spark_session.read.format(data_format).load(
             refresh_data_path + '/' + table).createOrReplaceTempView(table)
 
 if __name__ == "__main__":
