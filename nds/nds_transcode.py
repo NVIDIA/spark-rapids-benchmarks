@@ -784,10 +784,10 @@ def store(session, df, filename, output_format, output_mode, iceberg_write_forma
             writer.format(output_format).mode(output_mode).save(data_path)
 
 def transcode(args):
-    session = pyspark.sql.SparkSession.builder \
-        .appName("NDS - transcode") \
-        .getOrCreate()
-
+    session_builder = pyspark.sql.SparkSession.builder
+    if args.output_format == "iceberg":
+        session_builder.config("spark.sql.catalog.spark_catalog.warehouse", args.output_prefix)
+    session = session_builder.appName("NDS - transcode").getOrCreate()
     session.sparkContext.setLogLevel(args.log_level)
     results = {}
 
@@ -844,8 +844,10 @@ if __name__ == "__main__":
     parser.add_argument(
         'output_prefix',
         help='text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is empty)' +
-        '. This positional arguments will not take effect if "--iceberg" is specified. ' +
-        'User needs to set Iceberg table path in their Spark submit templates/configs.')
+        '. If output_format is "iceberg", this argument will be regarded as the value of property ' +
+        '"spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog ' +
+        'session name "spark_catalog" is supported now, customized catalog is not ' +
+        'yet supported.')
     parser.add_argument(
         'report_file',
         help='location to store a performance report(local)')
