@@ -32,12 +32,13 @@
 import argparse
 import csv
 from datetime import datetime
+import os
 import time
 
 from pyspark.sql import SparkSession
 from PysparkBenchReport import PysparkBenchReport
 
-from check import get_abs_path
+from check import check_json_summary_folder, get_abs_path
 from nds_transcode import get_maintenance_schemas
 
 INSERT_FUNCS = [
@@ -145,13 +146,14 @@ def run_dm_query(spark, query_list):
     for q in query_list:
         spark.sql(q)
 
-def run_query(spark_session, query_dict, time_log_output_path):
+def run_query(spark_session, query_dict, time_log_output_path, json_summary_folder, property_file):
     # TODO: Duplicate code in nds_power.py. Refactor this part, make it general.
     execution_time_list = []
-    total_time_start = time.time()
+    check_json_summary_folder(json_summary_folder)
+    # Run query
+    total_time_start = datetime.now()
     spark_app_id = spark_session.sparkContext.applicationId
-
-    DM_start = time.time()
+    DM_start = datetime.now()
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
         spark_session.sparkContext.setJobGroup(query_name, query_name)
@@ -161,7 +163,14 @@ def run_query(spark_session, query_dict, time_log_output_path):
                                                        q_content)
         print(f"Time taken: {summary['queryTimes']} millis for {query_name}")
         execution_time_list.append((spark_app_id, query_name, summary['queryTimes']))
-        q_report.write_summary(query_name, prefix="")
+        if json_summary_folder:
+            # property_file e.g.: "property/aqe-on.properties" or just "aqe-off.properties"
+            if property_file:
+                summary_prefix = os.path.join(
+                    json_summary_folder, os.path.basename(property_file).split('.')[0])
+            else:
+                summary_prefix =  os.path.join(json_summary_folder, '')
+            q_report.write_summary(query_name, prefix=summary_prefix)
     spark_session.sparkContext.stop()
     DM_end = datetime.now()
     DM_elapse = (DM_end - DM_start).total_seconds()
@@ -211,6 +220,8 @@ if __name__ == "__main__":
     parser.add_argument('--data_format',
                         help='data format for refresh data, e.g. parquet, orc, avro',
                         default="parquet")
+    parser.add_argument('--property_file',
+                        help='property file for Spark configuration.')
 
     args = parser.parse_args()
     valid_queries = get_valid_query_names(args.maintenance_queries)
@@ -219,4 +230,4 @@ if __name__ == "__main__":
     query_dict = get_maintenance_queries(spark_session,
                                          args.maintenance_queries_folder,
                                          valid_queries)
-    run_query(spark_session, query_dict, args.time_log)
+    run_query(spark_session, query_dict, args.time_log, args.property_file)

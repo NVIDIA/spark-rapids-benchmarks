@@ -1,26 +1,26 @@
   data_gen:
-    scale_factor:
-    parallel:
-    raw_data_path: # raw NDS csv data
-    local_or_hdfs:
-    skip: False
+    scale_factor: 2
+    parallel: 2
+    raw_data_path: full_bench_raw_sf2 # raw NDS csv data
+    local_or_hdfs: local
+    skip: true
   load_test:
-    spark_template_path: # template to submit Spark App
-    output_path: # warehouse location for Iceberg
-    report_path: # execution report path
+    spark_template_path: convert_submit_cpu.template_bk  # template to submit Spark App
+    output_path: iceberg-warehouse # warehouse location for Iceberg
+    report_path: load_test.txt # execution report path
   generate_query_stream:
-    num_streams: # how many streams to be generated
-    query_template_dir: # template dir contains all query templates to generate Spark compatible queries
-    stream_output_path:
-    scale_factor:
+    num_streams: 5 # how many streams to be generated
+    query_template_dir: /home/allxu/code/nds/DSGen-software-code-3.2.0rc1/query_templates # template dir contains all query templates to generate Spark compatible queries
+    stream_output_path: bench_streams
   power_test: # use load test output as input to avoid duplication
-    spark_template_path:
-    report_path:
-    property_path: # property file contains some Spark configs as a addition to spark template file
+    spark_template_path: convert_submit_cpu.template_bk # duplicate template path in case for further tuning
+    report_path: power_test.csv
+    property_path: properties/aqe-on.properties # property file contains some Spark configs as a addition to spark template file
   throughput_test: # use most parameters from power test to avoid duplication
-    report_base_path:
+    report_base_path: throughput_report
   maintenance_test:
-    maintenance_raw_data_base_path:  # raw refresh data in csv format
-    maintenance_output_data: # refresh data in parquet format
-    maintenance_query_dir: # folder that contains all data maintenance queries
-    report_base_path:
+    raw_data_base_path: full_bench_raw_sf2 # raw refresh data in csv format
+    output_data: full_bench_parquet_refresh_sf2 # refresh data in parquet format
+    query_dir: data_maintenance # folder that contains all data maintenance queries
+    load_report_base_path: maintenance_load_report
+    maintenance_report_base_path: maintenance_report
