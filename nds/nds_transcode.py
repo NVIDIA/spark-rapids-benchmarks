@@ -867,7 +867,7 @@ if __name__ == "__main__":
     parser.add_argument(
         '--tables',
         type=lambda s: s.split(','),
-        help="specify table names by a comma separated string. e.g. 'catalog_page,catalog_sales'")
+        help="specify table names by a comma separated string. e.g. 'catalog_page,catalog_sales'.")
     parser.add_argument(
         '--log_level',
         help='set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: INFO)',

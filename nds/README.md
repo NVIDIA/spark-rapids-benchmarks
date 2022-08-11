@@ -115,7 +115,7 @@ optional arguments:
                         save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.default value is errorifexists, which is the Spark default behavior.
   --output_format {parquet,orc,avro,json,iceberg}
                         output data format when converting CSV data sources.
-  --tables TABLES       specify table names by a comma separated string. e.g. 'catalog_page,catalog_sales'
+  --tables TABLES       specify table names by a comma separated string. e.g. 'catalog_page,catalog_sales'.
   --log_level LOG_LEVEL
                         set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: INFO)
   --floats              replace DecimalType with DoubleType when saving parquet files. If not specified, decimal data will be saved.
