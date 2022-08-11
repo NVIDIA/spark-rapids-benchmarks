@@ -20,7 +20,7 @@
 # 2. The Iceberg catalog/tables is expected to be in current directory.
 #    see `spark.sql.catalog.spark_catalog.warehouse`.
 
-export SPARK_RAPIDS_PLUGIN_JAR=rapids-4-spark_2.12-22.06.0.jar
+export SPARK_RAPIDS_PLUGIN_JAR=${SPARK_RAPIDS_PLUGIN_JAR:-rapids-4-spark_2.12-22.06.0.jar}
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
 export SPARK_CONF=("--master" "yarn"
                    "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.2_2.12:0.13.1"

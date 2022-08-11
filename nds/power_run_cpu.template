@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-export NDS_LISTENER_JAR=NDSBenchmarkListener-1.0-SNAPSHOT.jar
+export NDS_LISTENER_JAR=${NDS_LISTENER_JAR:-NDSBenchmarkListener-1.0-SNAPSHOT.jar}
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
 export SPARK_CONF=("--master" "yarn"
                    "--conf" "spark.rapids.sql.enabled=false"

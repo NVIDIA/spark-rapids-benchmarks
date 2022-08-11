@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-export SPARK_RAPIDS_PLUGIN_JAR=rapids-4-spark_2.12-22.06.0.jar
-export NDS_LISTENER_JAR=NDSBenchmarkListener-1.0-SNAPSHOT.jar
+export SPARK_RAPIDS_PLUGIN_JAR=${SPARK_RAPIDS_PLUGIN_JAR:-rapids-4-spark_2.12-22.06.0.jar}
+export NDS_LISTENER_JAR=${NDS_LISTENER_JAR:-NDSBenchmarkListener-1.0-SNAPSHOT.jar}
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
 export SPARK_CONF=("--master" "yarn"
                    "--conf" "spark.rapids.memory.gpu.pool=ARENA"
