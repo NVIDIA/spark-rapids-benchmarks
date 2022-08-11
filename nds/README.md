@@ -105,8 +105,8 @@ usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,error
 positional arguments:
   input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"; the
                         default is empty)
-  output_prefix         text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is empty).
-                        This positional arguments will not take effect if "--iceberg" is specified and user needs to set Iceberg table path in their Spark submit templates/configs.
+  output_prefix         text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is empty). If output_format is "iceberg", this argument will be regarded as the value of property "spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog session
+                        name "spark_catalog" is supported now, customized catalog is not yet supported.
   report_file           location to store a performance report(local)
 
 optional arguments:
@@ -115,7 +115,7 @@ optional arguments:
                         save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.default value is errorifexists, which is the Spark default behavior.
   --output_format {parquet,orc,avro,json,iceberg}
                         output data format when converting CSV data sources.
-  --tables TABLES       specify table names by a comma seprated string. e.g. 'catalog_page,catalog_sales'.
+  --tables TABLES       specify table names by a comma separated string. e.g. 'catalog_page,catalog_sales'.
   --log_level LOG_LEVEL
                         set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: INFO)
   --floats              replace DecimalType with DoubleType when saving parquet files. If not specified, decimal data will be saved.
