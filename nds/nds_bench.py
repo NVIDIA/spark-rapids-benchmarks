@@ -308,7 +308,8 @@ def throughput_test(num_streams,
 
 def maintenance_test(num_streams,
                      first_or_second,
-                     template_path,
+                     load_template_path,
+                     refresh_template_path,
                      maintenance_raw_data_base_path,
                      maintenance_parquet_data_base_path,
                      maintenance_query_path,
@@ -326,7 +327,7 @@ def maintenance_test(num_streams,
             f"_{i}" + ".csv"
         # the load time of refresh data is counted as a part in the maintenance time
         maintenance_load_cmd = ["./spark-submit-template",
-                                template_path,
+                                load_template_path,
                                 "nds_transcode.py",
                                 maintenance_raw_path,
                                 maintenance_parquet_path,
@@ -336,7 +337,7 @@ def maintenance_test(num_streams,
                                 "--update"]
         subprocess.run(maintenance_load_cmd, check=True)
         maintenance_cmd = ["./spark-submit-template",
-                           template_path,
+                           refresh_template_path,
                            "nds_maintenance.py",
                            maintenance_parquet_path,
                            maintenance_query_path,
@@ -383,7 +384,7 @@ def run_full_bench(yaml_params):
     parallel = str(yaml_params['data_gen']['parallel'])
     raw_data_path = yaml_params['data_gen']['raw_data_path']
     local_or_hdfs = yaml_params['data_gen']['local_or_hdfs']
-    template_path = yaml_params['load_test']['spark_template_path']
+    template_path = yaml_params['load_test']['spark_template_path'] # write to Iceberg
     iceberg_output_path = yaml_params['load_test']['output_path']
     load_report_path = yaml_params['load_test']['report_path']
     num_streams = yaml_params['generate_query_stream']['num_streams']
@@ -394,7 +395,7 @@ def run_full_bench(yaml_params):
     power_property_path = yaml_params['power_test']['property_path']
     throughput_report_base = yaml_params['throughput_test']['report_base_path']
     maintenance_raw_data_base_path = yaml_params['maintenance_test']['raw_data_base_path']
-    maintenance_load_template = yaml_params['maintenance_test']['load_template_path']
+    maintenance_load_template = yaml_params['maintenance_test']['load_template_path'] # write to parquet, with GPU
     maintenance_parquet_data_base_path = yaml_params['maintenance_test']['output_data']
     maintenance_query_dir = yaml_params['maintenance_test']['query_dir']
     maintenance_load_report_base_path = yaml_params['maintenance_test']['load_report_base_path']
@@ -441,6 +442,7 @@ def run_full_bench(yaml_params):
     # 5
     maintenance_test(num_streams,
                      1,
+                     maintenance_load_template,
                      template_path,
                      maintenance_raw_data_base_path,
                      maintenance_parquet_data_base_path,
@@ -466,6 +468,7 @@ def run_full_bench(yaml_params):
     # 7
     maintenance_test(num_streams,
                      2,
+                     maintenance_load_template
                      template_path,
                      maintenance_raw_data_base_path,
                      maintenance_parquet_data_base_path,
