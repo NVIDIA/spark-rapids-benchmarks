@@ -742,8 +742,8 @@ def store(session, df, filename, output_format, output_mode, iceberg_write_forma
         df (DataFrame): DataFrame to be serialized into Iceberg table
         filename (str): name of the table(file)
         output_format (str): parquet, orc or avro
-        write_mode (str): save modes as defined by "https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.
-        use_iceberg (bool): write data into Iceberg tables
+        output_mode (str): save modes as defined by "https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.
+        iceberg_write_format (bool): write data into Iceberg tables with specified format
         compression (str): compression codec for converted data when saving to disk
         prefix (str): output data path when not using Iceberg.
     """

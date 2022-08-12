@@ -222,6 +222,8 @@ if __name__ == "__main__":
                         default="parquet")
     parser.add_argument('--property_file',
                         help='property file for Spark configuration.')
+    parser.add_argument('--json_summary_folder',
+                        help='Empty folder/path (will create if not exist) to save JSON summary file for each query.')
 
     args = parser.parse_args()
     valid_queries = get_valid_query_names(args.maintenance_queries)
@@ -230,4 +232,4 @@ if __name__ == "__main__":
     query_dict = get_maintenance_queries(spark_session,
                                          args.maintenance_queries_folder,
                                          valid_queries)
-    run_query(spark_session, query_dict, args.time_log, args.property_file)
+    run_query(spark_session, query_dict, args.time_log, args.json_summary_folder, args.property_file)
