@@ -384,7 +384,8 @@ def run_full_bench(yaml_params):
     parallel = str(yaml_params['data_gen']['parallel'])
     raw_data_path = yaml_params['data_gen']['raw_data_path']
     local_or_hdfs = yaml_params['data_gen']['local_or_hdfs']
-    template_path = yaml_params['load_test']['spark_template_path'] # write to Iceberg
+    # write to Iceberg
+    template_path = yaml_params['load_test']['spark_template_path']
     iceberg_output_path = yaml_params['load_test']['output_path']
     load_report_path = yaml_params['load_test']['report_path']
     num_streams = yaml_params['generate_query_stream']['num_streams']
@@ -395,7 +396,10 @@ def run_full_bench(yaml_params):
     power_property_path = yaml_params['power_test']['property_path']
     throughput_report_base = yaml_params['throughput_test']['report_base_path']
     maintenance_raw_data_base_path = yaml_params['maintenance_test']['raw_data_base_path']
-    maintenance_load_template = yaml_params['maintenance_test']['load_template_path'] # write to parquet, with GPU
+    # write to parquet, with GPU
+    maintenance_load_template = yaml_params['maintenance_test']['load_template_path']
+    # for refresh functions
+    maintenance_refresh_template = yaml_params['maintenance_test']['maintenance_template_path']
     maintenance_parquet_data_base_path = yaml_params['maintenance_test']['output_data']
     maintenance_query_dir = yaml_params['maintenance_test']['query_dir']
     maintenance_load_report_base_path = yaml_params['maintenance_test']['load_report_base_path']
@@ -443,14 +447,13 @@ def run_full_bench(yaml_params):
     maintenance_test(num_streams,
                      1,
                      maintenance_load_template,
-                     template_path,
+                     maintenance_refresh_template,
                      maintenance_raw_data_base_path,
                      maintenance_parquet_data_base_path,
                      maintenance_query_dir,
                      maintenance_load_report_base_path,
                      maintenance_report_base_path,
                      power_property_path)
-
     Tdm1 = get_maintenance_time(maintenance_load_report_base_path,
                                 maintenance_report_base_path,
                                 num_streams,
@@ -468,8 +471,8 @@ def run_full_bench(yaml_params):
     # 7
     maintenance_test(num_streams,
                      2,
-                     maintenance_load_template
-                     template_path,
+                     maintenance_load_template,
+                     maintenance_refresh_template,
                      maintenance_raw_data_base_path,
                      maintenance_parquet_data_base_path,
                      maintenance_query_dir,
@@ -483,7 +486,7 @@ def run_full_bench(yaml_params):
 
     perf_metric = get_perf_metric(
         scale_factor, num_streams, Tld, TPower, Ttt1, Ttt2, Tdm1, Tdm2)
-    print(perf_metric)
+    print(f"====== Performance Metric: {perf_metric} ======")
 
     metrics_map = {"perf_metric": perf_metric}
     write_metrics_report(metrics_report, metrics_map)

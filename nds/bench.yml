@@ -3,9 +3,9 @@
     parallel: 2
     raw_data_path: full_bench_raw_sf2 # raw NDS csv data
     local_or_hdfs: local
-    skip: true
+    skip: false
   load_test:
-    spark_template_path: convert_submit_cpu.template_bk  # template to do Iceberg writing
+    spark_template_path: convert_submit_cpu.template_bk  # template to do Iceberg writing, GPU disabled
     output_path: /home/allxu/tmp/nds/nds/iceberg-warehouse # warehouse location for Iceberg
     report_path: load_test.txt # execution report path
   generate_query_stream:
@@ -13,14 +13,15 @@
     query_template_dir: /home/allxu/code/nds/DSGen-software-code-3.2.0rc1/query_templates # template dir contains all query templates to generate Spark compatible queries
     stream_output_path: bench_streams
   power_test: # use load test output as input to avoid duplication
-    spark_template_path: convert_submit_cpu.template_bk # duplicate template path in case for further tuning
+    spark_template_path: power_run_gpu.template_bk # template with both Iceberg & GPU enabled
     report_path: power_test.csv
     property_path: properties/aqe-on.properties # property file contains some Spark configs as a addition to spark template file
   throughput_test: # use most parameters from power test to avoid duplication
     report_base_path: throughput_report
   maintenance_test:
     raw_data_base_path: full_bench_raw_sf2 # raw refresh data in csv format
-    load_template_path: convert_submit_gpu.template_bk # template to do refresh data transcoding
+    load_template_path: convert_submit_gpu.template_bk # template to do refresh data transcoding(to Parquet)
+    maintenance_template_path: maintenance.template # template to do data maintenance(Iceberg, need spark.sql.catalog.spark_catalog.warehouse)
     output_data: full_bench_parquet_refresh_sf2 # refresh data in parquet format
     query_dir: data_maintenance # folder that contains all data maintenance queries
     load_report_base_path: maintenance_load_report
