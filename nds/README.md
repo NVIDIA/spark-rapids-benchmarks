@@ -18,7 +18,7 @@ You may not use NDS except in compliance with the Apache License, Version 2.0 an
 
 ## prerequisites:
 
-1. python > 3.6
+1. python >= 3.6
 2. Necessary libraries 
     ```
     sudo apt install openjdk-8-jdk-headless gcc make flex bison byacc maven
@@ -50,9 +50,6 @@ Then two jars will be built at:
 
 ### Generate data
 
-
-Note: please make sure you have `Hadoop binary` locally.
-
 How to generate data to local or HDFS:
 ```
 $ python nds_gen_data.py -h
@@ -72,6 +69,7 @@ optional arguments:
   --overwrite_output  overwrite if there has already existing data in the path provided.
   --replication REPLICATION
                       the number of replication factor when generating data to HDFS. if not set, the Hadoop job will use the setting in the Hadoop cluster.
+  --update UPDATE     generate update dataset <n>. <n> is identical to the number of streams used in the Throughput Tests of the benchmark
 ```
 
 Example command:
@@ -83,12 +81,16 @@ python nds_gen_data.py hdfs 100 100 /data/raw_sf100 --overwrite_output
 ### Convert CSV to Parquet or Other data sources
 
 To do the data conversion, the `nds_transcode.py` need to be submitted as a Spark job. User can leverage
-the [spark-submit-template](./spark-submit-template) utilty to simpify the submission.
-The utility requires a pre-defined [template file](./convert_submit_gpu.template)where user needs to put 
+the [spark-submit-template](./spark-submit-template) utility to simplify the submission.
+The utility requires a pre-defined [template file](./convert_submit_gpu.template) where user needs to put
 necessary Spark configurations. Either user can submit the `nds_transcode.py` directly to spark with
-arbitary Spark parameters.
+arbitrary Spark parameters.
 
-Parquet and Orc are supported for output data foramt at present.
+Parquet, Orc, Avro, JSON and Iceberg are supported for output data format at present with CPU. For GPU conversion,
+only Parquet and Orc are supported.
+
+Note: when exporting data from CSV to Iceberg, user needs to set necessary configs for Iceberg in submit template.
+e.g. [convert_submit_cpu_iceberg.template](./convert_submit_cpu_iceberg.template)
 
 User can also specify `--tables` to convert specific table or tables. See argument details below.
 
@@ -98,30 +100,31 @@ otherwise DecimalType will be saved.
 arguments for `nds_transcode.py`:
 ```
 python nds_transcode.py -h
-usage: nds_transcode.py [-h] [--output_mode OUTPUT_MODE] [--input_suffix INPUT_SUFFIX]
-                        [--log_level LOG_LEVEL] [--floats]
-                        input_prefix output_prefix report_file
+usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--output_format {parquet,orc,avro,iceberg}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update] [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION] input_prefix output_prefix report_file
 
 positional arguments:
   input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"; the
                         default is empty)
-  output_prefix         text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is
-                        empty)
+  output_prefix         text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is empty). If output_format is "iceberg", this argument will be regarded as the value of property "spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog session
+                        name "spark_catalog" is supported now, customized catalog is not yet supported.
   report_file           location to store a performance report(local)
 
 optional arguments:
   -h, --help            show this help message and exit
-  --output_mode {overwrite,append,ignore,error,errorifexists,default}
-                        save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modesdefault value is errorifexists, which is the Spark default behavior
-  --output_format {parquet,orc}
-                        output data format when converting CSV data sources. Now supports parquet, orc.
-  --tables TABLES       specify table names by a comma seprated string. e.g. 'catalog_page,catalog_sales'.
-  --input_suffix INPUT_SUFFIX
-                        text to append to every input filename (e.g., ".dat"; the default is empty)
+  --output_mode {overwrite,append,ignore,error,errorifexists}
+                        save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.default value is errorifexists, which is the Spark default behavior.
+  --output_format {parquet,orc,avro,json,iceberg}
+                        output data format when converting CSV data sources.
+  --tables TABLES       specify table names by a comma separated string. e.g. 'catalog_page,catalog_sales'.
   --log_level LOG_LEVEL
                         set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: INFO)
-  --floats              replace DecimalType with DoubleType when saving parquet files. If not specified,
-                        decimal data will be saved.
+  --floats              replace DecimalType with DoubleType when saving parquet files. If not specified, decimal data will be saved.
+  --update              transcode the source data or update data
+  --iceberg_write_format {parquet,orc,avro}
+                        File format for the Iceberg table; parquet, avro, or orc
+  --compression COMPRESSION
+                        Compression codec to use when saving data. See https://iceberg.apache.org/docs/latest/configuration/#write-properties for supported codecs in Iceberg. See
+                        https://spark.apache.org/docs/latest/sql-data-sources.html for supported codecs for Spark built-in formats. When not specified, the default for the requested output format will be used.
 
 ```
 
@@ -134,17 +137,16 @@ nds_transcode.py  raw_sf3k  parquet_sf3k report.txt
 User can also use `spark-submit` to submit `nds_transcode.py` directly.
 
 We provide two basic templates for GPU run(convert_submit_gpu.template) and CPU run(convert_submit_cpu.template).
-To enable GPU run, user need to download two jars in advance to use spark-rapids plugin.
+To enable GPU run, user needs to download the following jar.
 
-- cuDF jar: https://repo1.maven.org/maven2/ai/rapids/cudf/22.02.0/cudf-22.02.0.jar
-- spark-rapids jar: https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.02.0/rapids-4-spark_2.12-22.02.0.jar
+- spark-rapids jar: https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.06.0/rapids-4-spark_2.12-22.06.0.jar
 
-After that, please set environment variable `CUDF_JAR` and `SPARK_RAPIDS_PLUGIN_JAR` to the path where
-the jars are downloaded to in spark submit templates.
+After that, please set environment variable `SPARK_RAPIDS_PLUGIN_JAR` to the path where the jars are
+downloaded to in spark submit templates.
 
 ### Data partitioning
 
-when converting CSV to Parquet data, the script will add data partitioning to some tables:
+When converting CSV to Parquet data, the script will add data partitioning to some tables:
 
 | Table              | Partition Column    |
 | -----------        | -----------         |
@@ -169,7 +171,7 @@ we applied the following changes to original templates released in TPC-DS v3.2.0
 ### Generate Specific Query or Query Streams
 
 ```
-usage: nds_gen_query_stream.py [-h] [--template TEMPLATE] [--streams STREAMS]
+usage: nds_gen_query_stream.py [-h] (--template TEMPLATE | --streams STREAMS)
                                template_dir scale output_dir
 
 positional arguments:
@@ -199,26 +201,30 @@ python nds_gen_query_stream.py $TPCDS_HOME/query_templates 3000 ./query_streams 
 
 ### Power Run
 
-_After_ user generates query streams, Power Run can be executed using one of the them by submitting `nds_power.py` to Spark. 
+_After_ user generates query streams, Power Run can be executed using one of them by submitting `nds_power.py` to Spark.
 
-Arguments supported for `nds_power.py`:
+Arguments supported by `nds_power.py`:
 ```
-usage: nds_power.py [-h] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT]
-                    input_prefix query_stream_file time_log
+usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json,iceberg}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] input_prefix query_stream_file time_log
 
 positional arguments:
-  input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data")
+  input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"). If input_format is "iceberg", this argument will be regarded as the value of property "spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog session name "spark_catalog" is supported now, customized catalog is not yet supported.
   query_stream_file     query stream file that contains NDS queries in specific order
   time_log              path to execution time log, only support local path.
 
 optional arguments:
   -h, --help            show this help message and exit
+  --input_format {parquet,orc,avro,csv,json,iceberg}
+                        type for input data source, e.g. parquet, orc, json, csv or iceberg. Certain types are not fully supported by GPU reading, please refer to https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md for more details.
   --output_prefix OUTPUT_PREFIX
                         text to prepend to every output file (e.g., "hdfs:///ds-parquet")
   --output_format OUTPUT_FORMAT
                         type of query output
   --property_file PROPERTY_FILE
                         property file for Spark configuration.
+  --floats              When loading Text files like json and csv, schemas are required to determine if certain parts of the data are read as decimal type or not. If specified, float data will be used.
+  --json_summary_folder JSON_SUMMARY_FOLDER
+                        path of a folder to save json summary file for each query.
 
 ```
 
@@ -277,5 +283,97 @@ When providing `spark-submit-template` to Throughput Run, please do consider the
 in your environment to make sure all Spark job can get necessary resources to run at the same time,
 otherwise some query application may be in _WAITING_ status(which can be observed from Spark UI or 
 Yarn Resource Manager UI) until enough resources are released.
+
+### Data Maintenance
+Data Maintenance performance data update over existed dataset including data INSERT and DELETE. The
+update operations cannot be done atomically on raw Parquet/Orc files, so we use
+[Iceberg](https://iceberg.apache.org/) as dataset metadata manager to overcome the issue.
+
+Enabling Iceberg requires additional configuration. Please refer to [Iceberg Spark](https://iceberg.apache.org/docs/latest/getting-started/)
+for details. We also provide a Spark submit template with necessary Iceberg configs: [convert_submit_cpu_iceberg.template](./convert_submit_cpu_iceberg.template)
+
+The data maintenance queries are in [data_maintenance](./data_maintenance) folder. `DF_*.sql` are
+DELETE queries while `LF_*.sql` are INSERT queries.
+
+Note: The Delete functions in Data Maintenance cannot run successfully in Spark 3.2.0 and 3.2.1 due 
+to a known Spark [issue](https://issues.apache.org/jira/browse/SPARK-39454). User can run it in Spark 3.2.2
+or later. More details including work-around for version 3.2.0 and 3.2.1 could be found in this 
+[link](https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1141956487)
+
+Arguments supported for data maintenance:
+```
+usage: nds_maintenance.py [-h] [--maintenance_queries MAINTENANCE_QUERIES] [--data_format DATA_FORMAT] refresh_data_path maintenance_queries_folder time_log
+
+positional arguments:
+  refresh_data_path     path to refresh data
+  maintenance_queries_folder
+                        folder contains all NDS Data Maintenance queries. If "--maintenance_queries"
+                        is not set, all queries under the folder will beexecuted.
+  time_log              path to execution time log in csv format, only support local path.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --maintenance_queries MAINTENANCE_QUERIES
+                        specify Data Maintenance query names by a comma seprated string. e.g. "LF_CR,LF_CS"
+  --data_format DATA_FORMAT
+                        data format for refresh data, e.g. parquet, orc, avro
+
+```
+
+An example command to run only _LF_CS_ and _DF_CS_ functions:
+```
+./spark-submit-template convert_submit_cpu_iceberg.template \
+nds_maintenance.py \
+update_data_sf3k \
+./data_maintenance \
+time.csv \
+--maintenance_queries LF_CS,DF_CS \
+--data_format orc
+```
+
+Note: to make the maintenance query compatible in Spark, we made the following changes:
+1. change `CREATE VIEW` to `CREATE TEMP VIEW` in all INSERT queries due to [[SPARK-29630]](https://github.com/apache/spark/pull/26361)
+2. change data type for column `sret_ticket_number` in table `s_store_returns` from `char(20)` to `bigint` due to [known issue](https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1138379596)
+
+## Data Validation
+To validate query output between Power Runs with and without GPU, we provide [nds_validate.py](nds_validate.py)
+to do the job.
+
+Arguments supported by `nds_validate.py`:
+```
+usage: nds_validate.py [-h] [--input1_format INPUT1_FORMAT] [--input2_format INPUT2_FORMAT] [--max_errors MAX_ERRORS] [--epsilon EPSILON] [--ignore_ordering] [--use_iterator] [--floats] --json_summary_folder JSON_SUMMARY_FOLDER input1 input2 query_stream_file
+
+positional arguments:
+  input1                path of the first input data.
+  input2                path of the second input data.
+  query_stream_file     query stream file that contains NDS queries in specific order.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --input1_format INPUT1_FORMAT
+                        data source type for the first input data. e.g. parquet, orc. Default is: parquet.
+  --input2_format INPUT2_FORMAT
+                        data source type for the second input data. e.g. parquet, orc. Default is: parquet.
+  --max_errors MAX_ERRORS
+                        Maximum number of differences to report.
+  --epsilon EPSILON     Allow for differences in precision when comparing floating point values.
+                        Given 2 float numbers: 0.000001 and 0.000000, the diff of them is 0.000001 which is less than the epsilon 0.00001, so we regard this as acceptable and will not report a mismatch.
+  --ignore_ordering     Sort the data collected from the DataFrames before comparing them.
+  --use_iterator        When set, use `toLocalIterator` to load one partition at a time into driver memory, reducing.
+                        memory usage at the cost of performance because processing will be single-threaded.
+  --floats              whether the input data contains float data or decimal data. There're some known mismatch issues due to float point, we will do some special checks when the input data is float for some queries.
+  --json_summary_folder JSON_SUMMARY_FOLDER
+                        path of a folder that contains json summary file for each query.
+
+```
+
+Example command to compare output data of two queries:
+```
+python nds_validate.py \
+query_output_cpu \
+query_output_gpu \
+./nds_query_streams/query_1.sql \
+--ignore_ordering
+```
 
 ### NDS2.0 is using source code from TPC-DS Tool V3.2.0

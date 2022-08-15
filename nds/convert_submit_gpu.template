@@ -14,9 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-export CUDF_JAR=cudf-22.02.0.jar
-export SPARK_RAPIDS_PLUGIN_JAR=rapids-4-spark_2.12-22.02.0.jar
-export SPARK_HOME=YOUR_SPARK_HOME
+export SPARK_RAPIDS_PLUGIN_JAR=rapids-4-spark_2.12-22.06.0.jar
+export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
 export SPARK_CONF=("--master" "yarn"
                    "--deploy-mode" "cluster"
                    "--driver-memory" "10G"
@@ -32,11 +31,8 @@ export SPARK_CONF=("--master" "yarn"
                    "--conf" "spark.rapids.sql.explain=NOT_ON_GPU"
                    "--conf" "spark.rapids.sql.incompatibleOps.enabled=true"
                    "--conf" "spark.rapids.sql.variableFloatAgg.enabled=true"
-                   "--conf" "spark.rapids.sql.csv.read.date.enabled=true"
-                   "--conf" "spark.rapids.sql.csvTimestamps.enabled=false"
-                   "--conf" "spark.rapids.sql.csv.read.integer.enabled=true"
                    "--conf" "spark.sql.legacy.parquet.datetimeRebaseModeInWrite=CORRECTED"
                    "--conf" "spark.executor.resource.gpu.amount=1"
                    "--conf" "spark.executor.resource.gpu.discoveryScript=./getGpusResources.sh"
                    "--files" "$SPARK_HOME/examples/src/main/scripts/getGpusResources.sh"
-                   "--jars" "$SPARK_RAPIDS_PLUGIN_JAR,$CUDF_JAR")
+                   "--jars" "$SPARK_RAPIDS_PLUGIN_JAR")

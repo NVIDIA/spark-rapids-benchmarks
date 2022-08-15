@@ -34,7 +34,8 @@ import os
 import time
 from typing import Callable
 from pyspark.sql import SparkSession
-import pyspark_spy
+
+import python_listener
 
 class PysparkBenchReport:
     """Class to generate json summary report for a benchmark
@@ -70,24 +71,35 @@ class PysparkBenchReport:
         self.summary['env']['envVars'] = filtered_env_vars
         self.summary['env']['sparkConf'] = spark_conf
         self.summary['env']['sparkVersion'] = self.spark_session.version
-        listener = pyspark_spy.TaskFailureListener()
+        listener = None
+        spark_env = dict(self.spark_session.sparkContext.getConf().getAll())
         try:
-            pyspark_spy.register_listener(self.spark_session.sparkContext, listener)
+            listener = python_listener.PythonListener()
+            listener.register()
+        except TypeError as e:
+            print("Not found com.nvidia.spark.rapids.listener.Manager", str(e))
+            listener = None
+        if listener is not None:
+            print("TaskFailureListener is registered.")
+        try:
             start_time = int(time.time() * 1000)
             fn(*args)
             end_time = int(time.time() * 1000)
-            if len(listener.failures) != 0:
+            if listener and len(listener.failures) != 0:
                 self.summary['queryStatus'].append("CompletedWithTaskFailures")
             else:
                 self.summary['queryStatus'].append("Completed")
         except Exception as e:
+            # print the exception to ease debugging
+            print(e)
             end_time = int(time.time() * 1000)
             self.summary['queryStatus'].append("Failed")
             self.summary['exceptions'].append(str(e))
         finally:
             self.summary['startTime'] = start_time
             self.summary['queryTimes'].append(end_time - start_time)
-            self.spark_session.sparkContext._jsc.sc().removeSparkListener(listener)
+            if listener is not None:
+                listener.unregister()
             return self.summary
             
     def write_summary(self, query_name, prefix=""):
