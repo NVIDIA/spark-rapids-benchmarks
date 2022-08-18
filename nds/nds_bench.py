@@ -29,8 +29,7 @@
 # obtained from using this file do not comply with the TPC-DS Benchmark.
 #
 
-# This script starts from Load Tests and will not generate raw data.
-# We assume raw CSV data including "Maintenance data" is already generated.
+
 #
 # 1. run nds_transcode.py to load data to Iceberg. => get "TLoad" and "timestamp" for 2.
 # 2. run nds_gen_query_stream.py to generate query streams with RNDSEED = "timestamp" from 1.
@@ -40,6 +39,7 @@
 # 5. run nds_maintenance.py to do Maintenance Test 1.  => get "Tdm1"
 # 6. run nds-throughput to do Throughput Test 2. => get "Ttt2"
 # 7. run nds_maintenance.py to do Maintenance Test 2. => get "Tdm2"
+# 8. run nds_rollback.py to rollback tables modified in Maintenance Test 1&2
 
 import argparse
 import math
@@ -62,16 +62,23 @@ def get_load_end_timestamp(load_report_file):
     this timestamp will be used to generate query streams as the RNDSEED input argument.
     """
     rngseed = None
+    rollback_timestamp = None
     with open(load_report_file, "r") as f:
         for line in f:
             if "RNGSEED used:" in line:
                 # e.g. "RNGSEED used: 07291122510"
                 rngseed = line.split(":")[1].strip()
-    if rngseed:
-        return rngseed
-    else:
+            if "Load Test Finished at:" in line:
+                # e.g. "Load Test Finished at: 2022-08-15 13:32:08.140921"
+                rollback_timestamp = line.split("Load Test Finished at: ")[1].strip()
+    if not rngseed:
         raise Exception(
             f"RNGSEED not found in Load Test report file: {load_report_file}")
+    elif not rollback_timestamp:
+        raise Exception(
+            f"Load Test End Timestamp not found in Load Test report file: {load_report_file}")
+    else:
+        return rngseed, rollback_timestamp
 
 
 def get_load_time(load_report_file):
@@ -249,7 +256,8 @@ def run_load_test(template_path,
                      output_path,
                      load_report_file,
                      "--output_format", "iceberg",
-                     '--output_mode', "overwrite"]
+                     "--output_mode", "overwrite",
+                     "--log_level", "WARN"]
     subprocess.run(load_test_cmd, check=True)
 
 
@@ -333,7 +341,8 @@ def maintenance_test(num_streams,
                                 maintenance_parquet_path,
                                 maintenance_load_report_path,
                                 "--output_format", "parquet",
-                                '--output_mode', "overwrite",
+                                "--output_mode", "overwrite",
+                                "--log_level", "WARN",
                                 "--update"]
         subprocess.run(maintenance_load_cmd, check=True)
         maintenance_cmd = ["./spark-submit-template",
@@ -378,6 +387,13 @@ def write_metrics_report(report_path, metrics_map):
             f.write(f"{key},{value}\n")
 
 
+def rollback(timestamp, template_path):
+    rollback_cmd = ["./spark-submit-template",
+                    template_path,
+                    "nds_rollback.py",
+                    timestamp]
+    subprocess.run(rollback_cmd, check=True)
+
 def run_full_bench(yaml_params):
     skip_data_gen = yaml_params['data_gen']['skip']
     scale_factor = str(yaml_params['data_gen']['scale_factor'])
@@ -385,13 +401,14 @@ def run_full_bench(yaml_params):
     raw_data_path = yaml_params['data_gen']['raw_data_path']
     local_or_hdfs = yaml_params['data_gen']['local_or_hdfs']
     # write to Iceberg
-    template_path = yaml_params['load_test']['spark_template_path']
+    load_template_path = yaml_params['load_test']['spark_template_path']
     iceberg_output_path = yaml_params['load_test']['output_path']
     load_report_path = yaml_params['load_test']['report_path']
     num_streams = yaml_params['generate_query_stream']['num_streams']
     query_template_dir = yaml_params['generate_query_stream']['query_template_dir']
     stream_output_path = yaml_params['generate_query_stream']['stream_output_path']
     power_stream_path = stream_output_path + "/query_0.sql"
+    power_template_path = yaml_params['power_test']['spark_template_path']
     power_report_path = yaml_params['power_test']['report_path']
     power_property_path = yaml_params['power_test']['property_path']
     throughput_report_base = yaml_params['throughput_test']['report_base_path']
@@ -410,18 +427,19 @@ def run_full_bench(yaml_params):
     if not skip_data_gen:
         run_data_gen(scale_factor, parallel, raw_data_path,
                      local_or_hdfs, num_streams)
-    # # 1.
-    run_load_test(template_path,
+    # 1.
+    run_load_test(load_template_path,
                   raw_data_path,
                   iceberg_output_path,
                   load_report_path)
     Tld = float(get_load_time(load_report_path))
     # 2.
-    RNGSEED = get_load_end_timestamp(load_report_path)
+    # RNGSEED is required for query stream generation in Spec 4.3.1
+    RNGSEED, rollbak_timestamp = get_load_end_timestamp(load_report_path)
     gen_streams(num_streams, query_template_dir,
                 scale_factor, stream_output_path, RNGSEED)
     # 3.
-    power_test(template_path,
+    power_test(power_template_path,
                iceberg_output_path,
                power_stream_path,
                power_report_path,
@@ -436,7 +454,7 @@ def run_full_bench(yaml_params):
     # 4.
     throughput_test(num_streams,
                     1,
-                    template_path,
+                    power_template_path,
                     iceberg_output_path,
                     stream_output_path,
                     throughput_report_base,
@@ -461,7 +479,7 @@ def run_full_bench(yaml_params):
     # 6
     throughput_test(num_streams,
                     2,
-                    template_path,
+                    power_template_path,
                     iceberg_output_path,
                     stream_output_path,
                     throughput_report_base,
@@ -483,11 +501,11 @@ def run_full_bench(yaml_params):
                                 maintenance_report_base_path,
                                 num_streams,
                                 2)
-
+    # 8.
+    rollback(rollbak_timestamp, maintenance_refresh_template)
     perf_metric = get_perf_metric(
         scale_factor, num_streams, Tld, TPower, Ttt1, Ttt2, Tdm1, Tdm2)
     print(f"====== Performance Metric: {perf_metric} ======")
-
     metrics_map = {"perf_metric": perf_metric}
     write_metrics_report(metrics_report, metrics_map)
 
