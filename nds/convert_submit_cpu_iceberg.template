@@ -21,7 +21,7 @@ export SPARK_HOME=YOUR_SPARK_HOME
 # 2. The Iceberg catalog/tables is expected to be in current directory.
 #    see `spark.sql.catalog.spark_catalog.warehouse`.
 export SPARK_CONF=("--master" "yarn"
-                   "--deploy-mode" "cluster"
+                   "--deploy-mode" "client"
                    "--driver-memory" "10G"
                    "--num-executors" "8"
                    "--executor-memory" "40G"

@@ -401,21 +401,25 @@ def run_full_bench(yaml_params):
     raw_data_path = yaml_params['data_gen']['raw_data_path']
     local_or_hdfs = yaml_params['data_gen']['local_or_hdfs']
     # write to Iceberg
+    skip_load_test = yaml_params['load_test']['skip']
     load_template_path = yaml_params['load_test']['spark_template_path']
     iceberg_output_path = yaml_params['load_test']['output_path']
     load_report_path = yaml_params['load_test']['report_path']
+    skip_stream_gen = yaml_params['generate_query_stream']['skip']
     num_streams = yaml_params['generate_query_stream']['num_streams']
     query_template_dir = yaml_params['generate_query_stream']['query_template_dir']
     stream_output_path = yaml_params['generate_query_stream']['stream_output_path']
     power_stream_path = stream_output_path + "/query_0.sql"
+    skip_power_test = yaml_params['power_test']['skip']
     power_template_path = yaml_params['power_test']['spark_template_path']
     power_report_path = yaml_params['power_test']['report_path']
     power_property_path = yaml_params['power_test']['property_path']
+    skip_throughput_test = yaml_params['throughput_test']['skip']
     throughput_report_base = yaml_params['throughput_test']['report_base_path']
-    maintenance_raw_data_base_path = yaml_params['maintenance_test']['raw_data_base_path']
-    # write to parquet, with GPU
+    # temaplte to write to parquet, with GPU
+    skip_maintenance_test = yaml_params['maintenance_test']['skip']
     maintenance_load_template = yaml_params['maintenance_test']['load_template_path']
-    # for refresh functions
+    # template for refresh functions, requires "spark.sql.catalog.spark_catalog.warehouse"
     maintenance_refresh_template = yaml_params['maintenance_test']['maintenance_template_path']
     maintenance_parquet_data_base_path = yaml_params['maintenance_test']['output_data']
     maintenance_query_dir = yaml_params['maintenance_test']['query_dir']
@@ -428,10 +432,11 @@ def run_full_bench(yaml_params):
         run_data_gen(scale_factor, parallel, raw_data_path,
                      local_or_hdfs, num_streams)
     # 1.
-    run_load_test(load_template_path,
-                  raw_data_path,
-                  iceberg_output_path,
-                  load_report_path)
+    if not skip_load_test:
+        run_load_test(load_template_path,
+                      raw_data_path,
+                      iceberg_output_path,
+                      load_report_path)
     Tld = float(get_load_time(load_report_path))
     # 2.
     # RNGSEED is required for query stream generation in Spec 4.3.1
@@ -439,11 +444,12 @@ def run_full_bench(yaml_params):
     gen_streams(num_streams, query_template_dir,
                 scale_factor, stream_output_path, RNGSEED)
     # 3.
-    power_test(power_template_path,
-               iceberg_output_path,
-               power_stream_path,
-               power_report_path,
-               power_property_path)
+    if not skip_power_test:
+        power_test(power_template_path,
+                   iceberg_output_path,
+                   power_stream_path,
+                   power_report_path,
+                   power_property_path)
 
     # TPower is in milliseconds
     # But Spec 7.1.16: Elapsed time is measured in seconds rounded up to the nearest 0.1 second.
@@ -452,51 +458,55 @@ def run_full_bench(yaml_params):
         float(get_power_time(power_report_path)) / 1000)
 
     # 4.
-    throughput_test(num_streams,
-                    1,
-                    power_template_path,
-                    iceberg_output_path,
-                    stream_output_path,
-                    throughput_report_base,
-                    power_property_path)
+    if not skip_throughput_test:
+        throughput_test(num_streams,
+                        1,
+                        power_template_path,
+                        iceberg_output_path,
+                        stream_output_path,
+                        throughput_report_base,
+                        power_property_path)
     Ttt1 = get_throughput_time(throughput_report_base,
                                num_streams, 1)
     # 5
-    maintenance_test(num_streams,
-                     1,
-                     maintenance_load_template,
-                     maintenance_refresh_template,
-                     maintenance_raw_data_base_path,
-                     maintenance_parquet_data_base_path,
-                     maintenance_query_dir,
-                     maintenance_load_report_base_path,
-                     maintenance_report_base_path,
-                     power_property_path)
+    if not skip_maintenance_test:
+        maintenance_test(num_streams,
+                         1,
+                         maintenance_load_template,
+                         maintenance_refresh_template,
+                         raw_data_path,
+                         maintenance_parquet_data_base_path,
+                         maintenance_query_dir,
+                         maintenance_load_report_base_path,
+                         maintenance_report_base_path,
+                         power_property_path)
     Tdm1 = get_maintenance_time(maintenance_load_report_base_path,
                                 maintenance_report_base_path,
                                 num_streams,
                                 1)
     # 6
-    throughput_test(num_streams,
-                    2,
-                    power_template_path,
-                    iceberg_output_path,
-                    stream_output_path,
-                    throughput_report_base,
-                    power_property_path)
+    if not skip_throughput_test:
+        throughput_test(num_streams,
+                        2,
+                        power_template_path,
+                        iceberg_output_path,
+                        stream_output_path,
+                        throughput_report_base,
+                        power_property_path)
     Ttt2 = get_throughput_time(throughput_report_base,
                                num_streams, 2)
     # 7
-    maintenance_test(num_streams,
-                     2,
-                     maintenance_load_template,
-                     maintenance_refresh_template,
-                     maintenance_raw_data_base_path,
-                     maintenance_parquet_data_base_path,
-                     maintenance_query_dir,
-                     maintenance_load_report_base_path,
-                     maintenance_report_base_path,
-                     power_property_path)
+    if not skip_maintenance_test:
+        maintenance_test(num_streams,
+                         2,
+                         maintenance_load_template,
+                         maintenance_refresh_template,
+                         raw_data_path,
+                         maintenance_parquet_data_base_path,
+                         maintenance_query_dir,
+                         maintenance_load_report_base_path,
+                         maintenance_report_base_path,
+                         power_property_path)
     Tdm2 = get_maintenance_time(maintenance_load_report_base_path,
                                 maintenance_report_base_path,
                                 num_streams,

@@ -81,4 +81,4 @@ LEFT OUTER JOIN web_page ON (wlin_web_page_id = wp_web_page_id AND wp_rec_end_da
 LEFT OUTER JOIN warehouse ON (wlin_warehouse_id = w_warehouse_id)
 LEFT OUTER JOIN promotion ON (wlin_promotion_id = p_promo_id);
 ------------------------------------------------
-insert into web_sales (select * from wsv);
+insert into web_sales (select * from wsv order by ws_sold_date_sk);

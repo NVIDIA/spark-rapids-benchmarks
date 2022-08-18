@@ -376,4 +376,21 @@ query_output_gpu \
 --ignore_ordering
 ```
 
+## Whole Process NDS Benchmark
+[nds_bench.py](./nds_bench.py) along with its yaml config file [bench.yml](./bench.yml) is the script
+to run the whole process NDS benchmark to get final metrics.
+User needs to fill in the config file to specify the parameters of the benchmark.
+User can specify the `skip` field in the config file to skip certain part of the benchmarks.
+Please note: each part of the benchmark will produce its report file for necessary metrics like total
+execution time, start or end timestamp. The final metrics are calculated by those reports. Skipping
+a part of the benchmark may cause metrics calculation failure in the end if there's no necessary reports
+generated previously.
+
+Example command to run the benchmark:
+```
+usage: nds_bench.py [-h] yaml_config
+
+positional arguments:
+  yaml_config  yaml config file for the benchmark
+```
 ### NDS2.0 is using source code from TPC-DS Tool V3.2.0

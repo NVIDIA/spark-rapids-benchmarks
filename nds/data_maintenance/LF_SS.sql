@@ -66,4 +66,4 @@ WHERE purc_purchase_id = plin_purchase_id
  AND i_rec_end_date is NULL
  AND s_rec_end_date is NULL;
 ------------------------------------------------
-insert into store_sales (select * from ssv);
+insert into store_sales (select * from ssv order by ss_sold_date_sk);

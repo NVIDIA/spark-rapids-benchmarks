@@ -48,12 +48,12 @@ def rollback(spark, timestamp, tables_to_rollback):
         print(f"Rolling back {table} to {timestamp}")
         rollback_sql = f"CALL spark_catalog.system.rollback_to_timestamp('{table}', TIMESTAMP '{timestamp}')"
         spark.sql(rollback_sql)
-        
+
+
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
     parser.add_argument('timestamp', help='timestamp to rollback to')
     args = parser.parse_args()
     spark = SparkSession.builder.appName("Rollback").getOrCreate()
     rollback(spark, args.timestamp, tables_to_rollback)
-        
-        
+    spark.stop()
