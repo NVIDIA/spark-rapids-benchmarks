@@ -21,6 +21,7 @@ You may not use NDS except in compliance with the Apache License, Version 2.0 an
 1. python >= 3.6
 2. Necessary libraries 
     ```
+    sudo locale-gen en_US.UTF-8
     sudo apt install openjdk-8-jdk-headless gcc make flex bison byacc maven
     ```
 3. TPC-DS Tools
