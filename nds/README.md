@@ -291,7 +291,7 @@ update operations cannot be done atomically on raw Parquet/Orc files, so we use
 [Iceberg](https://iceberg.apache.org/) as dataset metadata manager to overcome the issue.
 
 Enabling Iceberg requires additional configuration. Please refer to [Iceberg Spark](https://iceberg.apache.org/docs/latest/getting-started/)
-for details. We also provide a Spark submit template with necessary Iceberg configs: [convert_submit_cpu_iceberg.template](./convert_submit_cpu_iceberg.template)
+for details. We also provide a Spark submit template with necessary Iceberg configs: [maintenance.template](./maintenance.template)
 
 The data maintenance queries are in [data_maintenance](./data_maintenance) folder. `DF_*.sql` are
 DELETE queries while `LF_*.sql` are INSERT queries.
@@ -323,7 +323,7 @@ optional arguments:
 
 An example command to run only _LF_CS_ and _DF_CS_ functions:
 ```
-./spark-submit-template convert_submit_cpu_iceberg.template \
+./spark-submit-template maintenance.template \
 nds_maintenance.py \
 update_data_sf3k \
 ./data_maintenance \
