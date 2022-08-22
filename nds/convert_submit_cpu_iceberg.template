@@ -16,7 +16,7 @@
 #
 export SPARK_HOME=YOUR_SPARK_HOME
 
-# 1. The iceberg-spark-runtime-3.2_2.12:0.13.1 only works on Spark 3.2.x
+# 1. The iceberg-spark-runtime-3.2_2.12:0.13.2 only works on Spark 3.2.x
 #    Please refer to https://iceberg.apache.org/releases/ for other Spark versions.
 # 2. The Iceberg catalog/tables is expected to be in current directory.
 #    see `spark.sql.catalog.spark_catalog.warehouse`.
@@ -26,8 +26,7 @@ export SPARK_CONF=("--master" "yarn"
                    "--num-executors" "8"
                    "--executor-memory" "40G"
                    "--executor-cores" "12"
-                   "--conf" "spark.task.cpus=1"
-                   "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.2_2.12:0.13.1"
+                   "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.2_2.12:0.13.2"
                    "--conf" "spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
                    "--conf" "spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog"
                    "--conf" "spark.sql.catalog.spark_catalog.type=hadoop")

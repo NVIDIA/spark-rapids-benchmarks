@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-# 1. The iceberg-spark-runtime-3.2_2.12:0.13.1 only works on Spark 3.2.x
+# 1. The iceberg-spark-runtime-3.2_2.12:0.13.2 only works on Spark 3.2.x
 #    Please refer to https://iceberg.apache.org/releases/ for other Spark versions.
 # 2. The Iceberg catalog/tables is expected to be in current directory.
 #    see `spark.sql.catalog.spark_catalog.warehouse`.
@@ -23,7 +23,7 @@
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
 export SPARK_CONF=("--master" "yarn"
                    "--deploy-mode" "client"
-                   "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.2_2.12:0.13.1"
+                   "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.2_2.12:0.13.2"
                    "--conf" "spark.driver.memory=50G"
                    "--conf" "spark.executor.cores=16"
                    "--conf" "spark.executor.instances=8"
