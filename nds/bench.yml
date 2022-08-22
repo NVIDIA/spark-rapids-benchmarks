@@ -3,7 +3,9 @@ data_gen:
   parallel: 100
   raw_data_path: PATH_FOR_RAW_DATA # raw NDS csv data
   local_or_hdfs: hdfs
-  skip: false
+  # data generation is not a timed part in the full benchmark steps, set to "true" by default.
+  # the raw_data_path is the location for already generated data when "skip" is "true"
+  skip: true 
 load_test:
   spark_template_path: convert_submit_cpu.template  # template to do Iceberg writing, GPU disabled
   output_path: PATH_FOR_ICEBERG_WAREHOUSE # warehouse location for Iceberg
