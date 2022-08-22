@@ -164,7 +164,7 @@ def get_throughput_time(throughput_report_file_base, num_streams, first_or_secon
     return elapse
 
 
-def get_refresh_time(maintenance_report_file, maintenance_load_report_file):
+def get_refresh_time(maintenance_report_file):
     """get Maintenance elapse time from report"""
     maintenance_load_time = None
     maintenance_elapse = None
@@ -174,41 +174,33 @@ def get_refresh_time(maintenance_report_file, maintenance_load_report_file):
                 # e.g. "app-20220715143743-0007,Data Maintenance Time,11838"
                 maintenance_elapse = line.split(",")[2].strip()
 
-    # refresh data load time is counted as a part in the maintenance time
-    maintenance_load_time = get_load_time(maintenance_load_report_file)
     if maintenance_elapse:
-        return float(maintenance_elapse) + float(maintenance_load_time)
+        return float(maintenance_elapse)
     else:
         raise Exception("Data Maintenance Time not found in Data Maintenance report file: " +
                         f"{maintenance_report_file}.")
 
 
-def get_maintenance_time(maintenance_load_report_base_path,
-                         maintenance_report_base_path,
+def get_maintenance_time(maintenance_report_base_path,
                          num_streams, first_or_second):
     """Get maintenance time from maintenance report files generated in one maintenance test.
+    THe maintenance time is the sum of the elapse time of all maintenance reports in one maintenance test.
 
     Args:
-        maintenance_load_report_base_path (str): _description_
-        maintenance_report_base_path (str): _description_
-        num_streams (int): _description_
-        first_or_second (int): _description_
+        maintenance_report_base_path (str): base path of maintenance report files.
+        num_streams (int): total number of streams.
+        first_or_second (int): 1 or 2 for first or second maintenance test.
 
     Returns:
-        _type_: _description_
+        float: elapse time of maintenance test.
     """
     refresh_nums = get_stream_range(num_streams, first_or_second)
     Tdm = 0
     # refresh run for each stream in Throughput Test 1.
     for i in refresh_nums:
-        maintenance_load_report_path = maintenance_load_report_base_path + \
-            f"_{i}" + ".txt"
         maintenance_report_path = maintenance_report_base_path + \
             f"_{i}" + ".csv"
-
-        Tdm += float(get_load_time(maintenance_load_report_path))
-        Tdm += float(get_refresh_time(maintenance_report_path,
-                     maintenance_load_report_path))
+        Tdm += float(get_refresh_time(maintenance_report_path))
     return Tdm
 
 
@@ -316,39 +308,21 @@ def throughput_test(num_streams,
 
 def maintenance_test(num_streams,
                      first_or_second,
-                     load_template_path,
                      refresh_template_path,
                      maintenance_raw_data_base_path,
-                     maintenance_parquet_data_base_path,
                      maintenance_query_path,
-                     maintenance_load_report_base_path,
                      maintenance_report_base_path,
                      property_path):
     refresh_nums = get_stream_range(num_streams, first_or_second)
     # refresh run for each stream in Throughput Test.
     for i in refresh_nums:
         maintenance_raw_path = maintenance_raw_data_base_path + f"_{i}"
-        maintenance_parquet_path = maintenance_parquet_data_base_path + f"_{i}"
-        maintenance_load_report_path = maintenance_load_report_base_path + \
-            f"_{i}" + ".txt"
         maintenance_report_path = maintenance_report_base_path + \
             f"_{i}" + ".csv"
-        # the load time of refresh data is counted as a part in the maintenance time
-        maintenance_load_cmd = ["./spark-submit-template",
-                                load_template_path,
-                                "nds_transcode.py",
-                                maintenance_raw_path,
-                                maintenance_parquet_path,
-                                maintenance_load_report_path,
-                                "--output_format", "parquet",
-                                "--output_mode", "overwrite",
-                                "--log_level", "WARN",
-                                "--update"]
-        subprocess.run(maintenance_load_cmd, check=True)
         maintenance_cmd = ["./spark-submit-template",
                            refresh_template_path,
                            "nds_maintenance.py",
-                           maintenance_parquet_path,
+                           maintenance_raw_path,
                            maintenance_query_path,
                            maintenance_report_path,
                            "--property_file", property_path]
@@ -418,12 +392,9 @@ def run_full_bench(yaml_params):
     throughput_report_base = yaml_params['throughput_test']['report_base_path']
     # temaplte to write to parquet, with GPU
     skip_maintenance_test = yaml_params['maintenance_test']['skip']
-    maintenance_load_template = yaml_params['maintenance_test']['load_template_path']
     # template for refresh functions, requires "spark.sql.catalog.spark_catalog.warehouse"
     maintenance_refresh_template = yaml_params['maintenance_test']['maintenance_template_path']
-    maintenance_parquet_data_base_path = yaml_params['maintenance_test']['output_data']
     maintenance_query_dir = yaml_params['maintenance_test']['query_dir']
-    maintenance_load_report_base_path = yaml_params['maintenance_test']['load_report_base_path']
     maintenance_report_base_path = yaml_params['maintenance_test']['maintenance_report_base_path']
     metrics_report = yaml_params['metrics_report_path']
 
@@ -439,10 +410,11 @@ def run_full_bench(yaml_params):
                       load_report_path)
     Tld = float(get_load_time(load_report_path))
     # 2.
-    # RNGSEED is required for query stream generation in Spec 4.3.1
-    RNGSEED, rollbak_timestamp = get_load_end_timestamp(load_report_path)
-    gen_streams(num_streams, query_template_dir,
-                scale_factor, stream_output_path, RNGSEED)
+    if not skip_stream_gen:
+        # RNGSEED is required for query stream generation in Spec 4.3.1
+        RNGSEED, rollbak_timestamp = get_load_end_timestamp(load_report_path)
+        gen_streams(num_streams, query_template_dir,
+                    scale_factor, stream_output_path, RNGSEED)
     # 3.
     if not skip_power_test:
         power_test(power_template_path,
@@ -472,16 +444,12 @@ def run_full_bench(yaml_params):
     if not skip_maintenance_test:
         maintenance_test(num_streams,
                          1,
-                         maintenance_load_template,
                          maintenance_refresh_template,
                          raw_data_path,
-                         maintenance_parquet_data_base_path,
                          maintenance_query_dir,
-                         maintenance_load_report_base_path,
                          maintenance_report_base_path,
                          power_property_path)
-    Tdm1 = get_maintenance_time(maintenance_load_report_base_path,
-                                maintenance_report_base_path,
+    Tdm1 = get_maintenance_time(maintenance_report_base_path,
                                 num_streams,
                                 1)
     # 6
@@ -499,16 +467,12 @@ def run_full_bench(yaml_params):
     if not skip_maintenance_test:
         maintenance_test(num_streams,
                          2,
-                         maintenance_load_template,
                          maintenance_refresh_template,
                          raw_data_path,
-                         maintenance_parquet_data_base_path,
                          maintenance_query_dir,
-                         maintenance_load_report_base_path,
                          maintenance_report_base_path,
                          power_property_path)
-    Tdm2 = get_maintenance_time(maintenance_load_report_base_path,
-                                maintenance_report_base_path,
+    Tdm2 = get_maintenance_time(maintenance_report_base_path,
                                 num_streams,
                                 2)
     # 8.

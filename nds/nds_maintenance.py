@@ -196,11 +196,11 @@ def run_query(spark_session, query_dict, time_log_output_path, json_summary_fold
         writer.writerow(header)
         writer.writerows(execution_time_list)
     
-def register_temp_views(spark_session, refresh_data_path, data_format):
-    refresh_tables = get_maintenance_schemas(True).keys()
-    for table in refresh_tables:
-        spark_session.read.format(data_format).load(
-            refresh_data_path + '/' + table).createOrReplaceTempView(table)
+def register_temp_views(spark_session, refresh_data_path):
+    refresh_tables = get_maintenance_schemas(True)
+    for table, schema in refresh_tables.items():
+        spark_session.read.option("delimiter", '|').option(
+            "header", "false").csv(refresh_data_path + '/' + table, schema=schema).createOrReplaceTempView(table)
 
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
@@ -217,9 +217,6 @@ if __name__ == "__main__":
                         type=lambda s: s.split(','),
                         help='specify Data Maintenance query names by a comma seprated string.' +
                         ' e.g. "LF_CR,LF_CS"')
-    parser.add_argument('--data_format',
-                        help='data format for refresh data, e.g. parquet, orc, avro',
-                        default="parquet")
     parser.add_argument('--property_file',
                         help='property file for Spark configuration.')
     parser.add_argument('--json_summary_folder',
@@ -228,7 +225,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     valid_queries = get_valid_query_names(args.maintenance_queries)
     spark_session = create_spark_session(valid_queries)
-    register_temp_views(spark_session, args.refresh_data_path, args.data_format)
+    register_temp_views(spark_session, args.refresh_data_path)
     query_dict = get_maintenance_queries(spark_session,
                                          args.maintenance_queries_folder,
                                          valid_queries)
