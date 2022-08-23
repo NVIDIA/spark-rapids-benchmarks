@@ -282,7 +282,7 @@ def power_test(template_path,
                       report_path,
                       "--input_format", "iceberg",
                       "--property_file", property_path]
-    if output_prefix:
+    if output_path:
         power_test_cmd.extend(["--output_prefix", output_path])
     subprocess.run(power_test_cmd, check=True)
 
