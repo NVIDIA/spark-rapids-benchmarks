@@ -272,7 +272,8 @@ def power_test(template_path,
                input_path,
                stream_path,
                report_path,
-               property_path):
+               property_path,
+               output_path):
     power_test_cmd = ["./spark-submit-template",
                       template_path,
                       "nds_power.py",
@@ -281,6 +282,8 @@ def power_test(template_path,
                       report_path,
                       "--input_format", "iceberg",
                       "--property_file", property_path]
+    if output_prefix:
+        power_test_cmd.extend(["--output_prefix", output_path])
     subprocess.run(power_test_cmd, check=True)
 
 
@@ -388,6 +391,7 @@ def run_full_bench(yaml_params):
     power_template_path = yaml_params['power_test']['spark_template_path']
     power_report_path = yaml_params['power_test']['report_path']
     power_property_path = yaml_params['power_test']['property_path']
+    power_output_path = yaml_params['power_test']['output_path']
     skip_throughput_test = yaml_params['throughput_test']['skip']
     throughput_report_base = yaml_params['throughput_test']['report_base_path']
     # temaplte to write to parquet, with GPU
@@ -421,7 +425,8 @@ def run_full_bench(yaml_params):
                    iceberg_output_path,
                    power_stream_path,
                    power_report_path,
-                   power_property_path)
+                   power_property_path,
+                   power_output_path)
 
     # TPower is in milliseconds
     # But Spec 7.1.16: Elapsed time is measured in seconds rounded up to the nearest 0.1 second.

@@ -18,7 +18,6 @@ export NDS_LISTENER_JAR=NDSBenchmarkListener-1.0-SNAPSHOT.jar
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
 export SPARK_CONF=("--master" "yarn"
                    "--deploy-mode" "client"
-                   "--conf" "spark.rapids.sql.enabled=false"
                    "--conf" "spark.executor.cores=16"
                    "--conf" "spark.executor.memory=16G"
                    "--conf" "spark.driver.memory=50G"
