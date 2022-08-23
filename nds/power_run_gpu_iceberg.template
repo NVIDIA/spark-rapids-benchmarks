@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-# 1. The iceberg-spark-runtime-3.2_2.12:2 only works on Spark 3.2.x
+# 1. The iceberg-spark-runtime-3.2_2.12:0.13.2 only works on Spark 3.2.x
 #    Please refer to https://iceberg.apache.org/releases/ for other Spark versions.
 # 2. The Iceberg catalog/tables is expected to be in current directory.
 #    see `spark.sql.catalog.spark_catalog.warehouse`.
