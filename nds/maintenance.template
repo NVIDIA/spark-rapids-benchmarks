@@ -22,7 +22,7 @@ export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
 export SPARK_RAPIDS_PLUGIN_JAR=rapids-4-spark_2.12-22.06.0.jar
 export NDS_LISTENER_JAR=NDSBenchmarkListener-1.0-SNAPSHOT.jar
 export ICEBERG_WAREHOUSE=PATH_TO_ICEBERG_WAREHOUSE
-SPARK_CONF=(("--master" "yarn"
+SPARK_CONF=("--master" "yarn"
              "--deploy-mode" "client"
              "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.2_2.12:0.13.2"
              "--conf" "spark.driver.maxResultSize=2GB"
