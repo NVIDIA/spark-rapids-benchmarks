@@ -39,7 +39,6 @@
 # 5. run nds_maintenance.py to do Maintenance Test 1.  => get "Tdm1"
 # 6. run nds-throughput to do Throughput Test 2. => get "Ttt2"
 # 7. run nds_maintenance.py to do Maintenance Test 2. => get "Tdm2"
-# 8. run nds_rollback.py to rollback tables modified in Maintenance Test 1&2
 
 import argparse
 import math
@@ -62,23 +61,16 @@ def get_load_end_timestamp(load_report_file):
     this timestamp will be used to generate query streams as the RNDSEED input argument.
     """
     rngseed = None
-    rollback_timestamp = None
     with open(load_report_file, "r") as f:
         for line in f:
             if "RNGSEED used:" in line:
                 # e.g. "RNGSEED used: 07291122510"
                 rngseed = line.split(":")[1].strip()
-            if "Load Test Finished at:" in line:
-                # e.g. "Load Test Finished at: 2022-08-15 13:32:08.140921"
-                rollback_timestamp = line.split("Load Test Finished at: ")[1].strip()
     if not rngseed:
         raise Exception(
             f"RNGSEED not found in Load Test report file: {load_report_file}")
-    elif not rollback_timestamp:
-        raise Exception(
-            f"Load Test End Timestamp not found in Load Test report file: {load_report_file}")
     else:
-        return rngseed, rollback_timestamp
+        return rngseed
 
 
 def get_load_time(load_report_file):
@@ -166,7 +158,6 @@ def get_throughput_time(throughput_report_file_base, num_streams, first_or_secon
 
 def get_refresh_time(maintenance_report_file):
     """get Maintenance elapse time from report"""
-    maintenance_load_time = None
     maintenance_elapse = None
     with open(maintenance_report_file, "r") as f:
         for line in f:
@@ -201,7 +192,7 @@ def get_maintenance_time(maintenance_report_base_path,
         maintenance_report_path = maintenance_report_base_path + \
             f"_{i}" + ".csv"
         Tdm += float(get_refresh_time(maintenance_report_path))
-    return Tdm
+    return round_up_to_nearest_10_percent(Tdm)
 
 
 def get_throughput_stream_nums(num_streams, first_or_second):
@@ -364,13 +355,6 @@ def write_metrics_report(report_path, metrics_map):
             f.write(f"{key},{value}\n")
 
 
-def rollback(timestamp, template_path):
-    rollback_cmd = ["./spark-submit-template",
-                    template_path,
-                    "nds_rollback.py",
-                    timestamp]
-    subprocess.run(rollback_cmd, check=True)
-
 def run_full_bench(yaml_params):
     skip_data_gen = yaml_params['data_gen']['skip']
     scale_factor = str(yaml_params['data_gen']['scale_factor'])
@@ -412,11 +396,11 @@ def run_full_bench(yaml_params):
                       raw_data_path,
                       iceberg_output_path,
                       load_report_path)
-    Tld = float(get_load_time(load_report_path))
+    Tld = round_up_to_nearest_10_percent(float(get_load_time(load_report_path)))
     # 2.
     if not skip_stream_gen:
         # RNGSEED is required for query stream generation in Spec 4.3.1
-        RNGSEED, rollbak_timestamp = get_load_end_timestamp(load_report_path)
+        RNGSEED = get_load_end_timestamp(load_report_path)
         gen_streams(num_streams, query_template_dir,
                     scale_factor, stream_output_path, RNGSEED)
     # 3.
@@ -480,12 +464,18 @@ def run_full_bench(yaml_params):
     Tdm2 = get_maintenance_time(maintenance_report_base_path,
                                 num_streams,
                                 2)
-    # 8.
-    rollback(rollbak_timestamp, maintenance_refresh_template)
     perf_metric = get_perf_metric(
         scale_factor, num_streams, Tld, TPower, Ttt1, Ttt2, Tdm1, Tdm2)
     print(f"====== Performance Metric: {perf_metric} ======")
-    metrics_map = {"perf_metric": perf_metric}
+    metrics_map = {"scale_factor": scale_factor,
+                   "num_streams": num_streams,
+                   "Tld": Tld,
+                   "TPower": TPower,
+                   "Ttt1": Ttt1,
+                   "Ttt2": Ttt2,
+                   "Tdm1": Tdm1,
+                   "Tdm2": Tdm2,
+                   "perf_metric": perf_metric}
     write_metrics_report(metrics_report, metrics_map)
 
 
