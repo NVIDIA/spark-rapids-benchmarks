@@ -15,24 +15,24 @@
 # limitations under the License.
 #
 export SPARK_RAPIDS_PLUGIN_JAR=rapids-4-spark_2.12-22.06.0.jar
-export NDS_LISTENER_JAR=NDSBenchmarkListener-1.0-SNAPSHOT.jar
+export NDS_LISTENER_JAR=nds-benchmark-listener-1.0-SNAPSHOT.jar
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
 export SPARK_CONF=("--master" "yarn"
-                   "--conf" "spark.rapids.memory.gpu.pool=ARENA"
                    "--conf" "spark.driver.maxResultSize=2GB"
-                   "--conf" "spark.executor.instances=8"
+                   "--conf" "spark.driver.memory=10G"
                    "--conf" "spark.executor.cores=16"
-                   "--conf" "spark.locality.wait=0"
-                   "--conf" "spark.rapids.sql.concurrentGpuTasks=2"
-                   "--conf" "spark.executor.resource.gpu.amount=1"
-                   "--conf" "spark.task.resource.gpu.amount=0.0625"
+                   "--conf" "spark.executor.instances=8"
                    "--conf" "spark.executor.memory=16G"
-                   "--conf" "spark.driver.memory=50G"
-                   "--conf" "spark.sql.files.maxPartitionBytes=2gb"
-                   "--conf" "spark.rapids.memory.host.spillStorageSize=32G"
-                   "--conf" "spark.sql.adaptive.enabled=true"
-                   "--conf" "spark.plugins=com.nvidia.spark.SQLPlugin"
-                   "--conf" "spark.rapids.memory.pinnedPool.size=8g"
+                   "--conf" "spark.executor.resource.gpu.amount=1"
                    "--conf" "spark.executor.resource.gpu.discoveryScript=./getGpusResources.sh"
+                   "--conf" "spark.locality.wait=0"
+                   "--conf" "spark.plugins=com.nvidia.spark.SQLPlugin"
+                   "--conf" "spark.rapids.memory.gpu.pool=ARENA"
+                   "--conf" "spark.rapids.memory.host.spillStorageSize=32G"
+                   "--conf" "spark.rapids.memory.pinnedPool.size=8g"
+                   "--conf" "spark.rapids.sql.concurrentGpuTasks=2"
+                   "--conf" "spark.sql.adaptive.enabled=true"
+                   "--conf" "spark.sql.files.maxPartitionBytes=2gb"
+                   "--conf" "spark.task.resource.gpu.amount=0.0625"
                    "--files" "$SPARK_HOME/examples/src/main/scripts/getGpusResources.sh"
                    "--jars" "$SPARK_RAPIDS_PLUGIN_JAR,$NDS_LISTENER_JAR")

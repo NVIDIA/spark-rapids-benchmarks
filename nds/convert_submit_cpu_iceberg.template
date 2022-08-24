@@ -23,11 +23,11 @@
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
 export SPARK_CONF=("--master" "yarn"
                    "--deploy-mode" "client"
-                   "--driver-memory" "10G"
-                   "--num-executors" "8"
-                   "--executor-memory" "40G"
-                   "--executor-cores" "12"
-                   "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.2_2.12:0.13.2"
+                   "--conf" "spark.driver.memory=10G"
+                   "--conf" "spark.executor.memory=16G"
+                   "--conf" "spark.executor.cores=12"
+                   "--conf" "spark.executor.instances=8"
                    "--conf" "spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
                    "--conf" "spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog"
-                   "--conf" "spark.sql.catalog.spark_catalog.type=hadoop")
+                   "--conf" "spark.sql.catalog.spark_catalog.type=hadoop"
+                   "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.2_2.12:0.13.2")
