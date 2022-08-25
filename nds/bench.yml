@@ -24,7 +24,7 @@ power_test: # use load test output as input to avoid duplication
   spark_template_path: power_run_gpu_iceberg.template # template with both Iceberg & GPU enabled
   report_path: power_test.csv
   property_path: properties/aqe-on.properties # property file contains some Spark configs as a addition to spark template file
-  output_path: PATH_FOR_QUERY_OUTPUT # leave it empty to use "collect" as Spark action. Otherwise it can be used for data validation
+  output_path: # leave it empty to use "collect" as Spark action. Otherwise it can be used for data validation
   skip: false
 throughput_test: # use most parameters from power test to avoid duplication
   report_base_path: throughput_report
