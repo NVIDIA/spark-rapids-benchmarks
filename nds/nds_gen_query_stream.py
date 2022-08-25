@@ -64,6 +64,8 @@ def generate_query_streams(args, tool_path):
                           '-streams', args.streams]
     else:
         cmd = base_cmd + ['-template', args.template]
+    if args.rngseed:
+        cmd += ['-rngseed', args.rngseed]
     subprocess.run(cmd, check=True, cwd=str(work_dir))
 
     if args.template:
