@@ -41,7 +41,7 @@ from pyspark.sql import DataFrame
 
 from check import check_json_summary_folder, check_version
 from nds_gen_query_stream import split_special_query
-from nds_transcode import get_schemas
+from nds_schema import get_schemas
 
 check_version()
 

@@ -39,7 +39,7 @@ from pyspark.sql import SparkSession
 from PysparkBenchReport import PysparkBenchReport
 
 from check import check_json_summary_folder, get_abs_path
-from nds_transcode import get_maintenance_schemas
+from nds_schema import get_maintenance_schemas
 
 INSERT_FUNCS = [
     'LF_CR',
