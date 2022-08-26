@@ -21,12 +21,14 @@
 # 2. The Iceberg catalog/tables is expected to be in current directory.
 #    see `spark.sql.catalog.spark_catalog.warehouse`.
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
+export SPARK_MASTER=${SPARK_MASTER:-yarn}
 export DRIVER_MEMORY=${DRIVER_MEMORY:-10G}
 export EXECUTOR_CORES=${EXECUTOR_CORES:-12}
 export NUM_EXECUTORS=${NUM_EXECUTORS:-8}
 export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
 export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
-export SPARK_CONF=("--master" "yarn"
+
+export SPARK_CONF=("--master" "${SPARK_MASTER}"
                    "--deploy-mode" "client"
                    "--conf"	"spark.driver.memory=${DRIVER_MEMORY}"
                    "--conf"	"spark.executor.cores=${EXECUTOR_CORES}"

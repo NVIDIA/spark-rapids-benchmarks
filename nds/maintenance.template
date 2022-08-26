@@ -19,13 +19,15 @@
 # Please refer to https://iceberg.apache.org/releases/ for other Spark versions.
 
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
-export NDS_LISTENER_JAR=nds-benchmark-listener-1.0-SNAPSHOT.jar
-export ICEBERG_WAREHOUSE=${ICEBERG_WAREHOUSE:-PATH_TO_ICEBERG_WAREHOUSE}
+export SPARK_MASTER=${SPARK_MASTER:-yarn}
 export DRIVER_MEMORY=${DRIVER_MEMORY:-10G}
 export EXECUTOR_CORES=${EXECUTOR_CORES:-12}
 export NUM_EXECUTORS=${NUM_EXECUTORS:-8}
 export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
 export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
+export NDS_LISTENER_JAR=${NDS_LISTENER_JAR:-nds-benchmark-listener-1.0-SNAPSHOT.jar}
+export ICEBERG_WAREHOUSE=${ICEBERG_WAREHOUSE:-/data/iceberg-warehouse}
+
 export SPARK_CONF=("--master" "yarn"
                    "--deploy-mode" "client"
                    "--conf" "spark.driver.maxResultSize=2GB"
