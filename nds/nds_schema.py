@@ -29,7 +29,15 @@
 # obtained from using this file do not comply with the TPC-DS Benchmark.
 #
 
+import pyspark
 from pyspark.sql.types import *
+
+if not hasattr(pyspark.sql.types, "VarcharType"):
+    # this is a version of Spark that doesn't have fixed- and max-length string types
+    setattr(pyspark.sql.types, "VarcharType", lambda x: StringType())
+    setattr(pyspark.sql.types, "CharType", lambda x: StringType())
+
+from pyspark.sql.types import VarcharType, CharType
 
 def decimalType(use_decimal, precision, scale):
     if use_decimal:
@@ -701,6 +709,8 @@ def get_maintenance_schemas(use_decimal):
     return MAINTENANCE_SCHEMAS
 
 if __name__ == "__main__":
-    print(get_maintenance_schemas())
-    print(get_schemas(false))
-    print(get_schemas(true))
+    # Test code
+    print(get_schemas(False))
+    print(get_schemas(True))
+    print(get_maintenance_schemas(False))
+    print(get_maintenance_schemas(True))

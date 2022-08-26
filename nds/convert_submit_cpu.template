@@ -15,15 +15,15 @@
 # limitations under the License.
 #
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
-export DRIVER_MEMORY=${DRIVER_MEMORY:-10}
+export DRIVER_MEMORY=${DRIVER_MEMORY:-10G}
 export EXECUTOR_CORES=${EXECUTOR_CORES:-12}
 export NUM_EXECUTORS=${NUM_EXECUTORS:-8}
-export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16}
+export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
 export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
 export SPARK_CONF=("--master" "yarn"
                    "--deploy-mode" "client"
-                   "--conf" "spark.driver.memory=${DRIVER_MEMORY}G"
+                   "--conf" "spark.driver.memory=${DRIVER_MEMORY}"
                    "--conf" "spark.executor.cores=${EXECUTOR_CORES}"
                    "--conf" "spark.executor.instances=${NUM_EXECUTORS}"
-                   "--conf" "spark.executor.memory=${EXECUTOR_MEMORY}G"
+                   "--conf" "spark.executor.memory=${EXECUTOR_MEMORY}"
                    "--conf" "spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}")

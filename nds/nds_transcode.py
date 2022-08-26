@@ -40,11 +40,6 @@ from pyspark.sql.types import *
 from pyspark.sql.functions import col
 from nds_schema import *
 
-if not hasattr(pyspark.sql.types, "VarcharType"):
-    # this is a version of Spark that doesn't have fixed- and max-length string types
-    setattr(pyspark.sql.types, "VarcharType", lambda x: StringType())
-    setattr(pyspark.sql.types, "CharType", lambda x: StringType())
-
 # Note the specific partitioning is applied when save the parquet data files.
 TABLE_PARTITIONING = {
     'catalog_sales': 'cs_sold_date_sk',

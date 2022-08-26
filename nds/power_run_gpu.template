@@ -23,23 +23,24 @@ export NUM_EXECUTORS=${NUM_EXECUTORS:-8}
 export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
 export CONCURRENT_GPU_TASKS=${CONCURRENT_GPU_TASKS:-2}
 export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
+
 export SPARK_CONF=("--master" "yarn"
+                   "--deploy-mode" "client"
                    "--conf" "spark.driver.maxResultSize=2GB"
                    "--conf" "spark.driver.memory=${DRIVER_MEMORY}"
                    "--conf" "spark.executor.cores=${EXECUTOR_CORES}"
                    "--conf" "spark.executor.instances=${NUM_EXECUTORS}"
                    "--conf" "spark.executor.memory=${EXECUTOR_MEMORY}"
+                   "--conf" "spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}"
+                   "--conf" "spark.sql.files.maxPartitionBytes=2gb"
+                   "--conf" "spark.locality.wait=0"
+                   "--conf" "spark.sql.adaptive.enabled=true"
                    "--conf" "spark.executor.resource.gpu.amount=1"
                    "--conf" "spark.executor.resource.gpu.discoveryScript=./getGpusResources.sh"
-                   "--conf" "spark.locality.wait=0"
+                   "--conf" "spark.task.resource.gpu.amount=0.0625"
                    "--conf" "spark.plugins=com.nvidia.spark.SQLPlugin"
-                   "--conf" "spark.rapids.memory.gpu.pool=ARENA"
                    "--conf" "spark.rapids.memory.host.spillStorageSize=32G"
                    "--conf" "spark.rapids.memory.pinnedPool.size=8g"
                    "--conf" "spark.rapids.sql.concurrentGpuTasks=${CONCURRENT_GPU_TASKS}"
-                   "--conf" "spark.sql.adaptive.enabled=true"
-                   "--conf" "spark.sql.files.maxPartitionBytes=2gb"
-                   "--conf" "spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}"
-                   "--conf" "spark.task.resource.gpu.amount=0.0625"
                    "--files" "$SPARK_HOME/examples/src/main/scripts/getGpusResources.sh"
                    "--jars" "$SPARK_RAPIDS_PLUGIN_JAR,$NDS_LISTENER_JAR")

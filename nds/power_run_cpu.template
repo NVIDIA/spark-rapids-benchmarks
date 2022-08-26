@@ -16,15 +16,22 @@
 #
 export NDS_LISTENER_JAR=${NDS_LISTENER_JAR:-nds-benchmark-listener-1.0-SNAPSHOT.jar}
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
+export DRIVER_MEMORY=${DRIVER_MEMORY:-10G}
+export EXECUTOR_CORES=${EXECUTOR_CORES:-12}
+export NUM_EXECUTORS=${NUM_EXECUTORS:-8}
+export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
+export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
+
 export SPARK_CONF=("--master" "yarn"
-                   "--conf" "spark.driver.memory=10G"
-                   "--conf" "spark.dynamicAllocation.enabled=false"
-                   "--conf" "spark.executor.cores=16"
-                   "--conf" "spark.executor.instances=8"
-                   "--conf" "spark.executor.memory=16G"
+                   "--deploy-mode" "client"
+                   "--conf" "spark.driver.memory=${DRIVER_MEMORY}"
+                   "--conf" "spark.executor.cores=${EXECUTOR_CORES}"
+                   "--conf" "spark.executor.instances=${NUM_EXECUTORS}"
+                   "--conf" "spark.executor.memory=${EXECUTOR_MEMORY}"
+                   "--conf" "spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}"
                    "--conf" "spark.locality.wait=0"
                    "--conf" "spark.scheduler.minRegisteredResourcesRatio=1.0"
                    "--conf" "spark.sql.adaptive.enabled=true"
                    "--conf" "spark.sql.broadcastTimeout=1200"
-                   "--conf" "spark.sql.shuffle.partitions=128"
+                   "--conf" "spark.dynamicAllocation.enabled=false"
                    "--jars" "$NDS_LISTENER_JAR")

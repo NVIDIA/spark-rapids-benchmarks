@@ -15,33 +15,31 @@
 # limitations under the License.
 #
 
-# The iceberg-spark-runtime-3.2_2.12:0.13.2 only works on Spark 3.2.x
+# The iceberg-spark-runtime-3.1_2.12:0.13.2 only works on Spark 3.1.x
 # Please refer to https://iceberg.apache.org/releases/ for other Spark versions.
 
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
 export NDS_LISTENER_JAR=nds-benchmark-listener-1.0-SNAPSHOT.jar
 export ICEBERG_WAREHOUSE=${ICEBERG_WAREHOUSE:-PATH_TO_ICEBERG_WAREHOUSE}
-export DRIVER_MEMORY=${DRIVER_MEMORY:-10}
+export DRIVER_MEMORY=${DRIVER_MEMORY:-10G}
 export EXECUTOR_CORES=${EXECUTOR_CORES:-12}
 export NUM_EXECUTORS=${NUM_EXECUTORS:-8}
-export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16}
+export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
 export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
 export SPARK_CONF=("--master" "yarn"
                    "--deploy-mode" "client"
-                   "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.1_2.12:0.13.2"
                    "--conf" "spark.driver.maxResultSize=2GB"
-                   "--conf"	"spark.driver.memory=${DRIVER_MEMORY}G"
+                   "--conf"	"spark.driver.memory=${DRIVER_MEMORY}"
                    "--conf"	"spark.executor.cores=${EXECUTOR_CORES}"
                    "--conf"	"spark.executor.instances=${NUM_EXECUTORS}"
-                   "--conf"	"spark.executor.memory=${EXECUTOR_MEMORY}G"
-                   "--conf" "spark.executor.resource.gpu.amount=1"
-                   "--conf" "spark.executor.resource.gpu.discoveryScript=./getGpusResources.sh"
+                   "--conf"	"spark.executor.memory=${EXECUTOR_MEMORY}"
+                   "--conf" "spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}"
+                   "--conf" "spark.sql.files.maxPartitionBytes=2gb"
                    "--conf" "spark.locality.wait=0"
+                   "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.1_2.12:0.13.2"
+                   "--conf" "spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
+                   "--conf" "spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog"
                    "--conf" "spark.sql.catalog.spark_catalog.type=hadoop"
                    "--conf" "spark.sql.catalog.spark_catalog.warehouse=$ICEBERG_WAREHOUSE"
-                   "--conf" "spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog"
-                   "--conf" "spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
-                   "--conf" "spark.sql.files.maxPartitionBytes=2gb"
-                   "--conf" "spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}"
                    "--jars" "$NDS_LISTENER_JAR")
 
