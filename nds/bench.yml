@@ -1,0 +1,37 @@
+data_gen:
+  scale_factor: 10000
+  parallel: 100
+  raw_data_path: PATH_FOR_RAW_DATA # raw NDS csv data
+  local_or_hdfs: hdfs
+  # data generation is not a timed part in the full benchmark steps, set to "true" by default.
+  # the raw_data_path is the location for already generated data when "skip" is "true"
+  skip: true 
+load_test:
+  spark_template_path: convert_submit_cpu_iceberg.template  # template to do Iceberg writing, GPU disabled
+  output_path: PATH_FOR_ICEBERG_WAREHOUSE # warehouse location for Iceberg
+  report_path: load_test.txt # execution report path
+  skip: false
+generate_query_stream:
+  # how many streams to be generated including the stream for Power Test
+  # If there're 4 streams in one Throughput test, num_streams = 4*2+1 according to Spec 4.3.2
+  num_streams: 9
+  # template dir contains all query templates to generate Spark compatible queries
+  # yaml doesn't support resolving environment variable, please use absolute path
+  query_template_dir: PATH_TO_TPCDS_HOME/query_templates
+  stream_output_path: bench_streams
+  skip: false
+power_test: # use load test output as input to avoid duplication
+  spark_template_path: power_run_gpu_iceberg.template # template with both Iceberg & GPU enabled
+  report_path: power_test.csv
+  property_path: properties/aqe-on.properties # property file contains some Spark configs as a addition to spark template file
+  output_path: # leave it empty to use "collect" as Spark action. Otherwise it can be used for data validation
+  skip: false
+throughput_test: # use most parameters from power test to avoid duplication
+  report_base_path: throughput_report
+  skip: false
+maintenance_test:
+  maintenance_template_path: maintenance.template # template to do data maintenance(Iceberg, need spark.sql.catalog.spark_catalog.warehouse)
+  query_dir: data_maintenance # folder that contains all data maintenance queries
+  maintenance_report_base_path: maintenance_report
+  skip: false
+metrics_report_path: metrics.csv

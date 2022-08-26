@@ -15,31 +15,39 @@
 # limitations under the License.
 #
 
-# 1. The iceberg-spark-runtime-3.2_2.12:0.13.1 only works on Spark 3.2.x
+# 1. The iceberg-spark-runtime-3.2_2.12:0.13.2 only works on Spark 3.2.x
 #    Please refer to https://iceberg.apache.org/releases/ for other Spark versions.
 # 2. The Iceberg catalog/tables is expected to be in current directory.
 #    see `spark.sql.catalog.spark_catalog.warehouse`.
 
-export SPARK_RAPIDS_PLUGIN_JAR=rapids-4-spark_2.12-22.06.0.jar
+export SPARK_RAPIDS_PLUGIN_JAR=${SPARK_RAPIDS_PLUGIN_JAR:-rapids-4-spark_2.12-22.06.0.jar}
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
+export DRIVER_MEMORY=${DRIVER_MEMORY:-10G}
+export EXECUTOR_CORES=${EXECUTOR_CORES:-12}
+export NUM_EXECUTORS=${NUM_EXECUTORS:-8}
+export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
+export CONCURRENT_GPU_TASKS=${CONCURRENT_GPU_TASKS:-2}
+export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
 export SPARK_CONF=("--master" "yarn"
-                   "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.2_2.12:0.13.1"
+                   "--deploy-mode" "client"
+                   "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.1_2.12:0.13.2"
                    "--conf" "spark.driver.maxResultSize=2GB"
-                   "--conf" "spark.driver.memory=50G"
-                   "--conf" "spark.executor.cores=16"
-                   "--conf" "spark.executor.instances=8"
-                   "--conf" "spark.executor.memory=16G"
+                   "--conf" "spark.driver.memory=${DRIVER_MEMORY}"
+                   "--conf" "spark.executor.cores=${EXECUTOR_CORES}"
+                   "--conf" "spark.executor.instances=${NUM_EXECUTORS}"
+                   "--conf" "spark.executor.memory=${EXECUTOR_MEMORY}"
                    "--conf" "spark.executor.resource.gpu.amount=1"
                    "--conf" "spark.executor.resource.gpu.discoveryScript=./getGpusResources.sh"
                    "--conf" "spark.locality.wait=0"
                    "--conf" "spark.plugins=com.nvidia.spark.SQLPlugin"
                    "--conf" "spark.rapids.memory.host.spillStorageSize=32G"
                    "--conf" "spark.rapids.memory.pinnedPool.size=8g"
-                   "--conf" "spark.rapids.sql.concurrentGpuTasks=2"
+                   "--conf" "spark.rapids.sql.concurrentGpuTasks=${CONCURRENT_GPU_TASKS}"
                    "--conf" "spark.sql.catalog.spark_catalog.type=hadoop"
                    "--conf" "spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog"
                    "--conf" "spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
                    "--conf" "spark.sql.files.maxPartitionBytes=2gb"
+                   "--conf" "spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}"
                    "--conf" "spark.task.resource.gpu.amount=0.0625"
                    "--files" "$SPARK_HOME/examples/src/main/scripts/getGpusResources.sh"
                    "--jars" "$SPARK_RAPIDS_PLUGIN_JAR")

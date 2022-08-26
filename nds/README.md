@@ -21,6 +21,7 @@ You may not use NDS except in compliance with the Apache License, Version 2.0 an
 1. python >= 3.6
 2. Necessary libraries 
     ```
+    sudo locale-gen en_US.UTF-8
     sudo apt install openjdk-8-jdk-headless gcc make flex bison byacc maven
     ```
 3. TPC-DS Tools
@@ -290,7 +291,7 @@ update operations cannot be done atomically on raw Parquet/Orc files, so we use
 [Iceberg](https://iceberg.apache.org/) as dataset metadata manager to overcome the issue.
 
 Enabling Iceberg requires additional configuration. Please refer to [Iceberg Spark](https://iceberg.apache.org/docs/latest/getting-started/)
-for details. We also provide a Spark submit template with necessary Iceberg configs: [convert_submit_cpu_iceberg.template](./convert_submit_cpu_iceberg.template)
+for details. We also provide a Spark submit template with necessary Iceberg configs: [maintenance.template](./maintenance.template)
 
 The data maintenance queries are in [data_maintenance](./data_maintenance) folder. `DF_*.sql` are
 DELETE queries while `LF_*.sql` are INSERT queries.
@@ -322,7 +323,7 @@ optional arguments:
 
 An example command to run only _LF_CS_ and _DF_CS_ functions:
 ```
-./spark-submit-template convert_submit_cpu_iceberg.template \
+./spark-submit-template maintenance.template \
 nds_maintenance.py \
 update_data_sf3k \
 ./data_maintenance \
@@ -376,4 +377,21 @@ query_output_gpu \
 --ignore_ordering
 ```
 
+## Whole Process NDS Benchmark
+[nds_bench.py](./nds_bench.py) along with its yaml config file [bench.yml](./bench.yml) is the script
+to run the whole process NDS benchmark to get final metrics.
+User needs to fill in the config file to specify the parameters of the benchmark.
+User can specify the `skip` field in the config file to skip certain part of the benchmarks.
+Please note: each part of the benchmark will produce its report file for necessary metrics like total
+execution time, start or end timestamp. The final metrics are calculated by those reports. Skipping
+a part of the benchmark may cause metrics calculation failure in the end if there's no necessary reports
+generated previously.
+
+Example command to run the benchmark:
+```
+usage: nds_bench.py [-h] yaml_config
+
+positional arguments:
+  yaml_config  yaml config file for the benchmark
+```
 ### NDS2.0 is using source code from TPC-DS Tool V3.2.0

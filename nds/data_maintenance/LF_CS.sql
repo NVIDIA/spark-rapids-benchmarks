@@ -82,4 +82,4 @@ LEFT OUTER JOIN warehouse ON (clin_warehouse_id = w_warehouse_id)
 LEFT OUTER JOIN item ON (clin_item_id = i_item_id AND i_rec_end_date IS NULL)
 LEFT OUTER JOIN promotion ON (clin_promotion_id = p_promo_id);
 ------------------------------------------------
-insert into catalog_sales (select * from csv);
+insert into catalog_sales (select * from csv order by cs_sold_date_sk);

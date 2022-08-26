@@ -75,4 +75,4 @@ LEFT OUTER JOIN ship_mode ON (cret_shipmode_id = sm_ship_mode_id)
 LEFT OUTER JOIN warehouse ON (cret_warehouse_id = w_warehouse_id)
 WHERE i_rec_end_date IS NULL AND cc_rec_end_date IS NULL;
 ------------------------------------------------
-insert into catalog_returns (select * from crv);
+insert into catalog_returns (select * from crv order by cr_returned_date_sk);

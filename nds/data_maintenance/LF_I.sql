@@ -39,4 +39,4 @@ LEFT OUTER JOIN warehouse ON (invn_warehouse_id=w_warehouse_id)
 LEFT OUTER JOIN item ON (invn_item_id=i_item_id AND i_rec_end_date IS NULL)
 LEFT OUTER JOIN date_dim ON (d_date=invn_date);
 ------------------------------------------------
-insert into inventory (select * from iv);
+insert into inventory (select * from iv order by inv_date_sk);

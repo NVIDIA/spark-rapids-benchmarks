@@ -65,4 +65,4 @@ LEFT OUTER JOIN reason ON (sret_reason_id = r_reason_id)
 WHERE i_rec_end_date IS NULL
  AND s_rec_end_date IS NULL;
 ------------------------------------------------
-insert into store_returns (select * from srv);
+insert into store_returns (select * from srv order by sr_returned_date_sk);

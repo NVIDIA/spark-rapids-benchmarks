@@ -131,3 +131,14 @@ def get_dir_size(start_path):
             if not os.path.islink(fp):
                 total_size += os.path.getsize(fp)
     return total_size
+
+def check_json_summary_folder(json_summary_folder):
+    if json_summary_folder:
+    # prepare a folder to save json summaries of query results
+        if not os.path.exists(json_summary_folder):
+            os.makedirs(json_summary_folder)
+        else:
+            if os.listdir(json_summary_folder):
+                raise Exception(f"json_summary_folder {json_summary_folder} is not empty. " +
+                                "There may be already some json files there. Please clean the folder " +
+                                "or specify another one.")

@@ -39,7 +39,7 @@ from pyspark.conf import SparkConf
 from PysparkBenchReport import PysparkBenchReport
 from pyspark.sql import DataFrame
 
-from check import check_version
+from check import check_json_summary_folder, check_version
 from nds_gen_query_stream import split_special_query
 from nds_transcode import get_schemas
 
@@ -163,7 +163,8 @@ def run_query_stream(input_prefix,
                      input_format="parquet",
                      use_decimal=True,
                      output_path=None,
-                     output_format="parquet"):
+                     output_format="parquet",
+                     json_summary_folder=None):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
 
@@ -202,15 +203,8 @@ def run_query_stream(input_prefix,
         execution_time_list = setup_tables(spark_session, input_prefix, input_format, use_decimal,
                                            execution_time_list)
 
+    check_json_summary_folder(json_summary_folder)
     # Run query
-    # prepare a folder to save json summaries of query results
-    if not os.path.exists(args.json_summary_folder):
-        os.makedirs(args.json_summary_folder)
-    else:
-        if os.listdir(args.json_summary_folder):
-            raise Exception(f"json_summary_folder {args.json_summary_folder} is not empty. " +
-                            "There may be already some json files there. Please clean the folder " +
-                            "or specify another one.")
     power_start = time.time()
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
@@ -224,17 +218,15 @@ def run_query_stream(input_prefix,
                                                    output_format)
         print(f"Time taken: {summary['queryTimes']} millis for {query_name}")
         query_times = summary['queryTimes']
-        num_iterations = len(query_times)
-        if num_iterations != 1:
-            raise Exception(f"Query {query_name} had {num_iterations} iterations but 1 expected.")
         execution_time_list.append((spark_app_id, query_name, query_times[0]))
-        # property_file e.g.: "property/aqe-on.properties" or just "aqe-off.properties"
-        if property_file:
-            summary_prefix = os.path.join(
-                args.json_summary_folder, os.path.basename(property_file).split('.')[0])
-        else:
-            summary_prefix =  os.path.join(args.json_summary_folder, '')
-        q_report.write_summary(query_name, prefix=summary_prefix)
+        if json_summary_folder:
+            # property_file e.g.: "property/aqe-on.properties" or just "aqe-off.properties"
+            if property_file:
+                summary_prefix = os.path.join(
+                    json_summary_folder, os.path.basename(property_file).split('.')[0])
+            else:
+                summary_prefix =  os.path.join(json_summary_folder, '')
+            q_report.write_summary(query_name, prefix=summary_prefix)
     power_end = time.time()
     power_elapse = int((power_end - power_start)*1000)
     spark_session.sparkContext.stop()
@@ -242,6 +234,10 @@ def run_query_stream(input_prefix,
     total_elapse = int((total_time_end - total_time_start)*1000)
     print("====== Power Test Time: {} milliseconds ======".format(power_elapse))
     print("====== Total Time: {} milliseconds ======".format(total_elapse))
+    execution_time_list.append(
+        (spark_app_id, "Power Start Time", power_start))
+    execution_time_list.append(
+        (spark_app_id, "Power End Time", power_end))
     execution_time_list.append(
         (spark_app_id, "Power Test Time", power_elapse))
     execution_time_list.append(
@@ -295,7 +291,6 @@ if __name__ == "__main__":
                         'determine if certain parts of the data are read as decimal type or not. '+
                         'If specified, float data will be used.')
     parser.add_argument('--json_summary_folder',
-                        default='json_summary',
                         help='Empty folder/path (will create if not exist) to save JSON summary file for each query.')
 
 
@@ -308,4 +303,5 @@ if __name__ == "__main__":
                      args.input_format,
                      not args.floats,
                      args.output_prefix,
-                     args.output_format)
+                     args.output_format,
+                     args.json_summary_folder)
