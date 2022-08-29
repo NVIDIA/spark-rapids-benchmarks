@@ -91,6 +91,23 @@ def store(session, df, filename, output_format, output_mode, iceberg_write_forma
         CTAS += ")"
         CTAS += " as select * from temptbl"
         session.sql(CTAS)
+    elif output_format == "delta":
+        if output_mode == 'overwrite':
+            session.sql(f"drop table if exists {filename}")
+        CTAS = f"create table {filename} using delta "
+        if filename in TABLE_PARTITIONING.keys():
+           df.repartition(
+               col(TABLE_PARTITIONING[filename])).sortWithinPartitions(
+                   TABLE_PARTITIONING[filename]).createOrReplaceTempView("temptbl")
+           CTAS += f"partitioned by ({TABLE_PARTITIONING[filename]})"
+        else:
+            df.coalesce(1).createOrReplaceTempView("temptbl")
+        # Delta Lake doesn't have specific compression properties, set it by `spark.sql.parquet.compression.codec`
+        # Note Delta Lake only support Parquet.
+        if compression:
+            session.conf.set("spark.sql.parquet.compression.codec", compression)
+        CTAS += " as select * from temptbl"
+        session.sql(CTAS)
     else:
         data_path = prefix + '/' + filename
         if filename in TABLE_PARTITIONING.keys():
@@ -112,7 +129,9 @@ def transcode(args):
     session_builder = pyspark.sql.SparkSession.builder
     if args.output_format == "iceberg":
         session_builder.config("spark.sql.catalog.spark_catalog.warehouse", args.output_prefix)
-    session = session_builder.appName("NDS - transcode").getOrCreate()
+    if args.output_format == "delta":
+        session_builder.config("spark.sql.warehouse.dir", args.output_prefix)
+    session = session_builder.appName(f"NDS - transcode - {args.output_format}").getOrCreate()
     session.sparkContext.setLogLevel(args.log_level)
     results = {}
 
@@ -199,7 +218,7 @@ if __name__ == "__main__":
         default="errorifexists")
     parser.add_argument(
         '--output_format',
-        choices=['parquet', 'orc', 'avro', 'json', 'iceberg'],
+        choices=['parquet', 'orc', 'avro', 'json', 'iceberg', 'delta'],
         default='parquet',
         help="output data format when converting CSV data sources."
     )
