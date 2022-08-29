@@ -40,6 +40,7 @@ from PysparkBenchReport import PysparkBenchReport
 
 from check import check_json_summary_folder, get_abs_path
 from nds_schema import get_maintenance_schemas
+from nds_power import register_delta_tables
 
 INSERT_FUNCS = [
     'LF_CR',
@@ -95,13 +96,19 @@ def get_valid_query_names(spec_queries):
         DM_FUNCS = spec_queries
     return DM_FUNCS
 
-def create_spark_session(valid_queries):
+def create_spark_session(valid_queries, warehouse_path, warehouse_type):
     if len(valid_queries) == 1:
         app_name = "NDS - Data Maintenance - " + valid_queries[0]
     else:
         app_name = "NDS - Data Maintenance"
-    spark_session = SparkSession.builder.appName(
-        app_name).getOrCreate()
+    spark_session_builder = SparkSession.builder
+    if warehouse_type == "iceberg":
+        spark_session_builder.config("spark.sql.catalog.spark_catalog.warehouse", warehouse_path)
+    if warehouse_type == "delta":
+        # TODO: find a way to set the warehouse path in Spark config.
+        # The following config doesn't work for Delta Lake warehouse, but no harm. So keep it.
+        spark_session_builder.config("spark.sql.warehouse.dir", warehouse_path)
+    spark_session = spark_session_builder.appName(app_name).getOrCreate()
     return spark_session
 
 def get_maintenance_queries(spark_session, folder, valid_queries):
@@ -146,7 +153,7 @@ def run_dm_query(spark, query_list):
     for q in query_list:
         spark.sql(q)
 
-def run_query(spark_session, query_dict, time_log_output_path, json_summary_folder, property_file):
+def run_query(spark_session, query_dict, time_log_output_path, json_summary_folder, property_file, warehouse_path, warehouse_type):
     # TODO: Duplicate code in nds_power.py. Refactor this part, make it general.
     execution_time_list = []
     check_json_summary_folder(json_summary_folder)
@@ -154,6 +161,8 @@ def run_query(spark_session, query_dict, time_log_output_path, json_summary_fold
     total_time_start = datetime.now()
     spark_app_id = spark_session.sparkContext.applicationId
     DM_start = datetime.now()
+    if warehouse_type == 'delta':
+        register_delta_tables(spark_session, warehouse_path, execution_time_list)
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
         spark_session.sparkContext.setJobGroup(query_name, query_name)
@@ -204,6 +213,8 @@ def register_temp_views(spark_session, refresh_data_path):
 
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
+    parser.add_argument('warehouse_path',
+                        help='warehouse path for Data Maintenance test.')
     parser.add_argument('refresh_data_path',
                         help='path to refresh data')
     parser.add_argument('maintenance_queries_folder',
@@ -221,12 +232,16 @@ if __name__ == "__main__":
                         help='property file for Spark configuration.')
     parser.add_argument('--json_summary_folder',
                         help='Empty folder/path (will create if not exist) to save JSON summary file for each query.')
-
+    parser.add_argument('--warehouse_type',
+                        help='Type of the warehouse used for Data Maintenance test.',
+                        choices=['iceberg', 'delta'],
+                        default='iceberg')
     args = parser.parse_args()
     valid_queries = get_valid_query_names(args.maintenance_queries)
-    spark_session = create_spark_session(valid_queries)
+    spark_session = create_spark_session(valid_queries, args.warehouse_path, args.warehouse_type)
     register_temp_views(spark_session, args.refresh_data_path)
     query_dict = get_maintenance_queries(spark_session,
                                          args.maintenance_queries_folder,
                                          valid_queries)
-    run_query(spark_session, query_dict, args.time_log, args.json_summary_folder, args.property_file)
+    run_query(spark_session, query_dict, args.time_log, args.json_summary_folder,
+              args.property_file, args.warehouse_path, args.warehouse_type)
