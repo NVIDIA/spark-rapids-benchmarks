@@ -104,6 +104,23 @@ def setup_tables(spark_session, input_prefix, input_format, use_decimal, executi
             (spark_app_id, "CreateTempView {}".format(table_name), end - start))
     return execution_time_list
 
+def register_delta_tables(spark_session, input_prefix, execution_time_list):
+    spark_app_id = spark_session.sparkContext.applicationId
+    # Register tables for Delta Lake
+    for table_name in get_schemas(False).keys():
+        start = int(time.time() * 1000)
+        # input_prefix must be absolute path: https://github.com/delta-io/delta/issues/555
+        register_sql = f"CREATE TABLE {table_name} USING DELTA LOCATION '{input_prefix}/{table_name}'"
+        print(register_sql)
+        spark_session.sql(register_sql)
+        end = int(time.time() * 1000)
+        print("====== Registering for table {} ======".format(table_name))
+        print("Time taken: {} millis for table {}".format(end - start, table_name))
+        execution_time_list.append(
+            (spark_app_id, "Register {}".format(table_name), end - start))
+    return execution_time_list
+
+
 def run_one_query(spark_session,
                   query,
                   query_name,
@@ -197,11 +214,16 @@ def run_query_stream(input_prefix,
     if input_format == 'iceberg':
         session_builder.config("spark.sql.catalog.spark_catalog.warehouse", input_prefix)
     if input_format == 'delta':
+        # this doesn't work for local case, not sure on Dataproc.
         session_builder.config("spark.sql.warehouse.dir", input_prefix)
     spark_session = session_builder.appName(
         app_name).getOrCreate()
+    # Register tables for Delta Lake.
+    # TODO: investigate if there's a config to avoid this registration.
+    if input_format == 'delta':
+        register_delta_tables(spark_session, input_prefix, execution_time_list)
     spark_app_id = spark_session.sparkContext.applicationId
-    if input_format != 'iceberg':
+    if input_format != 'iceberg' and input_format != 'delta':
         execution_time_list = setup_tables(spark_session, input_prefix, input_format, use_decimal,
                                            execution_time_list)
 
@@ -267,7 +289,8 @@ if __name__ == "__main__":
                         'If input_format is "iceberg", this argument will be regarded as the value of property ' +
                         '"spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog ' +
                         'session name "spark_catalog" is supported now, customized catalog is not ' +
-                        'yet supported.')
+                        'yet supported. Note if this points to a Delta Lake table, the path must be ' +
+                        'absolute. Issue: https://github.com/delta-io/delta/issues/555')
     parser.add_argument('query_stream_file',
                         help='query stream file that contains NDS queries in specific order')
     parser.add_argument('time_log',
