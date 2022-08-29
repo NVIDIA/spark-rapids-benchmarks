@@ -196,6 +196,8 @@ def run_query_stream(input_prefix,
             session_builder = session_builder.config(k,v)
     if input_format == 'iceberg':
         session_builder.config("spark.sql.catalog.spark_catalog.warehouse", input_prefix)
+    if input_format == 'delta':
+        session_builder.config("spark.sql.warehouse.dir", input_prefix)
     spark_session = session_builder.appName(
         app_name).getOrCreate()
     spark_app_id = spark_session.sparkContext.applicationId
@@ -276,7 +278,7 @@ if __name__ == "__main__":
                         'Certain types are not fully supported by GPU reading, please refer to ' +
                         'https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md ' +
                         'for more details.',
-                        choices=['parquet', 'orc', 'avro', 'csv', 'json', 'iceberg'],
+                        choices=['parquet', 'orc', 'avro', 'csv', 'json', 'iceberg', 'delta'],
                         default='parquet')
     parser.add_argument('--output_prefix',
                         help='text to prepend to every output file (e.g., "hdfs:///ds-parquet")')

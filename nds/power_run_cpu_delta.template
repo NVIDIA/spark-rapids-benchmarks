@@ -15,8 +15,8 @@
 # limitations under the License.
 #
 
-# 1. The iceberg-spark-runtime-3.1_2.12:0.13.2 only works on Spark 3.1.x
-#    Please refer to https://iceberg.apache.org/releases/ for other Spark versions.
+# 1. The io.delta:delta-core_2.12:1.0.0 only works on Spark 3.1.x
+#    Please refer to https://docs.delta.io/latest/releases.html for other Spark versions.
 
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
 export SPARK_MASTER=${SPARK_MASTER:-yarn}
@@ -25,6 +25,7 @@ export EXECUTOR_CORES=${EXECUTOR_CORES:-12}
 export NUM_EXECUTORS=${NUM_EXECUTORS:-8}
 export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
 export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
+export NDS_LISTENER_JAR=${NDS_LISTENER_JAR:-nds-benchmark-listener-1.0-SNAPSHOT.jar}
 
 export SPARK_CONF=("--master" "${SPARK_MASTER}"
                    "--deploy-mode" "client"
@@ -33,6 +34,8 @@ export SPARK_CONF=("--master" "${SPARK_MASTER}"
                    "--conf" "spark.executor.instances=${NUM_EXECUTORS}"
                    "--conf" "spark.executor.memory=${EXECUTOR_MEMORY}"
                    "--conf" "spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}"
-                   "--packages" "io.delta:delta-core_2.12:1.0.0"
+                   "--conf" "spark.locality.wait=0"
+                   "--packages" "io.delta:delta-core_2.12:2.0.0"
                    "--conf" "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension"
-                   "--conf" "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog")
+                   "--conf" "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
+                   "--jars" "$NDS_LISTENER_JAR")
