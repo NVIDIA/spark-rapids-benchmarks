@@ -8,7 +8,8 @@ data_gen:
   skip: true 
 load_test:
   spark_template_path: convert_submit_cpu_iceberg.template  # template to do Iceberg writing, GPU disabled
-  output_path: PATH_FOR_ICEBERG_WAREHOUSE # warehouse location for Iceberg
+  output_path: PATH_FOR_ICEBERG_OR_DELTA_WAREHOUSE # warehouse location for Iceberg or DeltaLake
+  warehouse_type: iceberg # support "iceberg" and "delta", use "iceberg" by default
   report_path: load_test.txt # execution report path
   skip: false
 generate_query_stream:

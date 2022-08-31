@@ -231,6 +231,7 @@ def run_data_gen(scale_factor, parallel, data_path, local_or_hdfs, num_streams):
 def run_load_test(template_path,
                   input_path,
                   output_path,
+                  warehouse_type,
                   load_report_file):
     load_test_cmd = ["./spark-submit-template",
                      template_path,
@@ -238,7 +239,7 @@ def run_load_test(template_path,
                      input_path,
                      output_path,
                      load_report_file,
-                     "--output_format", "iceberg",
+                     "--output_format", warehouse_type,
                      "--output_mode", "overwrite",
                      "--log_level", "WARN"]
     subprocess.run(load_test_cmd, check=True)
@@ -264,14 +265,15 @@ def power_test(template_path,
                stream_path,
                report_path,
                property_path,
-               output_path):
+               output_path,
+               warehouse_type):
     power_test_cmd = ["./spark-submit-template",
                       template_path,
                       "nds_power.py",
                       input_path,
                       stream_path,
                       report_path,
-                      "--input_format", "iceberg",
+                      "--input_format", warehouse_type,
                       "--property_file", property_path]
     if output_path:
         power_test_cmd.extend(["--output_prefix", output_path])
@@ -284,7 +286,8 @@ def throughput_test(num_streams,
                     input_path,
                     stream_base_path,
                     report_base_path,
-                    property_path):
+                    property_path,
+                    warehouse_type):
     throughput_cmd = ["./nds-throughput",
                       get_throughput_stream_nums(num_streams, first_or_second),
                       "./spark-submit-template",
@@ -293,7 +296,7 @@ def throughput_test(num_streams,
                       input_path,
                       stream_base_path + "/query_{}.sql",
                       report_base_path + "_{}.csv",
-                      "--input_format", "iceberg",
+                      "--input_format", warehouse_type,
                       "--property_file", property_path]
 
     print(throughput_cmd)
@@ -302,11 +305,13 @@ def throughput_test(num_streams,
 
 def maintenance_test(num_streams,
                      first_or_second,
+                     warehouse_path,
                      refresh_template_path,
                      maintenance_raw_data_base_path,
                      maintenance_query_path,
                      maintenance_report_base_path,
-                     property_path):
+                     property_path,
+                     warehouse_type):
     refresh_nums = get_stream_range(num_streams, first_or_second)
     # refresh run for each stream in Throughput Test.
     for i in refresh_nums:
@@ -316,10 +321,12 @@ def maintenance_test(num_streams,
         maintenance_cmd = ["./spark-submit-template",
                            refresh_template_path,
                            "nds_maintenance.py",
+                           warehouse_path,
                            maintenance_raw_path,
                            maintenance_query_path,
                            maintenance_report_path,
-                           "--property_file", property_path]
+                           "--property_file", property_path,
+                           "--warehouse_type", warehouse_type]
         subprocess.run(maintenance_cmd, check=True)
 
 
@@ -364,7 +371,8 @@ def run_full_bench(yaml_params):
     # write to Iceberg
     skip_load_test = yaml_params['load_test']['skip']
     load_template_path = yaml_params['load_test']['spark_template_path']
-    iceberg_output_path = yaml_params['load_test']['output_path']
+    warehouse_output_path = yaml_params['load_test']['output_path']
+    warehouse_type = yaml_params['load_test']['warehouse_type']
     load_report_path = yaml_params['load_test']['report_path']
     skip_stream_gen = yaml_params['generate_query_stream']['skip']
     num_streams = yaml_params['generate_query_stream']['num_streams']
@@ -394,7 +402,7 @@ def run_full_bench(yaml_params):
     if not skip_load_test:
         run_load_test(load_template_path,
                       raw_data_path,
-                      iceberg_output_path,
+                      warehouse_output_path,
                       load_report_path)
     Tld = round_up_to_nearest_10_percent(float(get_load_time(load_report_path)))
     # 2.
@@ -406,11 +414,12 @@ def run_full_bench(yaml_params):
     # 3.
     if not skip_power_test:
         power_test(power_template_path,
-                   iceberg_output_path,
+                   warehouse_output_path,
                    power_stream_path,
                    power_report_path,
                    power_property_path,
-                   power_output_path)
+                   power_output_path,
+                   warehouse_type)
 
     # TPower is in milliseconds
     # But Spec 7.1.16: Elapsed time is measured in seconds rounded up to the nearest 0.1 second.
@@ -423,21 +432,24 @@ def run_full_bench(yaml_params):
         throughput_test(num_streams,
                         1,
                         power_template_path,
-                        iceberg_output_path,
+                        warehouse_output_path,
                         stream_output_path,
                         throughput_report_base,
-                        power_property_path)
+                        power_property_path,
+                        warehouse_type)
     Ttt1 = get_throughput_time(throughput_report_base,
                                num_streams, 1)
     # 5
     if not skip_maintenance_test:
         maintenance_test(num_streams,
                          1,
+                         warehouse_output_path,
                          maintenance_refresh_template,
                          raw_data_path,
                          maintenance_query_dir,
                          maintenance_report_base_path,
-                         power_property_path)
+                         power_property_path,
+                         warehouse_type)
     Tdm1 = get_maintenance_time(maintenance_report_base_path,
                                 num_streams,
                                 1)
@@ -446,21 +458,24 @@ def run_full_bench(yaml_params):
         throughput_test(num_streams,
                         2,
                         power_template_path,
-                        iceberg_output_path,
+                        warehouse_output_path,
                         stream_output_path,
                         throughput_report_base,
-                        power_property_path)
+                        power_property_path,
+                        warehouse_type)
     Ttt2 = get_throughput_time(throughput_report_base,
                                num_streams, 2)
     # 7
     if not skip_maintenance_test:
         maintenance_test(num_streams,
                          2,
+                         warehouse_output_path,
                          maintenance_refresh_template,
                          raw_data_path,
                          maintenance_query_dir,
                          maintenance_report_base_path,
-                         power_property_path)
+                         power_property_path,
+                         warehouse_type)
     Tdm2 = get_maintenance_time(maintenance_report_base_path,
                                 num_streams,
                                 2)

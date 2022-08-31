@@ -141,6 +141,7 @@ def get_maintenance_queries(spark_session, folder, valid_queries):
 
 def run_subquery_for_delta(spark_session, delete_query):
     """DeltaLake doesn't support DELETE with subquery, so run the subquery at first as workaround.
+    return: a query that can be run on Delta Lake after subquery replacement.
     See issue: https://github.com/delta-io/delta/issues/730
     Note this method is very tricky and is totally based on the query content itself.
     """
@@ -179,7 +180,7 @@ def run_subquery_for_delta(spark_session, delete_query):
         return final_query
 
 
-def run_dm_query(spark, query_list, query_name):
+def run_dm_query(spark, query_list, query_name, warehouse_type):
     """Run data maintenance query.
     For delete queries, they can run on Spark 3.2.2 but not Spark 3.2.1
     See: https://issues.apache.org/jira/browse/SPARK-39454
@@ -191,7 +192,7 @@ def run_dm_query(spark, query_list, query_name):
         query_list ([str]): INSERT query list.
     """        
     for q in query_list:
-        if query_name in DELETE_FUNCS + INVENTORY_DELETE_FUNC:
+        if query_name in DELETE_FUNCS + INVENTORY_DELETE_FUNC and warehouse_type == "delta":
             q = run_subquery_for_delta(spark, q)
         spark.sql(q)
 
@@ -212,7 +213,8 @@ def run_query(spark_session, query_dict, time_log_output_path, json_summary_fold
         q_report = PysparkBenchReport(spark_session)
         summary = q_report.report_on(run_dm_query, spark_session,
                                                        q_content,
-                                                       query_name)
+                                                       query_name,
+                                                       warehouse_type)
         print(f"Time taken: {summary['queryTimes']} millis for {query_name}")
         execution_time_list.append((spark_app_id, query_name, summary['queryTimes']))
         if json_summary_folder:
