@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-# 1. The io.delta:delta-core_2.12:1.0.0 only works on Spark 3.1.x
+# 1. The io.delta:delta-core_2.12:1.0.1 only works on Spark 3.1.x
 #    Please refer to https://docs.delta.io/latest/releases.html for other Spark versions.
 
 export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
@@ -24,6 +24,7 @@ export DRIVER_MEMORY=${DRIVER_MEMORY:-10G}
 export EXECUTOR_CORES=${EXECUTOR_CORES:-12}
 export NUM_EXECUTORS=${NUM_EXECUTORS:-8}
 export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
+export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
 export CONCURRENT_GPU_TASKS=${CONCURRENT_GPU_TASKS:-2}
 export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
 export SPARK_RAPIDS_PLUGIN_JAR=${SPARK_RAPIDS_PLUGIN_JAR:-rapids-4-spark_2.12-22.06.0.jar}
@@ -47,7 +48,7 @@ export SPARK_CONF=("--master" "${SPARK_MASTER}"
                    "--conf" "spark.rapids.memory.host.spillStorageSize=32G"
                    "--conf" "spark.rapids.memory.pinnedPool.size=8g"
                    "--conf" "spark.rapids.sql.concurrentGpuTasks=${CONCURRENT_GPU_TASKS}"
-                   "--packages" "io.delta:delta-core_2.12:1.0.0"
+                   "--packages" "io.delta:delta-core_2.12:1.0.1"
                    "--conf" "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension"
                    "--conf" "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
                    "--files" "$SPARK_HOME/examples/src/main/scripts/getGpusResources.sh"

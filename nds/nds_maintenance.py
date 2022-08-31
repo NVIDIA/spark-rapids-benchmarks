@@ -139,18 +139,60 @@ def get_maintenance_queries(spark_session, folder, valid_queries):
             q_dict[q] = q_content
     return q_dict
 
-def run_dm_query(spark, query_list):
+def run_subquery_for_delta(spark_session, delete_query):
+    """DeltaLake doesn't support DELETE with subquery, so run the subquery at first as workaround.
+    See issue: https://github.com/delta-io/delta/issues/730
+    Note this method is very tricky and is totally based on the query content itself.
+    """
+    # first strip out the license part
+    delete_query = delete_query.split('--')[-1]
+    if not "min" in delete_query:
+        # e.g. "delete ... in (select ...);"
+        subquery_start_pos = delete_query.find("(") + 1
+        subquery_end_pos = delete_query.find(")")
+        if subquery_start_pos == -1 or subquery_end_pos == -1:
+            raise Exception("invalid delete query")
+        subquery = delete_query[subquery_start_pos:subquery_end_pos]
+        subquery_df = spark_session.sql(subquery)
+        # only 1 column, so retrive directly at index 0
+        col_name = subquery_df.schema.fields[0].name
+        subquery_result = subquery_df.collect()
+        # forme the string then drop "[" and "]"
+        subquery_result = str([row[col_name] for row in subquery_result])[1:-1]
+        final_query = delete_query.replace(subquery, subquery_result)
+        return final_query
+    else:
+        # e.g. "delete ... (select min(d_date_sk) ... )... and ... ( select max(d_date_sk) ... );"
+        # subquery_1 is between first "(" and second ")"
+        # subquery_2 is between third "(" and forth ")"
+        subquery_start_pos1 = delete_query.find("(") + 1
+        first_right_parenthesis = delete_query.find(")")
+        subquery_end_pos1 = delete_query.find(")", first_right_parenthesis + 1)
+        subquery_1 = delete_query[subquery_start_pos1:subquery_end_pos1]
+        subquery_2 = subquery_1.replace("min", "max")
+        # result only 1 row.
+        subquery_1_result = str(spark_session.sql(subquery_1).collect()[0][0])
+        subquery_2_result = str(spark_session.sql(subquery_2).collect()[0][0])
+        final_query = delete_query.replace(
+            subquery_1, subquery_1_result).replace(
+            subquery_2, subquery_2_result)
+        return final_query
+
+
+def run_dm_query(spark, query_list, query_name):
     """Run data maintenance query.
     For delete queries, they can run on Spark 3.2.2 but not Spark 3.2.1
     See: https://issues.apache.org/jira/browse/SPARK-39454
-    See: data_maintenance/DF_*.sql for insert query details.
-    See data_maintenance/LF_*.sql for delete query details.
+    See: data_maintenance/DF_*.sql for delete query details.
+    See data_maintenance/LF_*.sql for insert query details.
 
     Args:
         spark (SparkSession):  SparkSession instance.
         query_list ([str]): INSERT query list.
-    """
+    """        
     for q in query_list:
+        if query_name in DELETE_FUNCS + INVENTORY_DELETE_FUNC:
+            q = run_subquery_for_delta(spark, q)
         spark.sql(q)
 
 def run_query(spark_session, query_dict, time_log_output_path, json_summary_folder, property_file, warehouse_path, warehouse_type):
@@ -169,7 +211,8 @@ def run_query(spark_session, query_dict, time_log_output_path, json_summary_fold
         print(f"====== Run {query_name} ======")
         q_report = PysparkBenchReport(spark_session)
         summary = q_report.report_on(run_dm_query, spark_session,
-                                                       q_content)
+                                                       q_content,
+                                                       query_name)
         print(f"Time taken: {summary['queryTimes']} millis for {query_name}")
         execution_time_list.append((spark_app_id, query_name, summary['queryTimes']))
         if json_summary_folder:

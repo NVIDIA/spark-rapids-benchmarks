@@ -38,9 +38,8 @@ export SPARK_CONF=("--master" "yarn"
                    "--conf" "spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}"
                    "--conf" "spark.sql.files.maxPartitionBytes=2gb"
                    "--conf" "spark.locality.wait=0"
-                   "--packages" "io.delta:delta-core_2.12:1.0.0"
+                   "--packages" "io.delta:delta-core_2.12:1.0.1"
                    "--conf" "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension"
                    "--conf" "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
-                   "--conf" "spark.sql.catalog.spark_catalog.warehouse=$DELTA_WAREHOUSE"
                    "--jars" "$NDS_LISTENER_JAR")
 
