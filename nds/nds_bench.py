@@ -31,7 +31,7 @@
 
 
 #
-# 1. run nds_transcode.py to load data to Iceberg. => get "TLoad" and "timestamp" for 2.
+# 1. run nds_transcode.py to load data to Iceberg or DeltaLake. => get "TLoad" and "timestamp" for 2.
 # 2. run nds_gen_query_stream.py to generate query streams with RNDSEED = "timestamp" from 1.
 #    TPC-DS specification requires Sq >= 4, but this script allow Sq >= 1 for test purpose.
 # 3. run nds_power.py to do Power Test => get "TPower"
@@ -368,7 +368,7 @@ def run_full_bench(yaml_params):
     parallel = str(yaml_params['data_gen']['parallel'])
     raw_data_path = yaml_params['data_gen']['raw_data_path']
     local_or_hdfs = yaml_params['data_gen']['local_or_hdfs']
-    # write to Iceberg
+    # write to Iceberg or DeltaLake
     skip_load_test = yaml_params['load_test']['skip']
     load_template_path = yaml_params['load_test']['spark_template_path']
     warehouse_output_path = yaml_params['load_test']['output_path']
@@ -403,6 +403,7 @@ def run_full_bench(yaml_params):
         run_load_test(load_template_path,
                       raw_data_path,
                       warehouse_output_path,
+                      warehouse_type,
                       load_report_path)
     Tld = round_up_to_nearest_10_percent(float(get_load_time(load_report_path)))
     # 2.

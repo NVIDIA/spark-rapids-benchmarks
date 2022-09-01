@@ -110,7 +110,7 @@ def register_delta_tables(spark_session, input_prefix, execution_time_list):
     for table_name in get_schemas(False).keys():
         start = int(time.time() * 1000)
         # input_prefix must be absolute path: https://github.com/delta-io/delta/issues/555
-        register_sql = f"CREATE TABLE {table_name} USING DELTA LOCATION '{input_prefix}/{table_name}'"
+        register_sql = f"CREATE TABLE IF NOT EXISTS {table_name} USING DELTA LOCATION '{input_prefix}/{table_name}'"
         print(register_sql)
         spark_session.sql(register_sql)
         end = int(time.time() * 1000)
