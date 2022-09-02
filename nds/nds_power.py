@@ -297,7 +297,7 @@ if __name__ == "__main__":
                         help='path to execution time log, only support local path.',
                         default="")
     parser.add_argument('--input_format',
-                        help='type for input data source, e.g. parquet, orc, json, csv or iceberg. ' +
+                        help='type for input data source, e.g. parquet, orc, json, csv or iceberg, delta. ' +
                         'Certain types are not fully supported by GPU reading, please refer to ' +
                         'https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md ' +
                         'for more details.',

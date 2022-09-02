@@ -101,7 +101,8 @@ otherwise DecimalType will be saved.
 arguments for `nds_transcode.py`:
 ```
 python nds_transcode.py -h
-usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--output_format {parquet,orc,avro,iceberg}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update] [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION] input_prefix output_prefix report_file
+usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--output_format {parquet,orc,avro,json,iceberg,delta}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update] [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION]
+                        input_prefix output_prefix report_file
 
 positional arguments:
   input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"; the
@@ -114,7 +115,7 @@ optional arguments:
   -h, --help            show this help message and exit
   --output_mode {overwrite,append,ignore,error,errorifexists}
                         save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.default value is errorifexists, which is the Spark default behavior.
-  --output_format {parquet,orc,avro,json,iceberg}
+  --output_format {parquet,orc,avro,json,iceberg,delta}
                         output data format when converting CSV data sources.
   --tables TABLES       specify table names by a comma separated string. e.g. 'catalog_page,catalog_sales'.
   --log_level LOG_LEVEL
@@ -206,17 +207,18 @@ _After_ user generates query streams, Power Run can be executed using one of the
 
 Arguments supported by `nds_power.py`:
 ```
-usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json,iceberg}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] input_prefix query_stream_file time_log
+usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json,iceberg,delta}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] [--json_summary_folder JSON_SUMMARY_FOLDER] input_prefix query_stream_file time_log
 
 positional arguments:
-  input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"). If input_format is "iceberg", this argument will be regarded as the value of property "spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog session name "spark_catalog" is supported now, customized catalog is not yet supported.
+  input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"). If input_format is "iceberg", this argument will be regarded as the value of property "spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog session name
+                        "spark_catalog" is supported now, customized catalog is not yet supported. Note if this points to a Delta Lake table, the path must be absolute. Issue: https://github.com/delta-io/delta/issues/555
   query_stream_file     query stream file that contains NDS queries in specific order
   time_log              path to execution time log, only support local path.
 
 optional arguments:
   -h, --help            show this help message and exit
-  --input_format {parquet,orc,avro,csv,json,iceberg}
-                        type for input data source, e.g. parquet, orc, json, csv or iceberg. Certain types are not fully supported by GPU reading, please refer to https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md for more details.
+  --input_format {parquet,orc,avro,csv,json,iceberg,delta}
+                        type for input data source, e.g. parquet, orc, json, csv or iceberg, delta. Certain types are not fully supported by GPU reading, please refer to https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md for more details.
   --output_prefix OUTPUT_PREFIX
                         text to prepend to every output file (e.g., "hdfs:///ds-parquet")
   --output_format OUTPUT_FORMAT
@@ -225,8 +227,7 @@ optional arguments:
                         property file for Spark configuration.
   --floats              When loading Text files like json and csv, schemas are required to determine if certain parts of the data are read as decimal type or not. If specified, float data will be used.
   --json_summary_folder JSON_SUMMARY_FOLDER
-                        path of a folder to save json summary file for each query.
-
+                        Empty folder/path (will create if not exist) to save JSON summary file for each query.
 ```
 
 Example command to submit nds_power.py by spark-submit-template utility:
@@ -303,9 +304,10 @@ or later. More details including work-around for version 3.2.0 and 3.2.1 could b
 
 Arguments supported for data maintenance:
 ```
-usage: nds_maintenance.py [-h] [--maintenance_queries MAINTENANCE_QUERIES] [--data_format DATA_FORMAT] refresh_data_path maintenance_queries_folder time_log
+usage: nds_maintenance.py [-h] [--maintenance_queries MAINTENANCE_QUERIES] [--property_file PROPERTY_FILE] [--json_summary_folder JSON_SUMMARY_FOLDER] [--warehouse_type {iceberg,delta}] warehouse_path refresh_data_path maintenance_queries_folder time_log
 
 positional arguments:
+  warehouse_path        warehouse path for Data Maintenance test.
   refresh_data_path     path to refresh data
   maintenance_queries_folder
                         folder contains all NDS Data Maintenance queries. If "--maintenance_queries"
@@ -316,9 +318,12 @@ optional arguments:
   -h, --help            show this help message and exit
   --maintenance_queries MAINTENANCE_QUERIES
                         specify Data Maintenance query names by a comma seprated string. e.g. "LF_CR,LF_CS"
-  --data_format DATA_FORMAT
-                        data format for refresh data, e.g. parquet, orc, avro
-
+  --property_file PROPERTY_FILE
+                        property file for Spark configuration.
+  --json_summary_folder JSON_SUMMARY_FOLDER
+                        Empty folder/path (will create if not exist) to save JSON summary file for each query.
+  --warehouse_type {iceberg,delta}
+                        Type of the warehouse used for Data Maintenance test.
 ```
 
 An example command to run only _LF_CS_ and _DF_CS_ functions:
