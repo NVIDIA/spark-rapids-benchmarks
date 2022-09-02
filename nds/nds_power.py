@@ -213,15 +213,12 @@ def run_query_stream(input_prefix,
             session_builder = session_builder.config(k,v)
     if input_format == 'iceberg':
         session_builder.config("spark.sql.catalog.spark_catalog.warehouse", input_prefix)
-    if input_format == 'delta':
-        # this doesn't work for local case, not sure on Dataproc.
-        session_builder.config("spark.sql.warehouse.dir", input_prefix)
     spark_session = session_builder.appName(
         app_name).getOrCreate()
-    # Register tables for Delta Lake.
-    # TODO: investigate if there's a config to avoid this registration.
     if input_format == 'delta':
-        register_delta_tables(spark_session, input_prefix, execution_time_list)
+        # Register tables for Delta Lake.
+        # TODO: investigate if there's a config to avoid this registration.
+        execution_time_list = register_delta_tables(spark_session, input_prefix, execution_time_list)
     spark_app_id = spark_session.sparkContext.applicationId
     if input_format != 'iceberg' and input_format != 'delta':
         execution_time_list = setup_tables(spark_session, input_prefix, input_format, use_decimal,
