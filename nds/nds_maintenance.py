@@ -144,6 +144,7 @@ def run_subquery_for_delta(spark_session, delete_query):
     return: a query that can be run on Delta Lake after subquery replacement.
     See issue: https://github.com/delta-io/delta/issues/730
     Note this method is very tricky and is totally based on the query content itself.
+    TODO: remove this method when the issue above is resolved.
     """
     # first strip out the license part
     delete_query = delete_query.split('--')[-1]
@@ -158,7 +159,7 @@ def run_subquery_for_delta(spark_session, delete_query):
         # only 1 column, so retrive directly at index 0
         col_name = subquery_df.schema.fields[0].name
         subquery_result = subquery_df.collect()
-        # forme the string then drop "[" and "]"
+        # form the string then drop "[" and "]"
         subquery_result = str([row[col_name] for row in subquery_result])[1:-1]
         final_query = delete_query.replace(subquery, subquery_result)
         return final_query
@@ -205,7 +206,7 @@ def run_query(spark_session, query_dict, time_log_output_path, json_summary_fold
     spark_app_id = spark_session.sparkContext.applicationId
     DM_start = datetime.now()
     if warehouse_type == 'delta':
-        register_delta_tables(spark_session, warehouse_path, execution_time_list)
+        execution_time_list = register_delta_tables(spark_session, warehouse_path, execution_time_list)
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
         spark_session.sparkContext.setJobGroup(query_name, query_name)
