@@ -27,7 +27,7 @@ export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
 export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
 export NDS_LISTENER_JAR=${NDS_LISTENER_JAR:-nds-benchmark-listener-1.0-SNAPSHOT.jar}
 
-export SPARK_CONF=("--master" "yarn"
+export SPARK_CONF=("--master" "${SPARK_MASTER}"
                    "--deploy-mode" "client"
                    "--conf" "spark.driver.maxResultSize=2GB"
                    "--conf" "spark.driver.memory=${DRIVER_MEMORY}"
