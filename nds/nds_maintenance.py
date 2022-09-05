@@ -191,7 +191,7 @@ def run_dm_query(spark, query_list, query_name, warehouse_type):
     Args:
         spark (SparkSession):  SparkSession instance.
         query_list ([str]): INSERT query list.
-    """        
+    """
     for q in query_list:
         if query_name in DELETE_FUNCS + INVENTORY_DELETE_FUNC and warehouse_type == "delta":
             q = run_subquery_for_delta(spark, q)
