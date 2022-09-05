@@ -166,7 +166,7 @@ def run_subquery_for_delta(spark_session, delete_query):
     else:
         # e.g. "delete ... (select min(d_date_sk) ... )... and ... ( select max(d_date_sk) ... );"
         # subquery_1 is between first "(" and second ")"
-        # subquery_2 is between third "(" and forth ")"
+        # subquery_2 is only different from subquery_1 in the "min" and "max" keyword.
         subquery_start_pos1 = delete_query.find("(") + 1
         first_right_parenthesis = delete_query.find(")")
         subquery_end_pos1 = delete_query.find(")", first_right_parenthesis + 1)
