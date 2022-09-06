@@ -112,7 +112,9 @@ def transcode(args):
     session_builder = pyspark.sql.SparkSession.builder
     if args.output_format == "iceberg":
         session_builder.config("spark.sql.catalog.spark_catalog.warehouse", args.output_prefix)
-    session = session_builder.appName("NDS - transcode").getOrCreate()
+    if args.output_format == "delta":
+        session_builder.config("spark.sql.warehouse.dir", args.output_prefix)
+    session = session_builder.appName(f"NDS - transcode - {args.output_format}").getOrCreate()
     session.sparkContext.setLogLevel(args.log_level)
     results = {}
 
@@ -199,7 +201,7 @@ if __name__ == "__main__":
         default="errorifexists")
     parser.add_argument(
         '--output_format',
-        choices=['parquet', 'orc', 'avro', 'json', 'iceberg'],
+        choices=['parquet', 'orc', 'avro', 'json', 'iceberg', 'delta'],
         default='parquet',
         help="output data format when converting CSV data sources."
     )

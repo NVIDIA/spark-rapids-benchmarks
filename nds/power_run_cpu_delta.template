@@ -1,0 +1,41 @@
+#
+# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# 1. The io.delta:delta-core_2.12:1.0.1 only works on Spark 3.1.x
+#    Please refer to https://docs.delta.io/latest/releases.html for other Spark versions.
+
+export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
+export SPARK_MASTER=${SPARK_MASTER:-yarn}
+export DRIVER_MEMORY=${DRIVER_MEMORY:-10G}
+export EXECUTOR_CORES=${EXECUTOR_CORES:-12}
+export NUM_EXECUTORS=${NUM_EXECUTORS:-8}
+export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
+export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
+export NDS_LISTENER_JAR=${NDS_LISTENER_JAR:-nds-benchmark-listener-1.0-SNAPSHOT.jar}
+
+export SPARK_CONF=("--master" "${SPARK_MASTER}"
+                   "--deploy-mode" "client"
+                   "--conf" "spark.driver.memory=${DRIVER_MEMORY}"
+                   "--conf" "spark.executor.cores=${EXECUTOR_CORES}"
+                   "--conf" "spark.executor.instances=${NUM_EXECUTORS}"
+                   "--conf" "spark.executor.memory=${EXECUTOR_MEMORY}"
+                   "--conf" "spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}"
+                   "--conf" "spark.locality.wait=0"
+                   "--packages" "io.delta:delta-core_2.12:1.0.1"
+                   "--conf" "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension"
+                   "--conf" "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog"
+                   "--jars" "$NDS_LISTENER_JAR")

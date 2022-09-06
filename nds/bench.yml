@@ -7,8 +7,10 @@ data_gen:
   # the raw_data_path is the location for already generated data when "skip" is "true"
   skip: true 
 load_test:
-  spark_template_path: convert_submit_cpu_iceberg.template  # template to do Iceberg writing, GPU disabled
-  output_path: PATH_FOR_ICEBERG_WAREHOUSE # warehouse location for Iceberg
+  # template to do Iceberg(or DeltaLake, use "delta" keyword template) writing, GPU disabled
+  spark_template_path: convert_submit_cpu_iceberg.template
+  output_path: PATH_FOR_ICEBERG_OR_DELTA_WAREHOUSE # warehouse location for Iceberg or DeltaLake
+  warehouse_type: iceberg # support "iceberg" and "delta", use "iceberg" by default
   report_path: load_test.txt # execution report path
   skip: false
 generate_query_stream:
@@ -21,7 +23,8 @@ generate_query_stream:
   stream_output_path: bench_streams
   skip: false
 power_test: # use load test output as input to avoid duplication
-  spark_template_path: power_run_gpu_iceberg.template # template with both Iceberg & GPU enabled
+  # template with both Iceberg(or DeltaLake) & GPU enabled, use Iceberg by default
+  spark_template_path: power_run_gpu_iceberg.template
   report_path: power_test.csv
   property_path: properties/aqe-on.properties # property file contains some Spark configs as a addition to spark template file
   output_path: # leave it empty to use "collect" as Spark action. Otherwise it can be used for data validation
@@ -30,7 +33,8 @@ throughput_test: # use most parameters from power test to avoid duplication
   report_base_path: throughput_report
   skip: false
 maintenance_test:
-  maintenance_template_path: maintenance.template # template to do data maintenance(Iceberg, need spark.sql.catalog.spark_catalog.warehouse)
+  # template to do data maintenance on Iceberg(or DeltaLake, use "delta" keyword template)
+  maintenance_template_path: maintenance_iceberg.template
   query_dir: data_maintenance # folder that contains all data maintenance queries
   maintenance_report_base_path: maintenance_report
   skip: false
