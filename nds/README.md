@@ -35,8 +35,37 @@ You may not use NDS except in compliance with the Apache License, Version 2.0 an
     ```
     This variable will help find the TPC-DS Tool when building essential component for this repository.
 
-## Data Generation
+## Use spark-submit-template with template
+To help user run NDS, we provide a template to define the main Spark configs for spark-submit command.
+User can use different templates to run NDS with different configurations for different environment.
+We create [spark-submit-template](./spark-submit-template), which accepts a template file and
+submit the Spark with the configs defined in the template file.
 
+Example command to submit via `spark-submit-template` utility:
+```
+./spark-submit-template convert_submit_cpu.template \
+nds_transcode.py  raw_sf3k  parquet_sf3k report.txt
+```
+
+We give 3 types of template files used in different steps of NDS:
+1. convert_submit_*.template
+2. maintenance_*.template
+3. power_run_*.template
+
+We predefine different template files for different environment.
+For example, we provide below template files to run nds_transcode.py for different environment:
+* `convert_submit_cpu.template` is for Spark CPU cluster
+* `convert_submit_cpu_delta.template` is for Spark CPU cluster with DeltaLake
+* `convert_submit_cpu_iceberg.template` is for Spark CPU cluster with Iceberg
+* `convert_submit_gpu.template` is for Spark GPU cluster
+
+You need to choose one as your template file and modify it to fit your environment.
+We define a [base.template](./base.template) to help you define some basic variables for your envionment.
+And all the other templates will source `base.template` to get the basic variables.
+When you hope to run multiple steps of NDS, you just need to modify `base.template` to fit for your cluster.
+
+
+## Data Generation
 
 ### build the jar for data generation:
 ```
