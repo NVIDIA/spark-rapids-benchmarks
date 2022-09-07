@@ -1,0 +1,36 @@
+#
+# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# This is the base template file for the common information about test environment
+# including the information about Spark, cluster configuration and the Jar files,
+# which are required in the other templates.
+# We'll source this base file in all the other templates so that we just need to update
+# here once instead of updating in all the templates.
+# If you have any different configuration in a specific template, you can override
+# the variables in that template.
+
+export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
+export SPARK_MASTER=${SPARK_MASTER:-yarn}
+export DRIVER_MEMORY=${DRIVER_MEMORY:-10G}
+export EXECUTOR_CORES=${EXECUTOR_CORES:-12}
+export NUM_EXECUTORS=${NUM_EXECUTORS:-8}
+export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
+
+# The NDS listener jar which is built in jvm_listener directory.
+export NDS_LISTENER_JAR=${NDS_LISTENER_JAR:-nds-benchmark-listener-1.0-SNAPSHOT.jar}
+# The spark-rapids jar which is required when running on GPU
+export SPARK_RAPIDS_PLUGIN_JAR=${SPARK_RAPIDS_PLUGIN_JAR:-rapids-4-spark_2.12-22.06.0.jar}

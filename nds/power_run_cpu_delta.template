@@ -18,14 +18,8 @@
 # 1. The io.delta:delta-core_2.12:1.0.1 only works on Spark 3.1.x
 #    Please refer to https://docs.delta.io/latest/releases.html for other Spark versions.
 
-export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
-export SPARK_MASTER=${SPARK_MASTER:-yarn}
-export DRIVER_MEMORY=${DRIVER_MEMORY:-10G}
-export EXECUTOR_CORES=${EXECUTOR_CORES:-12}
-export NUM_EXECUTORS=${NUM_EXECUTORS:-8}
-export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
+source base.template
 export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
-export NDS_LISTENER_JAR=${NDS_LISTENER_JAR:-nds-benchmark-listener-1.0-SNAPSHOT.jar}
 
 export SPARK_CONF=("--master" "${SPARK_MASTER}"
                    "--deploy-mode" "client"
