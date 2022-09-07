@@ -39,7 +39,7 @@ You may not use NDS except in compliance with the Apache License, Version 2.0 an
 To help user run NDS, we provide a template to define the main Spark configs for spark-submit command.
 User can use different templates to run NDS with different configurations for different environment.
 We create [spark-submit-template](./spark-submit-template), which accepts a template file and
-submit the Spark with the configs defined in the template file.
+submit the Spark job with the configs defined in the template file.
 
 Example command to submit via `spark-submit-template` utility:
 ```
