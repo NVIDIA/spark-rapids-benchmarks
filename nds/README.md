@@ -48,9 +48,9 @@ nds_transcode.py  raw_sf3k  parquet_sf3k report.txt
 ```
 
 We give 3 types of template files used in different steps of NDS:
-1. convert_submit_*.template
-2. maintenance_*.template
-3. power_run_*.template
+1. convert_submit_*.template for converting the data by using nds_transcode.py
+2. maintenance_*.template for data maintenance by using nds_maintenance.py
+3. power_run_*.template for power run by using nds_power.py
 
 We predefine different template files for different environment.
 For example, we provide below template files to run nds_transcode.py for different environment:
