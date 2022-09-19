@@ -205,7 +205,7 @@ def run_query(spark_session, query_dict, time_log_output_path, json_summary_fold
     total_time_start = datetime.now()
     spark_app_id = spark_session.sparkContext.applicationId
     DM_start = datetime.now()
-    if warehouse_type == 'delta':
+    if warehouse_type == 'delta-unmanaged':
         execution_time_list = register_delta_tables(spark_session, warehouse_path, execution_time_list)
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
@@ -280,7 +280,7 @@ if __name__ == "__main__":
                         help='Empty folder/path (will create if not exist) to save JSON summary file for each query.')
     parser.add_argument('--warehouse_type',
                         help='Type of the warehouse used for Data Maintenance test.',
-                        choices=['iceberg', 'delta'],
+                        choices=['iceberg', 'delta', 'delta-unmanaged'],
                         default='iceberg')
     args = parser.parse_args()
     valid_queries = get_valid_query_names(args.maintenance_queries)

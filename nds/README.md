@@ -127,10 +127,25 @@ User can also specify `--tables` to convert specific table or tables. See argume
 if `--floats` is specified in the command, DoubleType will be used to replace DecimalType data in Parquet files,
 otherwise DecimalType will be saved.
 
+#### NOTE: DeltaLake tables
+
+To convert CSV to DeltaLake managed tables, user needs to leverage Dataproc Metastore service.
+When [creating a Dataproc Metastore service](https://cloud.google.com/dataproc-metastore/docs/create-service-cluster),
+user need to specify the `hive.metastore.warehouse.dir` to your desired gs bucket at section `Metastore config overrides`
+as the DeltaLake warehouse directory. e.g. `hive.metastore.warehouse.dir=gs://YOUR_BUCKET/warehouse`.
+This action is required when set `--output_format` to `delta` when transcoding. Note, the `output_prefix`
+will not take effect in this situation.
+Don't forget to `export` Metastore content that contains database and table metadata to a gs bucket
+when you are about to shutdown the Metastore service.
+
+For unmanaged tables, user doesn't need to create the Metastore service,  specify the `--output_format`
+ to `delta-unmanaged` will be enough.
+
+
 arguments for `nds_transcode.py`:
 ```
 python nds_transcode.py -h
-usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--output_format {parquet,orc,avro,json,iceberg,delta}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update] [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION]
+usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--output_format {parquet,orc,avro,json,iceberg,delta,delta-unmanaged}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update] [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION]
                         input_prefix output_prefix report_file
 
 positional arguments:
@@ -144,7 +159,7 @@ optional arguments:
   -h, --help            show this help message and exit
   --output_mode {overwrite,append,ignore,error,errorifexists}
                         save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.default value is errorifexists, which is the Spark default behavior.
-  --output_format {parquet,orc,avro,json,iceberg,delta}
+  --output_format {parquet,orc,avro,json,iceberg,delta,delta-unmanaged}
                         output data format when converting CSV data sources.
   --tables TABLES       specify table names by a comma separated string. e.g. 'catalog_page,catalog_sales'.
   --log_level LOG_LEVEL
@@ -236,7 +251,7 @@ _After_ user generates query streams, Power Run can be executed using one of the
 
 Arguments supported by `nds_power.py`:
 ```
-usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json,iceberg,delta}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] [--json_summary_folder JSON_SUMMARY_FOLDER] input_prefix query_stream_file time_log
+usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json,iceberg,delta,delta-unmanaged}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] [--json_summary_folder JSON_SUMMARY_FOLDER] input_prefix query_stream_file time_log
 
 positional arguments:
   input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"). If input_format is "iceberg", this argument will be regarded as the value of property "spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog session name
@@ -246,7 +261,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --input_format {parquet,orc,avro,csv,json,iceberg,delta}
+  --input_format {parquet,orc,avro,csv,json,iceberg,delta, delta-unmanaged}
                         type for input data source, e.g. parquet, orc, json, csv or iceberg, delta. Certain types are not fully supported by GPU reading, please refer to https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md for more details.
   --output_prefix OUTPUT_PREFIX
                         text to prepend to every output file (e.g., "hdfs:///ds-parquet")
@@ -333,7 +348,7 @@ or later. More details including work-around for version 3.2.0 and 3.2.1 could b
 
 Arguments supported for data maintenance:
 ```
-usage: nds_maintenance.py [-h] [--maintenance_queries MAINTENANCE_QUERIES] [--property_file PROPERTY_FILE] [--json_summary_folder JSON_SUMMARY_FOLDER] [--warehouse_type {iceberg,delta}] warehouse_path refresh_data_path maintenance_queries_folder time_log
+usage: nds_maintenance.py [-h] [--maintenance_queries MAINTENANCE_QUERIES] [--property_file PROPERTY_FILE] [--json_summary_folder JSON_SUMMARY_FOLDER] [--warehouse_type {iceberg,delta,delta-unmanaged}] warehouse_path refresh_data_path maintenance_queries_folder time_log
 
 positional arguments:
   warehouse_path        warehouse path for Data Maintenance test.
@@ -351,7 +366,7 @@ optional arguments:
                         property file for Spark configuration.
   --json_summary_folder JSON_SUMMARY_FOLDER
                         Empty folder/path (will create if not exist) to save JSON summary file for each query.
-  --warehouse_type {iceberg,delta}
+  --warehouse_type {iceberg,delta,delta-unmanaged}
                         Type of the warehouse used for Data Maintenance test.
 ```
 

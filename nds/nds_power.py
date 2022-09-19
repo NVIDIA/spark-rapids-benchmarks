@@ -215,12 +215,11 @@ def run_query_stream(input_prefix,
         session_builder.config("spark.sql.catalog.spark_catalog.warehouse", input_prefix)
     spark_session = session_builder.appName(
         app_name).getOrCreate()
-    if input_format == 'delta':
-        # Register tables for Delta Lake.
-        # TODO: investigate if there's a config to avoid this registration.
+    if input_format == 'delta-unmanaged':
+        # Register tables for Delta Lake. This is only needed for unmanaged tables.
         execution_time_list = register_delta_tables(spark_session, input_prefix, execution_time_list)
     spark_app_id = spark_session.sparkContext.applicationId
-    if input_format != 'iceberg' and input_format != 'delta':
+    if input_format != 'iceberg' and "delta" not in input_format:
         execution_time_list = setup_tables(spark_session, input_prefix, input_format, use_decimal,
                                            execution_time_list)
 
@@ -298,7 +297,7 @@ if __name__ == "__main__":
                         'Certain types are not fully supported by GPU reading, please refer to ' +
                         'https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md ' +
                         'for more details.',
-                        choices=['parquet', 'orc', 'avro', 'csv', 'json', 'iceberg', 'delta'],
+                        choices=['parquet', 'orc', 'avro', 'csv', 'json', 'iceberg', 'delta', 'delta-unmanaged'],
                         default='parquet')
     parser.add_argument('--output_prefix',
                         help='text to prepend to every output file (e.g., "hdfs:///ds-parquet")')
