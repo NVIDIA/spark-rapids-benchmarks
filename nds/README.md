@@ -129,7 +129,8 @@ otherwise DecimalType will be saved.
 
 #### NOTE: DeltaLake tables
 
-To convert CSV to DeltaLake managed tables, user needs to leverage Dataproc Metastore service.
+To convert CSV to DeltaLake [managed tables](https://docs.databricks.com/lakehouse/data-objects.html#what-is-a-managed-table),
+user needs to leverage Dataproc Metastore service.
 When [creating a Dataproc Metastore service](https://cloud.google.com/dataproc-metastore/docs/create-service-cluster),
 user need to specify the `hive.metastore.warehouse.dir` to your desired gs bucket at section `Metastore config overrides`
 as the DeltaLake warehouse directory. e.g. `hive.metastore.warehouse.dir=gs://YOUR_BUCKET/warehouse`.
@@ -138,11 +139,12 @@ will not take effect in this situation.
 Don't forget to `export` Metastore content that contains database and table metadata to a gs bucket
 when you are about to shutdown the Metastore service.
 
-For unmanaged tables, user doesn't need to create the Metastore service,  specify the `--output_format`
- to `delta-unmanaged` will be enough.
+For [unmanaged tables](https://docs.databricks.com/lakehouse/data-objects.html#what-is-an-unmanaged-table),
+user doesn't need to create the Metastore service,  specify the `--output_format`
+to `delta-unmanaged` will be enough.
 
 
-arguments for `nds_transcode.py`:
+Arguments for `nds_transcode.py`:
 ```
 python nds_transcode.py -h
 usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--output_format {parquet,orc,avro,json,iceberg,delta,delta-unmanaged}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update] [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION]

@@ -213,6 +213,9 @@ def run_query_stream(input_prefix,
             session_builder = session_builder.config(k,v)
     if input_format == 'iceberg':
         session_builder.config("spark.sql.catalog.spark_catalog.warehouse", input_prefix)
+    if input_format == 'delta':
+        session_builder.config("spark.sql.warehouse.dir", input_prefix)
+        session_builder.config("spark.sql.catalogImplementation", "hive")
     spark_session = session_builder.appName(
         app_name).getOrCreate()
     if input_format == 'delta-unmanaged':
