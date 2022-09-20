@@ -33,7 +33,6 @@ import argparse
 import csv
 from datetime import datetime
 import os
-import time
 
 from pyspark.sql import SparkSession
 from PysparkBenchReport import PysparkBenchReport
@@ -81,9 +80,17 @@ def replace_date(query_list, date_tuple_list):
     """
     q_updated = []
     for date_tuple in date_tuple_list:
+        date1 = datetime.strptime(date_tuple[0], "%Y-%m-%d")
+        date2 = datetime.strptime(date_tuple[1], "%Y-%m-%d")
+        if date1 > date2:
+            earlier = date_tuple[1]
+            later = date_tuple[0]
+        else:
+            earlier = date_tuple[0]
+            later = date_tuple[1]
         for c in query_list:
-            c = c.replace("DATE1", date_tuple[0])
-            c = c.replace("DATE2", date_tuple[1])
+            c = c.replace("DATE1", earlier)
+            c = c.replace("DATE2", later)
             q_updated.append(c)
     return q_updated
 
