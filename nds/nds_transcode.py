@@ -133,6 +133,7 @@ def transcode(args):
         session_builder.config("spark.sql.catalog.spark_catalog.warehouse", args.output_prefix)
     if args.output_format == "delta":
         session_builder.config("spark.sql.warehouse.dir", args.output_prefix)
+        session_builder.config("spark.sql.catalogImplementation", "hive")
     session = session_builder.appName(f"NDS - transcode - {args.output_format}").getOrCreate()
     session.sparkContext.setLogLevel(args.log_level)
     results = {}
