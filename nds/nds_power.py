@@ -181,7 +181,8 @@ def run_query_stream(input_prefix,
                      use_decimal=True,
                      output_path=None,
                      output_format="parquet",
-                     json_summary_folder=None):
+                     json_summary_folder=None,
+                     keep_sc=False):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
 
@@ -250,7 +251,8 @@ def run_query_stream(input_prefix,
             q_report.write_summary(query_name, prefix=summary_prefix)
     power_end = time.time()
     power_elapse = int((power_end - power_start)*1000)
-    spark_session.sparkContext.stop()
+    if not keep_sc:
+        spark_session.sparkContext.stop()
     total_time_end = time.time()
     total_elapse = int((total_time_end - total_time_start)*1000)
     print("====== Power Test Time: {} milliseconds ======".format(power_elapse))
@@ -314,7 +316,11 @@ if __name__ == "__main__":
                         'If specified, float data will be used.')
     parser.add_argument('--json_summary_folder',
                         help='Empty folder/path (will create if not exist) to save JSON summary file for each query.')
-
+    parser.add_argument('--keep_sc',
+                        action='store_true',
+                        help='Keep SparkContext alive after running all queries. This is a ' +
+                        'limitation on Databricks runtime environment. User should always attach ' +
+                        'this flag when running on Databricks.')
 
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
@@ -326,4 +332,5 @@ if __name__ == "__main__":
                      not args.floats,
                      args.output_prefix,
                      args.output_format,
-                     args.json_summary_folder)
+                     args.json_summary_folder,
+                     args.keep_sc)
