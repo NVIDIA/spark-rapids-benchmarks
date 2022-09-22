@@ -20,7 +20,6 @@ export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
 
 export SPARK_CONF=("--master" "${SPARK_MASTER}"
                    "--deploy-mode" "client"
-                   "--conf" "spark.scheduler.mode=FAIR"
                    "--conf" "spark.driver.memory=${DRIVER_MEMORY}"
                    "--conf" "spark.executor.cores=${EXECUTOR_CORES}"
                    "--conf" "spark.executor.instances=${NUM_EXECUTORS}"
