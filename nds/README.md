@@ -146,7 +146,7 @@ user doesn't need to create the Metastore service,  appending `--delta_unmanaged
 Arguments for `nds_transcode.py`:
 ```
 python nds_transcode.py -h
-usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--output_format {parquet,orc,avro,json,iceberg,delta,delta-unmanaged}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update] [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION]
+usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--output_format {parquet,orc,avro,json,iceberg,delta}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update] [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION] [--delta_unmanaged]
                         input_prefix output_prefix report_file
 
 positional arguments:
@@ -160,7 +160,7 @@ optional arguments:
   -h, --help            show this help message and exit
   --output_mode {overwrite,append,ignore,error,errorifexists}
                         save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.default value is errorifexists, which is the Spark default behavior.
-  --output_format {parquet,orc,avro,json,iceberg,delta,delta-unmanaged}
+  --output_format {parquet,orc,avro,json,iceberg,delta}
                         output data format when converting CSV data sources.
   --tables TABLES       specify table names by a comma separated string. e.g. 'catalog_page,catalog_sales'.
   --log_level LOG_LEVEL
@@ -172,7 +172,8 @@ optional arguments:
   --compression COMPRESSION
                         Compression codec to use when saving data. See https://iceberg.apache.org/docs/latest/configuration/#write-properties for supported codecs in Iceberg. See
                         https://spark.apache.org/docs/latest/sql-data-sources.html for supported codecs for Spark built-in formats. When not specified, the default for the requested output format will be used.
-
+  --delta_unmanaged     Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without leveraging a
+                        Metastore service
 ```
 
 Example command to submit via `spark-submit-template` utility:
@@ -252,7 +253,7 @@ _After_ user generates query streams, Power Run can be executed using one of the
 
 Arguments supported by `nds_power.py`:
 ```
-usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json,iceberg,delta,delta-unmanaged}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] [--json_summary_folder JSON_SUMMARY_FOLDER] input_prefix query_stream_file time_log
+usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json,iceberg,delta}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] [--json_summary_folder JSON_SUMMARY_FOLDER] [--delta_unmanaged] input_prefix query_stream_file time_log
 
 positional arguments:
   input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"). If input_format is "iceberg", this argument will be regarded as the value of property "spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog session name
@@ -262,7 +263,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --input_format {parquet,orc,avro,csv,json,iceberg,delta, delta-unmanaged}
+  --input_format {parquet,orc,avro,csv,json,iceberg,delta}
                         type for input data source, e.g. parquet, orc, json, csv or iceberg, delta. Certain types are not fully supported by GPU reading, please refer to https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md for more details.
   --output_prefix OUTPUT_PREFIX
                         text to prepend to every output file (e.g., "hdfs:///ds-parquet")
@@ -273,6 +274,8 @@ optional arguments:
   --floats              When loading Text files like json and csv, schemas are required to determine if certain parts of the data are read as decimal type or not. If specified, float data will be used.
   --json_summary_folder JSON_SUMMARY_FOLDER
                         Empty folder/path (will create if not exist) to save JSON summary file for each query.
+  --delta_unmanaged     Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without leveraging a
+                        Metastore service
 ```
 
 Example command to submit nds_power.py by spark-submit-template utility:
