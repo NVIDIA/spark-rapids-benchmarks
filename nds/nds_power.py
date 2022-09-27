@@ -182,6 +182,7 @@ def run_query_stream(input_prefix,
                      output_path=None,
                      output_format="parquet",
                      json_summary_folder=None,
+                     delta_unmanaged=False,
                      keep_sc=False):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
@@ -214,11 +215,13 @@ def run_query_stream(input_prefix,
             session_builder = session_builder.config(k,v)
     if input_format == 'iceberg':
         session_builder.config("spark.sql.catalog.spark_catalog.warehouse", input_prefix)
+    if input_format == 'delta':
+        session_builder.config("spark.sql.warehouse.dir", input_prefix)
+        session_builder.config("spark.sql.catalogImplementation", "hive")
     spark_session = session_builder.appName(
         app_name).getOrCreate()
-    if input_format == 'delta':
-        # Register tables for Delta Lake.
-        # TODO: investigate if there's a config to avoid this registration.
+    if input_format == 'delta' and delta_unmanaged:
+        # Register tables for Delta Lake. This is only needed for unmanaged tables.
         execution_time_list = register_delta_tables(spark_session, input_prefix, execution_time_list)
     spark_app_id = spark_session.sparkContext.applicationId
     if input_format != 'iceberg' and input_format != 'delta':
@@ -316,6 +319,10 @@ if __name__ == "__main__":
                         'If specified, float data will be used.')
     parser.add_argument('--json_summary_folder',
                         help='Empty folder/path (will create if not exist) to save JSON summary file for each query.')
+    parser.add_argument('--delta_unmanaged',
+                        action='store_true',
+                        help='Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without ' +
+        '               leveraging a Metastore service.')
     parser.add_argument('--keep_sc',
                         action='store_true',
                         help='Keep SparkContext alive after running all queries. This is a ' +
@@ -333,4 +340,5 @@ if __name__ == "__main__":
                      args.output_prefix,
                      args.output_format,
                      args.json_summary_folder,
+                     args.delta_unmanaged,
                      args.keep_sc)

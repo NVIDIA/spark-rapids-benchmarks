@@ -57,7 +57,15 @@ def load(session, filename, schema, delimiter="|", header="false", prefix=""):
     return session.read.option("delimiter", delimiter).option("header", header).csv(data_path, schema=schema)
 
 
-def store(session, df, filename, output_format, output_mode, iceberg_write_format, compression, prefix=""):
+def store(session,
+          df,
+          filename,
+          output_format,
+          output_mode,
+          iceberg_write_format,
+          compression,
+          prefix="",
+          delta_unmanaged=False):
     """Create Iceberg tables by CTAS
 
     Args:
@@ -91,6 +99,23 @@ def store(session, df, filename, output_format, output_mode, iceberg_write_forma
         CTAS += ")"
         CTAS += " as select * from temptbl"
         session.sql(CTAS)
+    elif output_format == "delta" and not delta_unmanaged:
+        if output_mode == 'overwrite':
+            session.sql(f"drop table if exists {filename}")
+        CTAS = f"create table {filename} using delta "
+        if filename in TABLE_PARTITIONING.keys():
+           df.repartition(
+               col(TABLE_PARTITIONING[filename])).sortWithinPartitions(
+                   TABLE_PARTITIONING[filename]).createOrReplaceTempView("temptbl")
+           CTAS += f"partitioned by ({TABLE_PARTITIONING[filename]})"
+        else:
+            df.coalesce(1).createOrReplaceTempView("temptbl")
+        # Delta Lake doesn't have specific compression properties, set it by `spark.sql.parquet.compression.codec`
+        # Note Delta Lake only support Parquet.
+        if compression:
+            session.conf.set("spark.sql.parquet.compression.codec", compression)
+        CTAS += " as select * from temptbl"
+        session.sql(CTAS)
     else:
         data_path = prefix + '/' + filename
         if filename in TABLE_PARTITIONING.keys():
@@ -114,6 +139,7 @@ def transcode(args):
         session_builder.config("spark.sql.catalog.spark_catalog.warehouse", args.output_prefix)
     if args.output_format == "delta":
         session_builder.config("spark.sql.warehouse.dir", args.output_prefix)
+        session_builder.config("spark.sql.catalogImplementation", "hive")
     session = session_builder.appName(f"NDS - transcode - {args.output_format}").getOrCreate()
     session.sparkContext.setLogLevel(args.log_level)
     results = {}
@@ -147,7 +173,8 @@ def transcode(args):
                           args.output_mode,
                           args.iceberg_write_format,
                           args.compression,
-                          args.output_prefix),
+                          args.output_prefix,
+                          args.delta_unmanaged),
             number=1)
         
     end_time = datetime.now()
@@ -237,5 +264,10 @@ if __name__ == "__main__":
         ' for supported codecs for Spark built-in formats.' +
         ' When not specified, the default for the requested output format will be used.'
     )
+    parser.add_argument(
+        '--delta_unmanaged',
+        action='store_true',
+        help='Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without ' +
+        'leveraging a Metastore service.')
     args = parser.parse_args()
     transcode(args)

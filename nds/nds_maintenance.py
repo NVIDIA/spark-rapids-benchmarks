@@ -211,7 +211,8 @@ def run_query(spark_session,
               property_file,
               warehouse_path,
               warehouse_type,
-              keep_sc):
+              keep_sc,
+              delta_unmanaged=False):
     # TODO: Duplicate code in nds_power.py. Refactor this part, make it general.
     execution_time_list = []
     check_json_summary_folder(json_summary_folder)
@@ -219,7 +220,7 @@ def run_query(spark_session,
     total_time_start = datetime.now()
     spark_app_id = spark_session.sparkContext.applicationId
     DM_start = datetime.now()
-    if warehouse_type == 'delta':
+    if warehouse_type == 'delta' and delta_unmanaged:
         execution_time_list = register_delta_tables(spark_session, warehouse_path, execution_time_list)
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
@@ -302,6 +303,10 @@ if __name__ == "__main__":
                         help='Keep SparkContext alive after running all queries. This is a ' +
                         'limitation on Databricks runtime environment. User should always attach ' +
                         'this flag when running on Databricks.')
+    parser.add_argument('--delta_unmanaged',
+                        action='store_true',
+                        help='Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without ' +
+        '               leveraging a Metastore service.')
     args = parser.parse_args()
     valid_queries = get_valid_query_names(args.maintenance_queries)
     spark_session = create_spark_session(valid_queries, args.warehouse_path, args.warehouse_type)
@@ -310,4 +315,5 @@ if __name__ == "__main__":
                                          args.maintenance_queries_folder,
                                          valid_queries)
     run_query(spark_session, query_dict, args.time_log, args.json_summary_folder,
-              args.property_file, args.warehouse_path, args.warehouse_type, args.keep_sc)
+              args.property_file, args.warehouse_path, args.warehouse_type, args.keep_sc,
+              args.delta_unmanaged)
