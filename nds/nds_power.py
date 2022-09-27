@@ -220,11 +220,11 @@ def run_query_stream(input_prefix,
         session_builder.config("spark.sql.catalogImplementation", "hive")
     spark_session = session_builder.appName(
         app_name).getOrCreate()
-    if delta_unmanaged:
+    if input_format == 'delta' and delta_unmanaged:
         # Register tables for Delta Lake. This is only needed for unmanaged tables.
         execution_time_list = register_delta_tables(spark_session, input_prefix, execution_time_list)
     spark_app_id = spark_session.sparkContext.applicationId
-    if input_format != 'iceberg' and "delta" not in input_format:
+    if input_format != 'iceberg' and input_format != 'delta':
         execution_time_list = setup_tables(spark_session, input_prefix, input_format, use_decimal,
                                            execution_time_list)
 
