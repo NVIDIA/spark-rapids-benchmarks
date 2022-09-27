@@ -352,7 +352,7 @@ or later. More details including work-around for version 3.2.0 and 3.2.1 could b
 
 Arguments supported for data maintenance:
 ```
-usage: nds_maintenance.py [-h] [--maintenance_queries MAINTENANCE_QUERIES] [--property_file PROPERTY_FILE] [--json_summary_folder JSON_SUMMARY_FOLDER] [--warehouse_type {iceberg,delta,delta-unmanaged}] warehouse_path refresh_data_path maintenance_queries_folder time_log
+usage: nds_maintenance.py [-h] [--maintenance_queries MAINTENANCE_QUERIES] [--property_file PROPERTY_FILE] [--json_summary_folder JSON_SUMMARY_FOLDER] [--warehouse_type {iceberg,delta}] [--delta_unmanaged] warehouse_path refresh_data_path maintenance_queries_folder time_log
 
 positional arguments:
   warehouse_path        warehouse path for Data Maintenance test.
@@ -370,8 +370,9 @@ optional arguments:
                         property file for Spark configuration.
   --json_summary_folder JSON_SUMMARY_FOLDER
                         Empty folder/path (will create if not exist) to save JSON summary file for each query.
-  --warehouse_type {iceberg,delta,delta-unmanaged}
+  --warehouse_type {iceberg,delta}
                         Type of the warehouse used for Data Maintenance test.
+  --delta_unmanaged     Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without leveraging a Metastore service.
 ```
 
 An example command to run only _LF_CS_ and _DF_CS_ functions:
