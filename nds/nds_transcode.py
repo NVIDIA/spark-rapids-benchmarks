@@ -57,7 +57,15 @@ def load(session, filename, schema, delimiter="|", header="false", prefix=""):
     return session.read.option("delimiter", delimiter).option("header", header).csv(data_path, schema=schema)
 
 
-def store(session, df, filename, output_format, output_mode, iceberg_write_format, compression, prefix=""):
+def store(session,
+          df,
+          filename,
+          output_format,
+          output_mode,
+          iceberg_write_format,
+          compression,
+          prefix="",
+          delta_unmanaged=False):
     """Create Iceberg tables by CTAS
 
     Args:
@@ -91,7 +99,7 @@ def store(session, df, filename, output_format, output_mode, iceberg_write_forma
         CTAS += ")"
         CTAS += " as select * from temptbl"
         session.sql(CTAS)
-    elif output_format == "delta":
+    elif output_format == "delta" and not delta_unmanaged:
         if output_mode == 'overwrite':
             session.sql(f"drop table if exists {filename}")
         CTAS = f"create table {filename} using delta "
@@ -117,8 +125,6 @@ def store(session, df, filename, output_format, output_mode, iceberg_write_forma
             writer = df.write
             if compression:
                 writer = writer.option('compression', compression)
-            if output_format == 'delta-unmanaged':
-                output_format = 'delta'
             writer.format(output_format).mode(
                 output_mode).partitionBy(TABLE_PARTITIONING[filename]).save(data_path)
         else:
@@ -167,7 +173,8 @@ def transcode(args):
                           args.output_mode,
                           args.iceberg_write_format,
                           args.compression,
-                          args.output_prefix),
+                          args.output_prefix,
+                          args.delta_unmanaged),
             number=1)
         
     end_time = datetime.now()
@@ -221,7 +228,7 @@ if __name__ == "__main__":
         default="errorifexists")
     parser.add_argument(
         '--output_format',
-        choices=['parquet', 'orc', 'avro', 'json', 'iceberg', 'delta', 'delta-unmanaged'],
+        choices=['parquet', 'orc', 'avro', 'json', 'iceberg', 'delta'],
         default='parquet',
         help="output data format when converting CSV data sources."
     )
@@ -257,5 +264,10 @@ if __name__ == "__main__":
         ' for supported codecs for Spark built-in formats.' +
         ' When not specified, the default for the requested output format will be used.'
     )
+    parser.add_argument(
+        '--delta_unmanaged',
+        action='store_true',
+        help='Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without ' +
+        'leveraging a Metastore service.')
     args = parser.parse_args()
     transcode(args)

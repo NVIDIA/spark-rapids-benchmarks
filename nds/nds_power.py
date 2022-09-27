@@ -181,7 +181,8 @@ def run_query_stream(input_prefix,
                      use_decimal=True,
                      output_path=None,
                      output_format="parquet",
-                     json_summary_folder=None):
+                     json_summary_folder=None,
+                     delta_unmanaged=False):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
 
@@ -218,7 +219,7 @@ def run_query_stream(input_prefix,
         session_builder.config("spark.sql.catalogImplementation", "hive")
     spark_session = session_builder.appName(
         app_name).getOrCreate()
-    if input_format == 'delta-unmanaged':
+    if delta_unmanaged:
         # Register tables for Delta Lake. This is only needed for unmanaged tables.
         execution_time_list = register_delta_tables(spark_session, input_prefix, execution_time_list)
     spark_app_id = spark_session.sparkContext.applicationId
@@ -300,7 +301,7 @@ if __name__ == "__main__":
                         'Certain types are not fully supported by GPU reading, please refer to ' +
                         'https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md ' +
                         'for more details.',
-                        choices=['parquet', 'orc', 'avro', 'csv', 'json', 'iceberg', 'delta', 'delta-unmanaged'],
+                        choices=['parquet', 'orc', 'avro', 'csv', 'json', 'iceberg', 'delta'],
                         default='parquet')
     parser.add_argument('--output_prefix',
                         help='text to prepend to every output file (e.g., "hdfs:///ds-parquet")')
@@ -316,6 +317,10 @@ if __name__ == "__main__":
                         'If specified, float data will be used.')
     parser.add_argument('--json_summary_folder',
                         help='Empty folder/path (will create if not exist) to save JSON summary file for each query.')
+    parser.add_argument('--delta_unmanaged',
+                        action='store_true',
+                        help='Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without ' +
+        '               leveraging a Metastore service.')
 
 
     args = parser.parse_args()
@@ -328,4 +333,5 @@ if __name__ == "__main__":
                      not args.floats,
                      args.output_prefix,
                      args.output_format,
-                     args.json_summary_folder)
+                     args.json_summary_folder,
+                     args.delta_unmanaged)

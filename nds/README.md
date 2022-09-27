@@ -130,9 +130,9 @@ otherwise DecimalType will be saved.
 #### NOTE: DeltaLake tables
 
 To convert CSV to DeltaLake [managed tables](https://docs.databricks.com/lakehouse/data-objects.html#what-is-a-managed-table),
-user needs to leverage Dataproc Metastore service.
+user needs to leverage a hive metastore service. For example, on Dataproc, you can use Dataproc Metastore service.
 When [creating a Dataproc Metastore service](https://cloud.google.com/dataproc-metastore/docs/create-service-cluster),
-user need to specify the `hive.metastore.warehouse.dir` to your desired gs bucket at section `Metastore config overrides`
+user needs to specify the `hive.metastore.warehouse.dir` to your desired gs bucket at section `Metastore config overrides`
 as the DeltaLake warehouse directory. e.g. `hive.metastore.warehouse.dir=gs://YOUR_BUCKET/warehouse`.
 This action is required when set `--output_format` to `delta` when transcoding. Note, the `output_prefix`
 will not take effect in this situation.
@@ -140,8 +140,7 @@ Don't forget to `export` Metastore content that contains database and table meta
 when you are about to shutdown the Metastore service.
 
 For [unmanaged tables](https://docs.databricks.com/lakehouse/data-objects.html#what-is-an-unmanaged-table),
-user doesn't need to create the Metastore service,  specify the `--output_format`
-to `delta-unmanaged` will be enough.
+user doesn't need to create the Metastore service,  appending `--delta_unmanaged` to arguments will be enough.
 
 
 Arguments for `nds_transcode.py`:
