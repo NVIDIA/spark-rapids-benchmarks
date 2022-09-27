@@ -182,11 +182,8 @@ def run_query_stream(input_prefix,
                      output_path=None,
                      output_format="parquet",
                      json_summary_folder=None,
-<<<<<<< HEAD
-                     delta_unmanaged=False):
-=======
+                     delta_unmanaged=False,
                      keep_sc=False):
->>>>>>> github/dev
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
 
