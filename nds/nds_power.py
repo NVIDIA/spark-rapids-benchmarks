@@ -182,7 +182,11 @@ def run_query_stream(input_prefix,
                      output_path=None,
                      output_format="parquet",
                      json_summary_folder=None,
+<<<<<<< HEAD
                      delta_unmanaged=False):
+=======
+                     keep_sc=False):
+>>>>>>> github/dev
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
 
@@ -253,7 +257,8 @@ def run_query_stream(input_prefix,
             q_report.write_summary(query_name, prefix=summary_prefix)
     power_end = time.time()
     power_elapse = int((power_end - power_start)*1000)
-    spark_session.sparkContext.stop()
+    if not keep_sc:
+        spark_session.sparkContext.stop()
     total_time_end = time.time()
     total_elapse = int((total_time_end - total_time_start)*1000)
     print("====== Power Test Time: {} milliseconds ======".format(power_elapse))
@@ -321,7 +326,11 @@ if __name__ == "__main__":
                         action='store_true',
                         help='Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without ' +
         '               leveraging a Metastore service.')
-
+    parser.add_argument('--keep_sc',
+                        action='store_true',
+                        help='Keep SparkContext alive after running all queries. This is a ' +
+                        'limitation on Databricks runtime environment. User should always attach ' +
+                        'this flag when running on Databricks.')
 
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
@@ -334,4 +343,5 @@ if __name__ == "__main__":
                      args.output_prefix,
                      args.output_format,
                      args.json_summary_folder,
-                     args.delta_unmanaged)
+                     args.delta_unmanaged,
+                     args.keep_sc)

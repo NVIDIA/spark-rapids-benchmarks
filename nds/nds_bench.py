@@ -339,6 +339,7 @@ def get_perf_metric(scale_factor, num_streams_in_throughput, Tload, Tpower, Ttt1
     Args:
         scale_factor (str): scale factor
         num_streams_in_throughput (int): number of streams executed in a Throughput Test
+        Tload: time elapse for data loading in seconds
         Tpower (float): time elaspe for Power Test in seconds
         Ttt1 (float): time elapse for Throughput Test 1 in seconds
         Ttt2 (float): time elapse for Throughput Test 2 in seconds
@@ -481,7 +482,7 @@ def run_full_bench(yaml_params):
                                 num_streams,
                                 2)
     perf_metric = get_perf_metric(
-        scale_factor, num_streams, Tld, TPower, Ttt1, Ttt2, Tdm1, Tdm2)
+        scale_factor, num_streams//2, Tld, TPower, Ttt1, Ttt2, Tdm1, Tdm2)
     print(f"====== Performance Metric: {perf_metric} ======")
     metrics_map = {"scale_factor": scale_factor,
                    "num_streams": num_streams,

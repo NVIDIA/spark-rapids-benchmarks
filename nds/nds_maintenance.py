@@ -204,7 +204,14 @@ def run_dm_query(spark, query_list, query_name, warehouse_type):
             q = run_subquery_for_delta(spark, q)
         spark.sql(q)
 
-def run_query(spark_session, query_dict, time_log_output_path, json_summary_folder, property_file, warehouse_path, warehouse_type):
+def run_query(spark_session,
+              query_dict,
+              time_log_output_path,
+              json_summary_folder,
+              property_file,
+              warehouse_path,
+              warehouse_type,
+              keep_sc):
     # TODO: Duplicate code in nds_power.py. Refactor this part, make it general.
     execution_time_list = []
     check_json_summary_folder(json_summary_folder)
@@ -233,7 +240,8 @@ def run_query(spark_session, query_dict, time_log_output_path, json_summary_fold
             else:
                 summary_prefix =  os.path.join(json_summary_folder, '')
             q_report.write_summary(query_name, prefix=summary_prefix)
-    spark_session.sparkContext.stop()
+    if not keep_sc:
+        spark_session.sparkContext.stop()
     DM_end = datetime.now()
     DM_elapse = (DM_end - DM_start).total_seconds()
     total_elapse = (DM_end - total_time_start).total_seconds()
@@ -289,6 +297,11 @@ if __name__ == "__main__":
                         help='Type of the warehouse used for Data Maintenance test.',
                         choices=['iceberg', 'delta', 'delta-unmanaged'],
                         default='iceberg')
+    parser.add_argument('--keep_sc',
+                        action='store_true',
+                        help='Keep SparkContext alive after running all queries. This is a ' +
+                        'limitation on Databricks runtime environment. User should always attach ' +
+                        'this flag when running on Databricks.')
     args = parser.parse_args()
     valid_queries = get_valid_query_names(args.maintenance_queries)
     spark_session = create_spark_session(valid_queries, args.warehouse_path, args.warehouse_type)
@@ -297,4 +310,4 @@ if __name__ == "__main__":
                                          args.maintenance_queries_folder,
                                          valid_queries)
     run_query(spark_session, query_dict, args.time_log, args.json_summary_folder,
-              args.property_file, args.warehouse_path, args.warehouse_type)
+              args.property_file, args.warehouse_path, args.warehouse_type, args.keep_sc)
