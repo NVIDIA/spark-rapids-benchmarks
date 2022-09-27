@@ -212,7 +212,7 @@ def run_query(spark_session,
               warehouse_path,
               warehouse_type,
               keep_sc,
-              delta_unmanaged):
+              delta_unmanaged=False):
     # TODO: Duplicate code in nds_power.py. Refactor this part, make it general.
     execution_time_list = []
     check_json_summary_folder(json_summary_folder)
@@ -296,7 +296,7 @@ if __name__ == "__main__":
                         help='Empty folder/path (will create if not exist) to save JSON summary file for each query.')
     parser.add_argument('--warehouse_type',
                         help='Type of the warehouse used for Data Maintenance test.',
-                        choices=['iceberg', 'delta', 'delta-unmanaged'],
+                        choices=['iceberg', 'delta'],
                         default='iceberg')
     parser.add_argument('--keep_sc',
                         action='store_true',
