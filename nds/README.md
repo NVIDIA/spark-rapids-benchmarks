@@ -310,6 +310,9 @@ time.csv \
 --output_format parquet
 ```
 
+Note there's a customized Spark listener used to track the Spark task status e.g. success or failed 
+or success with retry. The results will be recorded at the json summary files when all jobs are
+finished. This is often used for test or query monitoring purpose.
 
 ### Throughput Run
 Throughput Run simulates the scenario that multiple query sessions are running simultaneously in
