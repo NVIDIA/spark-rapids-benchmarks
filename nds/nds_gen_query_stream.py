@@ -113,10 +113,12 @@ if __name__ == "__main__":
                         help="generate query in directory.")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--template",
-                        help="build queries from this template")
+                        help="build queries from this template. Only used to generate one query " +
+                        "from one tempalte. This argument is mutually exclusive with --streams. " +
+                        "It is often used for test purpose.")
     group.add_argument('--streams',
                         help='generate how many query streams. ' +
-                        'If not specified, only one query will be produced.')
+                        'This argument is mutually exclusive with --template.')
     parser.add_argument('--rngseed',
                         help='seed the random generation seed.')
 
