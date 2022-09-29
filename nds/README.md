@@ -229,8 +229,11 @@ positional arguments:
 
 optional arguments:
   -h, --help           show this help message and exit
-  --template TEMPLATE  build queries from this template
-  --streams STREAMS    generate how many query streams. If not specified, only one query will be produced.
+  --template TEMPLATE  build queries from this template. Only used to generate one query from one tempalte. This argument is mutually exclusive with --streams. It
+                       is often used for test purpose.
+  --streams STREAMS    generate how many query streams. This argument is mutually exclusive with --template.
+  --rngseed RNGSEED    seed the random generation seed.
+
 
 ```
 
