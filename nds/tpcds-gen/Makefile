@@ -1,4 +1,4 @@
-all: target/lib/dsdgen.jar target/tpcds-gen-1.0-SNAPSHOT.jar jvm-listener
+all: target/lib/dsdgen.jar target/tpcds-gen-1.0-SNAPSHOT.jar
 
 target/tpcds-gen-1.0-SNAPSHOT.jar: $(shell find -name *.java)
 ifdef MVN_REPO_URL
@@ -25,6 +25,3 @@ endif
 
 clean:
 	mvn clean
-
-jvm-listener:
-	mvn -f ../jvm_listener/pom.xml package

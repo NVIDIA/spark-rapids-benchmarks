@@ -247,6 +247,18 @@ python nds_gen_query_stream.py $TPCDS_HOME/query_templates 3000 ./query_streams 
 
 ## Benchmark Runner
 
+### Build Dependencies
+There's a customized Spark listener used to track the Spark task status e.g. success or failed
+or success with retry. The results will be recorded at the json summary files when all jobs are
+finished. This is often used for test or query monitoring purpose.
+
+To build:
+```
+cd jvm_listener
+mvn package
+```
+`nds-benchmark-listener-1.0-SNAPSHOT.jar` will be generated in `jvm_listener/target` folder.
+
 ### Power Run
 
 _After_ user generates query streams, Power Run can be executed using one of them by submitting `nds_power.py` to Spark.
@@ -309,10 +321,6 @@ time.csv \
 --output_prefix /data/query_output \
 --output_format parquet
 ```
-
-Note there's a customized Spark listener used to track the Spark task status e.g. success or failed 
-or success with retry. The results will be recorded at the json summary files when all jobs are
-finished. This is often used for test or query monitoring purpose.
 
 ### Throughput Run
 Throughput Run simulates the scenario that multiple query sessions are running simultaneously in
