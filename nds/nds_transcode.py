@@ -137,7 +137,7 @@ def transcode(args):
     session_builder = pyspark.sql.SparkSession.builder
     if args.output_format == "iceberg":
         session_builder.config("spark.sql.catalog.spark_catalog.warehouse", args.output_prefix)
-    if args.output_format == "delta":
+    if args.output_format == "delta" and not args.delta_unmanaged:
         session_builder.config("spark.sql.warehouse.dir", args.output_prefix)
         session_builder.config("spark.sql.catalogImplementation", "hive")
     session = session_builder.appName(f"NDS - transcode - {args.output_format}").getOrCreate()
