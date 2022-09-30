@@ -111,10 +111,6 @@ def create_spark_session(valid_queries, warehouse_path, warehouse_type):
     spark_session_builder = SparkSession.builder
     if warehouse_type == "iceberg":
         spark_session_builder.config("spark.sql.catalog.spark_catalog.warehouse", warehouse_path)
-    elif warehouse_type == "delta":
-        # TODO: find a way to set the warehouse path in Spark config.
-        # The following config doesn't work for Delta Lake warehouse, but no harm. So keep it.
-        spark_session_builder.config("spark.sql.warehouse.dir", warehouse_path)
     spark_session = spark_session_builder.appName(app_name).getOrCreate()
     return spark_session
 
