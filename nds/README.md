@@ -9,7 +9,7 @@ comply with the TPC-DS Benchmarks.
 
 NDS is licensed under Apache License, Version 2.0.
 
-Additionally, certain files in NDS are licensed subject to the accompanying [TPC EULA](TPC%20EULA.txt) (also 
+Additionally, certain files in NDS are licensed subject to the accompanying [TPC EULA](../TPC%20EULA.txt) (also
 available at http://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp).  Files subject to the TPC 
 EULA are identified as such within the files.
 
@@ -354,7 +354,7 @@ update operations cannot be done atomically on raw Parquet/Orc files, so we use
 [Iceberg](https://iceberg.apache.org/) as dataset metadata manager to overcome the issue.
 
 Enabling Iceberg requires additional configuration. Please refer to [Iceberg Spark](https://iceberg.apache.org/docs/latest/getting-started/)
-for details. We also provide a Spark submit template with necessary Iceberg configs: [maintenance.template](./maintenance.template)
+for details. We also provide a Spark submit template with necessary Iceberg configs: [maintenance_iceberg.template](./maintenance_iceberg.template)
 
 The data maintenance queries are in [data_maintenance](./data_maintenance) folder. `DF_*.sql` are
 DELETE queries while `LF_*.sql` are INSERT queries.
@@ -391,7 +391,7 @@ optional arguments:
 
 An example command to run only _LF_CS_ and _DF_CS_ functions:
 ```
-./spark-submit-template maintenance.template \
+./spark-submit-template maintenance_iceberg.template \
 nds_maintenance.py \
 update_data_sf3k \
 ./data_maintenance \
@@ -457,7 +457,7 @@ generated previously.
 
 Example command to run the benchmark:
 ```
-usage: nds_bench.py [-h] yaml_config
+usage: python nds_bench.py [-h] yaml_config
 
 positional arguments:
   yaml_config  yaml config file for the benchmark
