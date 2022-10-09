@@ -183,7 +183,8 @@ def run_query_stream(input_prefix,
                      output_format="parquet",
                      json_summary_folder=None,
                      delta_unmanaged=False,
-                     keep_sc=False):
+                     keep_sc=False,
+                     hive_external=False):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
 
@@ -224,7 +225,7 @@ def run_query_stream(input_prefix,
         # Register tables for Delta Lake. This is only needed for unmanaged tables.
         execution_time_list = register_delta_tables(spark_session, input_prefix, execution_time_list)
     spark_app_id = spark_session.sparkContext.applicationId
-    if input_format != 'iceberg' and input_format != 'delta':
+    if input_format != 'iceberg' and input_format != 'delta' and not hive_external:
         execution_time_list = setup_tables(spark_session, input_prefix, input_format, use_decimal,
                                            execution_time_list)
 
@@ -303,7 +304,7 @@ if __name__ == "__main__":
                         'Certain types are not fully supported by GPU reading, please refer to ' +
                         'https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md ' +
                         'for more details.',
-                        choices=['parquet', 'orc', 'avro', 'csv', 'json', 'iceberg', 'delta'],
+                        choices=['parquet', 'orc', 'avro', 'csv', 'json', 'iceberg', 'delta', 'hive'],
                         default='parquet')
     parser.add_argument('--output_prefix',
                         help='text to prepend to every output file (e.g., "hdfs:///ds-parquet")')
@@ -328,6 +329,10 @@ if __name__ == "__main__":
                         help='Keep SparkContext alive after running all queries. This is a ' +
                         'limitation on Databricks runtime environment. User should always attach ' +
                         'this flag when running on Databricks.')
+    parser.add_argument('--hive',
+                        action='store_true',
+                        help='use table meta information in Hive metastore directly without ' +
+                        'registering temp views.')
 
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
@@ -341,4 +346,5 @@ if __name__ == "__main__":
                      args.output_format,
                      args.json_summary_folder,
                      args.delta_unmanaged,
-                     args.keep_sc)
+                     args.keep_sc,
+                     args.hive)
