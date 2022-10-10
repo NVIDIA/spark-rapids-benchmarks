@@ -304,7 +304,7 @@ if __name__ == "__main__":
                         'Certain types are not fully supported by GPU reading, please refer to ' +
                         'https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md ' +
                         'for more details.',
-                        choices=['parquet', 'orc', 'avro', 'csv', 'json', 'iceberg', 'delta', 'hive'],
+                        choices=['parquet', 'orc', 'avro', 'csv', 'json', 'iceberg', 'delta'],
                         default='parquet')
     parser.add_argument('--output_prefix',
                         help='text to prepend to every output file (e.g., "hdfs:///ds-parquet")')
