@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from pyspark import SparkContext
 from pyspark.java_gateway import ensure_callback_server_started
 
