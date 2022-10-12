@@ -22,7 +22,7 @@ source base.template
 export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
 export ICEBERG_WAREHOUSE=${ICEBERG_WAREHOUSE:-/data/iceberg-warehouse}
 
-export SPARK_CONF=("--master" "yarn"
+export SPARK_CONF=("--master" "${SPARK_MASTER}"
                    "--deploy-mode" "client"
                    "--conf" "spark.driver.maxResultSize=2GB"
                    "--conf" "spark.driver.memory=${DRIVER_MEMORY}"
