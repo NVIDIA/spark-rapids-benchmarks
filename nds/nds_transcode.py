@@ -66,7 +66,8 @@ def store(session,
           iceberg_write_format,
           compression,
           prefix="",
-          delta_unmanaged=False):
+          delta_unmanaged=False,
+          hive_external=False):
     """Create Iceberg tables by CTAS
 
     Args:
@@ -126,13 +127,21 @@ def store(session,
             writer = df.write
             if compression:
                 writer = writer.option('compression', compression)
-            writer.format(output_format).mode(
-                output_mode).partitionBy(TABLE_PARTITIONING[filename]).save(data_path)
+            writer = writer.format(output_format).mode(
+                output_mode).partitionBy(TABLE_PARTITIONING[filename])
+            if not hive_external:
+                writer.save(data_path)
+            else:
+                writer.saveAsTable(filename, path=data_path)
         else:
             writer = df.coalesce(1).write
             if compression:
                 writer = writer.option('compression', compression)
-            writer.format(output_format).mode(output_mode).save(data_path)
+            writer = writer.format(output_format).mode(output_mode)
+            if not hive_external:
+                writer.save(data_path)
+            else:
+                writer.saveAsTable(filename, path=data_path)
 
 def transcode(args):
     session_builder = pyspark.sql.SparkSession.builder
@@ -175,7 +184,8 @@ def transcode(args):
                           args.iceberg_write_format,
                           args.compression,
                           args.output_prefix,
-                          args.delta_unmanaged),
+                          args.delta_unmanaged,
+                          args.hive),
             number=1)
         
     end_time = datetime.now()
@@ -270,5 +280,10 @@ if __name__ == "__main__":
         action='store_true',
         help='Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without ' +
         'leveraging a Metastore service.')
+    parser.add_argument(
+        '--hive',
+        action='store_true',
+        help='create Hive external tables for the converted data.'
+    )
     args = parser.parse_args()
     transcode(args)
