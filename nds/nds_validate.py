@@ -239,7 +239,7 @@ def update_summary(prefix, unmatch_queries):
         prefix (str): folder of the json summary files
         unmatch_queries ([str]): list of queries that failed validation
     """
-    if not os.path.exists(args.json_summary_folder):
+    if not os.path.exists(prefix):
         raise Exception("The json summary folder doesn't exist.")
     print(f"Updating queryValidationStatus in folder {prefix}.")
     for query_name in query_dict.keys():
