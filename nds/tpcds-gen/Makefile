@@ -14,7 +14,9 @@ target/tools/dsdgen: check-env
 	mkdir -p target/
 	cp patches/*.patch $(TPCDS_HOME)/
 	# apply patches to both source code and templates
-	cd $(TPCDS_HOME); cat *.patch | patch -p1
+	cd $(TPCDS_HOME);
+	-cat *.patch | patch -R -p1
+	cat *.patch | patch -p1
 	test -d target/tools/ || (cd target; cp -r $(TPCDS_HOME)/tools tools)
 	cd target/tools; make clean; make
 
