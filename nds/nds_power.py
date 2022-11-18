@@ -273,10 +273,8 @@ def run_query_stream(input_prefix,
 
     # write to local csv file
     header = ["application_id", "query", "time/milliseconds"]
-    with open(time_log_output_path, 'w', encoding='UTF8') as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        writer.writerows(execution_time_list)
+    time_df = spark_session.createDataFrame(data=execution_time_list, schema = header)
+    time_df.write.csv(time_log_output_path)
 
 def load_properties(filename):
     myvars = {}
