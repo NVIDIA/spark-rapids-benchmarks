@@ -39,6 +39,7 @@ from pyspark.sql import SparkSession
 from pyspark.conf import SparkConf
 from PysparkBenchReport import PysparkBenchReport
 from pyspark.sql import DataFrame
+from pyspark.sql.types import StructType,StructField, StringType, DoubleType
 
 from check import check_json_summary_folder, check_version
 from nds_gen_query_stream import split_special_query
@@ -232,7 +233,7 @@ def run_query_stream(input_prefix,
 
     check_json_summary_folder(json_summary_folder)
     # Run query
-    power_start = time.time()
+    power_start = int(time.time())
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
         spark_session.sparkContext.setJobGroup(query_name, query_name)
@@ -254,7 +255,7 @@ def run_query_stream(input_prefix,
             else:
                 summary_prefix =  os.path.join(json_summary_folder, '')
             q_report.write_summary(query_name, prefix=summary_prefix)
-    power_end = time.time()
+    power_end = int(time.time())
     power_elapse = int((power_end - power_start)*1000)
     if not keep_sc:
         spark_session.sparkContext.stop()
@@ -271,10 +272,13 @@ def run_query_stream(input_prefix,
     execution_time_list.append(
         (spark_app_id, "Total Time", total_elapse))
 
-    # write to local csv file
+    # write to csv file for easy access, especially for cloud environment
     header = ["application_id", "query", "time/milliseconds"]
+    spark_session = SparkSession.builder.getOrCreate()
     time_df = spark_session.createDataFrame(data=execution_time_list, schema = header)
-    time_df.write.csv(time_log_output_path)
+    # show in driver log
+    time_df.show()
+    time_df.coalesce(1).write.csv(time_log_output_path)
 
 def load_properties(filename):
     myvars = {}
