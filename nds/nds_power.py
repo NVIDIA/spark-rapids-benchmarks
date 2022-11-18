@@ -39,7 +39,6 @@ from pyspark.sql import SparkSession
 from pyspark.conf import SparkConf
 from PysparkBenchReport import PysparkBenchReport
 from pyspark.sql import DataFrame
-from pyspark.sql.types import StructType,StructField, StringType, DoubleType
 
 from check import check_json_summary_folder, check_version
 from nds_gen_query_stream import split_special_query
