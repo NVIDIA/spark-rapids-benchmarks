@@ -293,6 +293,9 @@ optional arguments:
   --delta_unmanaged     Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without leveraging a
                         Metastore service
   --hive                use table meta information in Hive metastore directly without registering temp views.
+  --sub_queries SUB_QUERIES
+                        comma separated list of queries to run. If not specified, all queries in the stream file will be run. e.g. "query1,query2,query3". Note, use "_part1" and "_part2" suffix for the following query names: query14, query23, query24, query39. e.g. query14_part1,
+                        query39_part2
 ```
 
 Example command to submit nds_power.py by spark-submit-template utility:

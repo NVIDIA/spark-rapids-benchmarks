@@ -143,3 +143,10 @@ def check_json_summary_folder(json_summary_folder):
                 raise Exception(f"json_summary_folder {json_summary_folder} is not empty. " +
                                 "There may be already some json files there. Please clean the folder " +
                                 "or specify another one.")
+
+def check_query_subset_exists(query_dict, subset_list):
+    """check if the query subset exists in the query dictionary"""
+    for q in subset_list:
+        if q not in query_dict.keys():
+            raise Exception(f"Query {q} is not in the query dictionary. Please check the query subset.")
+    return True
