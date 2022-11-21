@@ -214,7 +214,7 @@ User can also use `spark-submit` to submit `nds_transcode.py` directly.
 We provide two basic templates for GPU run(convert_submit_gpu.template) and CPU run(convert_submit_cpu.template).
 To enable GPU run, user needs to download the following jar.
 
-[spark-rapids jar](https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.06.0/rapids-4-spark_2.12-22.06.0.jar)
+[spark-rapids jar](https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.10.0/rapids-4-spark_2.12-22.10.0.jar)
 
 After that, please set environment variable `SPARK_RAPIDS_PLUGIN_JAR` to the path where the jars are
 downloaded to in spark submit templates.
