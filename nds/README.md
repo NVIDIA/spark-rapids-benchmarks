@@ -16,7 +16,7 @@ EULA are identified as such within the files.
 
 You may not use NDS except in compliance with the Apache License, Version 2.0 and the TPC EULA.
 
-## prerequisites
+## Prerequisites
 
 1. python >= 3.6
 2. Necessary libraries
@@ -74,7 +74,7 @@ When you hope to run multiple steps of NDS, you just need to modify `base.templa
 
 ## Data Generation
 
-### build the jar for data generation
+### Build the jar for data generation
 
 ```bash
 cd tpcds-gen
