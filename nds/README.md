@@ -1,4 +1,5 @@
 # NDS v2.0 Automation
+
 ## Disclaimer
 
 NDS is derived from the TPC-DS Benchmarks and as such any results obtained using NDS are not
@@ -10,50 +11,57 @@ comply with the TPC-DS Benchmarks.
 NDS is licensed under Apache License, Version 2.0.
 
 Additionally, certain files in NDS are licensed subject to the accompanying [TPC EULA](../TPC%20EULA.txt) (also
-available at http://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp).  Files subject to the TPC 
+available at [tpc.org](http://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp). Files subject to the TPC
 EULA are identified as such within the files.
 
 You may not use NDS except in compliance with the Apache License, Version 2.0 and the TPC EULA.
 
-
-## prerequisites:
+## Prerequisites
 
 1. python >= 3.6
-2. Necessary libraries 
-    ```
+2. Necessary libraries
+
+    ```bash
     sudo locale-gen en_US.UTF-8
     sudo apt install openjdk-8-jdk-headless gcc make flex bison byacc maven
     ```
+
 3. TPC-DS Tools
 
     User must download TPC-DS Tools from [official TPC website](https://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp). The tool will be downloaded as a zip package with a random guid string prefix.
     After unzipping it, a folder called `DSGen-software-code-3.2.0rc1` will be seen.
 
     User must set a system environment variable `TPCDS_HOME` pointing to this directory. e.g.
-    ```
+
+    ```bash
     export TPCDS_HOME=/PATH/TO/YOUR/DSGen-software-code-3.2.0rc1
     ```
+
     This variable will help find the TPC-DS Tool when building essential component for this repository.
 
 ## Use spark-submit-template with template
+
 To help user run NDS, we provide a template to define the main Spark configs for spark-submit command.
 User can use different templates to run NDS with different configurations for different environment.
 We create [spark-submit-template](./spark-submit-template), which accepts a template file and
 submit the Spark job with the configs defined in the template file.
 
 Example command to submit via `spark-submit-template` utility:
-```
+
+```bash
 ./spark-submit-template convert_submit_cpu.template \
 nds_transcode.py  raw_sf3k  parquet_sf3k report.txt
 ```
 
 We give 3 types of template files used in different steps of NDS:
+
 1. convert_submit_*.template for converting the data by using nds_transcode.py
 2. maintenance_*.template for data maintenance by using nds_maintenance.py
 3. power_run_*.template for power run by using nds_power.py
 
 We predefine different template files for different environment.
 For example, we provide below template files to run nds_transcode.py for different environment:
+
 * `convert_submit_cpu.template` is for Spark CPU cluster
 * `convert_submit_cpu_delta.template` is for Spark CPU cluster with DeltaLake
 * `convert_submit_cpu_iceberg.template` is for Spark CPU cluster with Iceberg
@@ -64,24 +72,41 @@ We define a [base.template](./base.template) to help you define some basic varia
 And all the other templates will source `base.template` to get the basic variables.
 When you hope to run multiple steps of NDS, you just need to modify `base.template` to fit for your cluster.
 
-
 ## Data Generation
 
-### build the jar for data generation:
-```
+### Build the jar for data generation
+
+```bash
 cd tpcds-gen
 make
 ```
-Then two jars will be built at:
+
+Note that if your OS's default `gcc` version is 10+ the most recent version of
+TPC-DS Tools 3.2 does not link due to errors such as:
+
+```text
+/usr/bin/ld: s_purchase.o:/home/gshegalov/gits/NVIDIA/spark-rapids-benchmarks/nds/tpcds-gen/target/tools/s_purchase.c:55: multiple definition of `nItemIndex'; s_catalog_order.o:/home/gshegalov/gits/NVIDIA/spark-rapids-benchmarks/nds/tpcds-gen/target/tools/s_catalog_order.c:56: first defined here
 ```
+
+as a result of defaulting to [`-fno-common`](https://gcc.gnu.org/gcc-10/porting_to.html#common).
+As a workaround re-execute make in `tpcds-gen`:
+
+```bash
+make clean all LINUX_CC='gcc -fcommon'
+```
+
+Then two jars will be built at:
+
+```text
 ./target/tpcds-gen-1.0-SNAPSHOT.jar
 ./target/lib/dsdgen.jar
 ```
 
 ### Generate data
 
-How to generate data to local or HDFS:
-```
+How to generate data to local or HDFS
+
+```bash
 $ python nds_gen_data.py -h
 usage: nds_gen_data.py [-h] [--range RANGE] [--overwrite_output] {local,hdfs} scale parallel data_dir
 positional arguments:
@@ -103,10 +128,10 @@ optional arguments:
 ```
 
 Example command:
-```
+
+```bash
 python nds_gen_data.py hdfs 100 100 /data/raw_sf100 --overwrite_output
 ```
-
 
 ### Convert CSV to Parquet or Other data sources
 
@@ -142,9 +167,9 @@ when you are about to shutdown the Metastore service.
 For [unmanaged tables](https://docs.databricks.com/lakehouse/data-objects.html#what-is-an-unmanaged-table),
 user doesn't need to create the Metastore service,  appending `--delta_unmanaged` to arguments will be enough.
 
-
 Arguments for `nds_transcode.py`:
-```
+
+```bash
 python nds_transcode.py -h
 usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--output_format {parquet,orc,avro,json,iceberg,delta}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update] [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION] [--delta_unmanaged] [--hive]
                         input_prefix output_prefix report_file
@@ -178,7 +203,8 @@ optional arguments:
 ```
 
 Example command to submit via `spark-submit-template` utility:
-```
+
+```bash
 ./spark-submit-template convert_submit_gpu.template \
 nds_transcode.py  raw_sf3k  parquet_sf3k report.txt
 ```
@@ -188,7 +214,7 @@ User can also use `spark-submit` to submit `nds_transcode.py` directly.
 We provide two basic templates for GPU run(convert_submit_gpu.template) and CPU run(convert_submit_cpu.template).
 To enable GPU run, user needs to download the following jar.
 
-- spark-rapids jar: https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.06.0/rapids-4-spark_2.12-22.06.0.jar
+[spark-rapids jar](https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.10.0/rapids-4-spark_2.12-22.10.0.jar)
 
 After that, please set environment variable `SPARK_RAPIDS_PLUGIN_JAR` to the path where the jars are
 downloaded to in spark submit templates.
@@ -208,18 +234,18 @@ When converting CSV to Parquet data, the script will add data partitioning to so
 | web_returns        | wr_returned_date_sk |
 
 ## Query Generation
+
 The [templates.patch](./tpcds-gen/patches/templates.patch) that contains necessary modifications to make NDS queries runnable in Spark will be applied automatically in the build step. The final query templates will be in folder `$TPCDS_HOME/query_templates` after the build process.
 
 we applied the following changes to original templates released in TPC-DS v3.2.0:
 
-- add `interval` keyword before all `date interval add` mark `+` for syntax compatibility in Spark SQL.
+* add `interval` keyword before all `date interval add` mark `+` for syntax compatibility in Spark SQL.
 
-- convert `"` mark to `` ` `` mark for syntax compatibility in Spark SQL.
-
+* convert `"` mark to `` ` `` mark for syntax compatibility in Spark SQL.
 
 ### Generate Specific Query or Query Streams
 
-```
+```text
 usage: nds_gen_query_stream.py [-h] (--template TEMPLATE | --streams STREAMS)
                                template_dir scale output_dir
 
@@ -234,33 +260,36 @@ optional arguments:
                        is often used for test purpose.
   --streams STREAMS    generate how many query streams. This argument is mutually exclusive with --template.
   --rngseed RNGSEED    seed the random generation seed.
-
-
 ```
 
 Example command to generate one query using query1.tpl:
-```
+
+```bash
 python nds_gen_query_stream.py $TPCDS_HOME/query_templates 3000 ./query_1 --template query1.tpl
 ```
 
-Example command to generate 10 query streams each one of which contains all NDS queries but in 
+Example command to generate 10 query streams each one of which contains all NDS queries but in
 different order:
-```
+
+```bash
 python nds_gen_query_stream.py $TPCDS_HOME/query_templates 3000 ./query_streams --streams 10
 ```
 
 ## Benchmark Runner
 
 ### Build Dependencies
+
 There's a customized Spark listener used to track the Spark task status e.g. success or failed
 or success with retry. The results will be recorded at the json summary files when all jobs are
 finished. This is often used for test or query monitoring purpose.
 
 To build:
-```
+
+```bash
 cd jvm_listener
 mvn package
 ```
+
 `nds-benchmark-listener-1.0-SNAPSHOT.jar` will be generated in `jvm_listener/target` folder.
 
 ### Power Run
@@ -268,7 +297,8 @@ mvn package
 _After_ user generates query streams, Power Run can be executed using one of them by submitting `nds_power.py` to Spark.
 
 Arguments supported by `nds_power.py`:
-```
+
+```text
 usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json,iceberg,delta}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] [--json_summary_folder JSON_SUMMARY_FOLDER] [--delta_unmanaged] [--hive] input_prefix query_stream_file time_log
 
 positional arguments:
@@ -296,7 +326,8 @@ optional arguments:
 ```
 
 Example command to submit nds_power.py by spark-submit-template utility:
-```
+
+```bash
 ./spark-submit-template power_run_gpu.template \
 nds_power.py \
 parquet_sf3k \
@@ -315,9 +346,9 @@ double quotes in the template file. Please follow the format in [power_run_gpu.t
 
 User can define the `properties` file like [aqe-on.properties](./properties/aqe-on.properties). The properties will be passed to the submitted Spark job along with the configurations defined in the template file. User can define some common properties in the template file and put some other properties that usually varies in the property file.
 
-
 The command above will use `collect()` action to trigger Spark job for each query. It is also supported to save query output to some place for further verification. User can also specify output format e.g. csv, parquet or orc:
-```
+
+```bash
 ./spark-submit-template power_run_gpu.template \
 nds_power.py \
 parquet_sf3k \
@@ -328,6 +359,7 @@ time.csv \
 ```
 
 ### Throughput Run
+
 Throughput Run simulates the scenario that multiple query sessions are running simultaneously in
 Spark.
 
@@ -336,7 +368,7 @@ We provide an executable bash utility `nds-throughput` to do Throughput Run.
 Example command for Throughput Run that runs _2_ Power Run in parallel with stream file _query_1.sql_
 and _query_2.sql_ and produces csv log for execution time _time_1.csv_ and _time_2.csv_.
 
-```
+```bash
 ./nds-throughput 1,2 \
 ./spark-submit-template power_run_gpu.template \
 nds_power.py \
@@ -347,10 +379,11 @@ time_'{}'.csv
 
 When providing `spark-submit-template` to Throughput Run, please do consider the computing resources
 in your environment to make sure all Spark job can get necessary resources to run at the same time,
-otherwise some query application may be in _WAITING_ status(which can be observed from Spark UI or 
+otherwise some query application may be in _WAITING_ status(which can be observed from Spark UI or
 Yarn Resource Manager UI) until enough resources are released.
 
 ### Data Maintenance
+
 Data Maintenance performance data update over existed dataset including data INSERT and DELETE. The
 update operations cannot be done atomically on raw Parquet/Orc files, so we use
 [Iceberg](https://iceberg.apache.org/) as dataset metadata manager to overcome the issue.
@@ -361,13 +394,14 @@ for details. We also provide a Spark submit template with necessary Iceberg conf
 The data maintenance queries are in [data_maintenance](./data_maintenance) folder. `DF_*.sql` are
 DELETE queries while `LF_*.sql` are INSERT queries.
 
-Note: The Delete functions in Data Maintenance cannot run successfully in Spark 3.2.0 and 3.2.1 due 
+Note: The Delete functions in Data Maintenance cannot run successfully in Spark 3.2.0 and 3.2.1 due
 to a known Spark [issue](https://issues.apache.org/jira/browse/SPARK-39454). User can run it in Spark 3.2.2
-or later. More details including work-around for version 3.2.0 and 3.2.1 could be found in this 
+or later. More details including work-around for version 3.2.0 and 3.2.1 could be found in this
 [link](https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1141956487)
 
 Arguments supported for data maintenance:
-```
+
+```text
 usage: nds_maintenance.py [-h] [--maintenance_queries MAINTENANCE_QUERIES] [--property_file PROPERTY_FILE] [--json_summary_folder JSON_SUMMARY_FOLDER] [--warehouse_type {iceberg,delta}] [--delta_unmanaged] warehouse_path refresh_data_path maintenance_queries_folder time_log
 
 positional arguments:
@@ -392,7 +426,8 @@ optional arguments:
 ```
 
 An example command to run only _LF_CS_ and _DF_CS_ functions:
-```
+
+```bash
 ./spark-submit-template maintenance_iceberg.template \
 nds_maintenance.py \
 update_data_sf3k \
@@ -403,15 +438,18 @@ time.csv \
 ```
 
 Note: to make the maintenance query compatible in Spark, we made the following changes:
+
 1. change `CREATE VIEW` to `CREATE TEMP VIEW` in all INSERT queries due to [[SPARK-29630]](https://github.com/apache/spark/pull/26361)
 2. change data type for column `sret_ticket_number` in table `s_store_returns` from `char(20)` to `bigint` due to [known issue](https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1138379596)
 
 ## Data Validation
+
 To validate query output between Power Runs with and without GPU, we provide [nds_validate.py](nds_validate.py)
 to do the job.
 
 Arguments supported by `nds_validate.py`:
-```
+
+```text
 usage: nds_validate.py [-h] [--input1_format INPUT1_FORMAT] [--input2_format INPUT2_FORMAT] [--max_errors MAX_ERRORS] [--epsilon EPSILON] [--ignore_ordering] [--use_iterator] [--floats] --json_summary_folder JSON_SUMMARY_FOLDER input1 input2 query_stream_file
 
 positional arguments:
@@ -439,7 +477,8 @@ optional arguments:
 ```
 
 Example command to compare output data of two queries:
-```
+
+```bash
 python nds_validate.py \
 query_output_cpu \
 query_output_gpu \
@@ -448,6 +487,7 @@ query_output_gpu \
 ```
 
 ## Whole Process NDS Benchmark
+
 [nds_bench.py](./nds_bench.py) along with its yaml config file [bench.yml](./bench.yml) is the script
 to run the whole process NDS benchmark to get final metrics.
 User needs to fill in the config file to specify the parameters of the benchmark.
@@ -458,10 +498,12 @@ a part of the benchmark may cause metrics calculation failure in the end if ther
 generated previously.
 
 Example command to run the benchmark:
-```
+
+```text
 usage: python nds_bench.py [-h] yaml_config
 
 positional arguments:
   yaml_config  yaml config file for the benchmark
 ```
+
 ### NDS2.0 is using source code from TPC-DS Tool V3.2.0
