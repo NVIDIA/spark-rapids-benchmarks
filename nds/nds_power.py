@@ -239,7 +239,8 @@ def run_query_stream(input_prefix,
                                            execution_time_list)
 
     check_json_summary_folder(json_summary_folder)
-    query_dict = get_query_subset(query_dict, sub_queries)
+    if sub_queries:
+        query_dict = get_query_subset(query_dict, sub_queries)
     # Run query
     power_start = time.time()
     for query_name, q_content in query_dict.items():
