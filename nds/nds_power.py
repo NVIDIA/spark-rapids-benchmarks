@@ -275,8 +275,8 @@ def run_query_stream(input_prefix,
     header = ["application_id", "query", "time/milliseconds"]
     spark_session = SparkSession.builder.getOrCreate()
     time_df = spark_session.createDataFrame(data=execution_time_list, schema = header)
-    # show in driver log
-    time_df.show()
+    # show in driver log, for all queries.
+    time_df.show(150)
     time_df.coalesce(1).write.csv(time_log_output_path)
 
 def load_properties(filename):
