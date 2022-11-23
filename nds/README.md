@@ -323,6 +323,8 @@ optional arguments:
   --delta_unmanaged     Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without leveraging a
                         Metastore service
   --hive                use table meta information in Hive metastore directly without registering temp views.
+  --extra_time_log EXTRA_TIME_LOG
+                        extra path to save time log when running in cloud environment where driver node/pod cannot be accessed easily. User needs to add essential extra jars and configurations to access different cloud storage systems. e.g. s3, gs etc.
   --sub_queries SUB_QUERIES
                         comma separated list of queries to run. If not specified, all queries in the stream file will be run. e.g. "query1,query2,query3". Note, use "_part1" and "_part2" suffix for the following query names: query14, query23, query24, query39. e.g. query14_part1,
                         query39_part2

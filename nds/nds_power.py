@@ -356,7 +356,7 @@ if __name__ == "__main__":
                         'registering temp views.')
     parser.add_argument('--extra_time_log',
                         help='extra path to save time log when running in cloud environment where '+
-                        'driver node/pod cannot be accessed easily. User need to add essential extra' +
+                        'driver node/pod cannot be accessed easily. User needs to add essential extra ' +
                         'jars and configurations to access different cloud storage systems. ' +
                         'e.g. s3, gs etc.')
 
