@@ -345,23 +345,24 @@ if __name__ == "__main__":
                         help='use table meta information in Hive metastore directly without ' +
                         'registering temp views.')
     parser.add_argument('--sub_queries',
-                        type=lambda s: s.strip().split(','),
+                        type=lambda s: [x.strip() for x in s.split(',')],
                         help='comma separated list of queries to run. If not specified, all queries ' +
                         'in the stream file will be run. e.g. "query1,query2,query3". Note, use ' +
                         '"_part1" and "_part2" suffix for the following query names: ' +
                         'query14, query23, query24, query39. e.g. query14_part1, query39_part2')
     args = parser.parse_args()
-    query_dict = gen_sql_from_stream(args.query_stream_file)
-    run_query_stream(args.input_prefix,
-                     args.property_file,
-                     query_dict,
-                     args.time_log,
-                     args.sub_queries,
-                     args.input_format,
-                     not args.floats,
-                     args.output_prefix,
-                     args.output_format,
-                     args.json_summary_folder,
-                     args.delta_unmanaged,
-                     args.keep_sc,
-                     args.hive)
+    print(args.sub_queries)
+    # query_dict = gen_sql_from_stream(args.query_stream_file)
+    # run_query_stream(args.input_prefix,
+    #                  args.property_file,
+    #                  query_dict,
+    #                  args.time_log,
+    #                  args.sub_queries,
+    #                  args.input_format,
+    #                  not args.floats,
+    #                  args.output_prefix,
+    #                  args.output_format,
+    #                  args.json_summary_folder,
+    #                  args.delta_unmanaged,
+    #                  args.keep_sc,
+    #                  args.hive)
