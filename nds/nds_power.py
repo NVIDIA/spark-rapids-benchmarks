@@ -345,7 +345,7 @@ if __name__ == "__main__":
                         help='use table meta information in Hive metastore directly without ' +
                         'registering temp views.')
     parser.add_argument('--sub_queries',
-                        type=lambda s: s.split(','),
+                        type=lambda s: s.strip().split(','),
                         help='comma separated list of queries to run. If not specified, all queries ' +
                         'in the stream file will be run. e.g. "query1,query2,query3". Note, use ' +
                         '"_part1" and "_part2" suffix for the following query names: ' +
