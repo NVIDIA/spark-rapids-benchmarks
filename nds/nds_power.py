@@ -40,7 +40,7 @@ from pyspark.conf import SparkConf
 from PysparkBenchReport import PysparkBenchReport
 from pyspark.sql import DataFrame
 
-from check import check_json_summary_folder, check_version
+from check import check_json_summary_folder, check_query_subset_exists, check_version
 from nds_gen_query_stream import split_special_query
 from nds_schema import get_schemas
 
@@ -173,11 +173,19 @@ def ensure_valid_column_names(df: DataFrame):
     dedup_col_names = deduplicate(valid_col_names)
     return df.toDF(*dedup_col_names)
 
+def get_query_subset(query_dict, subset):
+    """Get a subset of queries from query_dict.
+    The subset is specified by a list of query names.
+    """
+    check_query_subset_exists(query_dict, subset)
+    return dict((k, query_dict[k]) for k in subset)
+
 
 def run_query_stream(input_prefix,
                      property_file,
                      query_dict,
                      time_log_output_path,
+                     sub_queries,
                      input_format="parquet",
                      use_decimal=True,
                      output_path=None,
@@ -231,6 +239,8 @@ def run_query_stream(input_prefix,
                                            execution_time_list)
 
     check_json_summary_folder(json_summary_folder)
+    if sub_queries:
+        query_dict = get_query_subset(query_dict, sub_queries)
     # Run query
     power_start = time.time()
     for query_name, q_content in query_dict.items():
@@ -334,13 +344,19 @@ if __name__ == "__main__":
                         action='store_true',
                         help='use table meta information in Hive metastore directly without ' +
                         'registering temp views.')
-
+    parser.add_argument('--sub_queries',
+                        type=lambda s: [x.strip() for x in s.split(',')],
+                        help='comma separated list of queries to run. If not specified, all queries ' +
+                        'in the stream file will be run. e.g. "query1,query2,query3". Note, use ' +
+                        '"_part1" and "_part2" suffix for the following query names: ' +
+                        'query14, query23, query24, query39. e.g. query14_part1, query39_part2')
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
     run_query_stream(args.input_prefix,
                      args.property_file,
                      query_dict,
                      args.time_log,
+                     args.sub_queries,
                      args.input_format,
                      not args.floats,
                      args.output_prefix,
