@@ -178,6 +178,7 @@ def run_query_stream(input_prefix,
                      property_file,
                      query_dict,
                      time_log_output_path,
+                     extra_time_log_output_path,
                      input_format="parquet",
                      use_decimal=True,
                      output_path=None,
@@ -271,13 +272,21 @@ def run_query_stream(input_prefix,
     execution_time_list.append(
         (spark_app_id, "Total Time", total_elapse))
 
-    # write to csv file for easy access, especially for cloud environment
     header = ["application_id", "query", "time/milliseconds"]
-    spark_session = SparkSession.builder.getOrCreate()
-    time_df = spark_session.createDataFrame(data=execution_time_list, schema = header)
-    # show in driver log, for all queries.
-    time_df.show(150)
-    time_df.coalesce(1).write.csv(time_log_output_path)
+    # print to driver stdout for quick view
+    print(header)
+    for row in execution_time_list:
+        print(row)
+    # write to local file at driver node
+    with open(time_log_output_path, 'w', encoding='UTF8') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        writer.writerows(execution_time_list)
+    # write to csv in cloud environment
+    if extra_time_log_output_path:
+        spark_session = SparkSession.builder.getOrCreate()
+        time_df = spark_session.createDataFrame(data=execution_time_list, schema = header)
+        time_df.coalesce(1).write.csv(time_log_output_path)
 
 def load_properties(filename):
     myvars = {}
@@ -335,6 +344,11 @@ if __name__ == "__main__":
                         action='store_true',
                         help='use table meta information in Hive metastore directly without ' +
                         'registering temp views.')
+    parser.add_argument('--extra_time_log',
+                        help='extra path to save time log when running in cloud environment where '+
+                        'driver node/pod cannot be accessed easily. User need to add essential extra' +
+                        'jars and configurations to access different cloud storage systems. ' +
+                        'e.g. s3, gs etc.')
 
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
@@ -342,6 +356,7 @@ if __name__ == "__main__":
                      args.property_file,
                      query_dict,
                      args.time_log,
+                     args.extra_time_log,
                      args.input_format,
                      not args.floats,
                      args.output_prefix,
