@@ -351,18 +351,17 @@ if __name__ == "__main__":
                         '"_part1" and "_part2" suffix for the following query names: ' +
                         'query14, query23, query24, query39. e.g. query14_part1, query39_part2')
     args = parser.parse_args()
-    print(args.sub_queries)
-    # query_dict = gen_sql_from_stream(args.query_stream_file)
-    # run_query_stream(args.input_prefix,
-    #                  args.property_file,
-    #                  query_dict,
-    #                  args.time_log,
-    #                  args.sub_queries,
-    #                  args.input_format,
-    #                  not args.floats,
-    #                  args.output_prefix,
-    #                  args.output_format,
-    #                  args.json_summary_folder,
-    #                  args.delta_unmanaged,
-    #                  args.keep_sc,
-    #                  args.hive)
+    query_dict = gen_sql_from_stream(args.query_stream_file)
+    run_query_stream(args.input_prefix,
+                     args.property_file,
+                     query_dict,
+                     args.time_log,
+                     args.sub_queries,
+                     args.input_format,
+                     not args.floats,
+                     args.output_prefix,
+                     args.output_format,
+                     args.json_summary_folder,
+                     args.delta_unmanaged,
+                     args.keep_sc,
+                     args.hive)
