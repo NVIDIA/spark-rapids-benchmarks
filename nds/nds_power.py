@@ -185,6 +185,7 @@ def run_query_stream(input_prefix,
                      property_file,
                      query_dict,
                      time_log_output_path,
+                     extra_time_log_output_path,
                      sub_queries,
                      input_format="parquet",
                      use_decimal=True,
@@ -242,7 +243,7 @@ def run_query_stream(input_prefix,
     if sub_queries:
         query_dict = get_query_subset(query_dict, sub_queries)
     # Run query
-    power_start = time.time()
+    power_start = int(time.time())
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
         spark_session.sparkContext.setJobGroup(query_name, query_name)
@@ -264,7 +265,7 @@ def run_query_stream(input_prefix,
             else:
                 summary_prefix =  os.path.join(json_summary_folder, '')
             q_report.write_summary(query_name, prefix=summary_prefix)
-    power_end = time.time()
+    power_end = int(time.time())
     power_elapse = int((power_end - power_start)*1000)
     if not keep_sc:
         spark_session.sparkContext.stop()
@@ -281,12 +282,21 @@ def run_query_stream(input_prefix,
     execution_time_list.append(
         (spark_app_id, "Total Time", total_elapse))
 
-    # write to local csv file
     header = ["application_id", "query", "time/milliseconds"]
+    # print to driver stdout for quick view
+    print(header)
+    for row in execution_time_list:
+        print(row)
+    # write to local file at driver node
     with open(time_log_output_path, 'w', encoding='UTF8') as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(execution_time_list)
+    # write to csv in cloud environment
+    if extra_time_log_output_path:
+        spark_session = SparkSession.builder.getOrCreate()
+        time_df = spark_session.createDataFrame(data=execution_time_list, schema = header)
+        time_df.coalesce(1).write.csv(extra_time_log_output_path)
 
 def load_properties(filename):
     myvars = {}
@@ -344,6 +354,12 @@ if __name__ == "__main__":
                         action='store_true',
                         help='use table meta information in Hive metastore directly without ' +
                         'registering temp views.')
+    parser.add_argument('--extra_time_log',
+                        help='extra path to save time log when running in cloud environment where '+
+                        'driver node/pod cannot be accessed easily. User needs to add essential extra ' +
+                        'jars and configurations to access different cloud storage systems. ' +
+                        'e.g. s3, gs etc.')
+
     parser.add_argument('--sub_queries',
                         type=lambda s: [x.strip() for x in s.split(',')],
                         help='comma separated list of queries to run. If not specified, all queries ' +
@@ -356,6 +372,7 @@ if __name__ == "__main__":
                      args.property_file,
                      query_dict,
                      args.time_log,
+                     args.extra_time_log,
                      args.sub_queries,
                      args.input_format,
                      not args.floats,
