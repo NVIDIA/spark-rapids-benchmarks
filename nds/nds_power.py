@@ -296,7 +296,7 @@ def run_query_stream(input_prefix,
     if extra_time_log_output_path:
         spark_session = SparkSession.builder.getOrCreate()
         time_df = spark_session.createDataFrame(data=execution_time_list, schema = header)
-        time_df.coalesce(1).write.csv(time_log_output_path)
+        time_df.coalesce(1).write.csv(extra_time_log_output_path)
 
 def load_properties(filename):
     myvars = {}
