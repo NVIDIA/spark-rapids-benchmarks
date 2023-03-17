@@ -150,6 +150,8 @@ def transcode(args):
     if args.output_format == "delta" and not args.delta_unmanaged:
         session_builder.config("spark.sql.warehouse.dir", args.output_prefix)
         session_builder.config("spark.sql.catalogImplementation", "hive")
+    if args.hive:
+        session_builder.enableHiveSupport()
     session = session_builder.appName(f"NDS - transcode - {args.output_format}").getOrCreate()
     session.sparkContext.setLogLevel(args.log_level)
     results = {}
@@ -167,8 +169,8 @@ def transcode(args):
             if t not in trans_tables.keys() :
                 raise Exception(f"invalid table name: {t}. Valid tables are: {schemas.keys()}")
         trans_tables = {t: trans_tables[t] for t in args.tables if t in trans_tables}
-    
-    
+
+
     start_time = datetime.now()
     print(f"Load Test Start Time: {start_time}")
     for fn, schema in trans_tables.items():
@@ -187,7 +189,7 @@ def transcode(args):
                           args.delta_unmanaged,
                           args.hive),
             number=1)
-        
+
     end_time = datetime.now()
     delta = (end_time - start_time).total_seconds()
     print(f"Load Test Finished at: {end_time}")
@@ -195,7 +197,7 @@ def transcode(args):
     # format required at TPC-DS Spec 4.3.1
     end_time_formatted = end_time.strftime("%m%d%H%M%S%f")[:-5]
     print(f"RNGSEED used :{end_time_formatted}")
-    
+
     report_text = ""
     report_text += f"Load Test Time: {delta} seconds\n"
     report_text += f"Load Test Finished at: {end_time}\n"
