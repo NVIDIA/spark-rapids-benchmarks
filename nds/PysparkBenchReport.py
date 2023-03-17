@@ -33,6 +33,7 @@
 import json
 import os
 import time
+import traceback
 from typing import Callable
 from pyspark.sql import SparkSession
 
@@ -54,7 +55,7 @@ class PysparkBenchReport:
             'startTime': None,
             'queryTimes': [],
         }
-        
+
     def report_on(self, fn: Callable, *args):
         """Record a function for its running environment, running status etc. and exclude sentive
         information like tokens, secret and password Generate summary in dict format for it.
@@ -73,7 +74,6 @@ class PysparkBenchReport:
         self.summary['env']['sparkConf'] = spark_conf
         self.summary['env']['sparkVersion'] = self.spark_session.version
         listener = None
-        spark_env = dict(self.spark_session.sparkContext.getConf().getAll())
         try:
             listener = python_listener.PythonListener()
             listener.register()
@@ -92,7 +92,10 @@ class PysparkBenchReport:
                 self.summary['queryStatus'].append("Completed")
         except Exception as e:
             # print the exception to ease debugging
+            print('ERROR BEGIN')
             print(e)
+            traceback.print_tb(e.__traceback__)
+            print('ERROR END')
             end_time = int(time.time() * 1000)
             self.summary['queryStatus'].append("Failed")
             self.summary['exceptions'].append(str(e))
@@ -102,7 +105,7 @@ class PysparkBenchReport:
             if listener is not None:
                 listener.unregister()
             return self.summary
-            
+
     def write_summary(self, query_name, prefix=""):
         """_summary_
 

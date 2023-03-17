@@ -36,7 +36,6 @@ import os
 import time
 from collections import OrderedDict
 from pyspark.sql import SparkSession
-from pyspark.conf import SparkConf
 from PysparkBenchReport import PysparkBenchReport
 from pyspark.sql import DataFrame
 
@@ -142,7 +141,7 @@ def ensure_valid_column_names(df: DataFrame):
         return char.isalpha() or char.isdigit() or char == '_'
 
     def is_valid(column_name):
-        len(column_name) > 0 and is_column_start(column_name[0]) and all(
+        return len(column_name) > 0 and is_column_start(column_name[0]) and all(
             [is_column_part(char) for char in column_name[1:]])
 
     def make_valid(column_name):
