@@ -36,7 +36,6 @@ import os
 import time
 from collections import OrderedDict
 from pyspark.sql import SparkSession
-from pyspark.conf import SparkConf
 from PysparkBenchReport import PysparkBenchReport
 from pyspark.sql import DataFrame
 
@@ -142,9 +141,9 @@ def ensure_valid_column_names(df: DataFrame):
         return char.isalpha() or char.isdigit() or char == '_'
 
     def is_valid(column_name):
-        len(column_name) > 0 and is_column_start(column_name[0]) and all(
+        return len(column_name) > 0 and is_column_start(column_name[0]) and all(
             [is_column_part(char) for char in column_name[1:]])
-        
+
     def make_valid(column_name):
         # To simplify: replace all invalid char with '_'
         valid_name = ''
@@ -158,7 +157,7 @@ def ensure_valid_column_names(df: DataFrame):
             else:
                 valid_name += char
         return valid_name
-    
+
     def deduplicate(column_names):
         # In some queries like q35, it's possible to get columns with the same name. Append a number
         # suffix to resolve this problem.
@@ -217,7 +216,7 @@ def run_query_stream(input_prefix,
         app_name = "NDS - " + list(query_dict.keys())[0]
     else:
         app_name = "NDS - Power Run"
-    # Execute Power Run or Specific query in Spark 
+    # Execute Power Run or Specific query in Spark
     # build Spark Session
     session_builder = SparkSession.builder
     if property_file:
