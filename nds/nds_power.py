@@ -361,7 +361,7 @@ if __name__ == "__main__":
                         'registering temp views.')
     parser.add_argument('--database',
                         default='default',
-                        help='use this database instead of default')
+                        help='use this database instead of default, used together with hive')
     parser.add_argument('--extra_time_log',
                         help='extra path to save time log when running in cloud environment where '+
                         'driver node/pod cannot be accessed easily. User needs to add essential extra ' +
