@@ -198,7 +198,7 @@ def run_query_stream(input_prefix,
     for easy accesibility. TempView Creation time is also recorded.
 
     Args:
-        input_prefix (str): path of input data or warehouse if input_format is "iceberg".
+        input_prefix (str): path of input data or warehouse if input_format is "iceberg" or hive_external=True.
         query_dict (OrderedDict): ordered dict {query_name: query_content} of all TPC-DS queries runnable in Spark
         time_log_output_path (str): path of the log that contains query execution time, both local
                                     and HDFS path are supported.
@@ -234,7 +234,7 @@ def run_query_stream(input_prefix,
     spark_session = session_builder.appName(
         app_name).getOrCreate()
     if hive_external:
-        spark_session.catalog.setCurrentDatabase(args.database)
+        spark_session.catalog.setCurrentDatabase(input_prefix)
 
     if input_format == 'delta' and delta_unmanaged:
         # Register tables for Delta Lake. This is only needed for unmanaged tables.
@@ -315,7 +315,7 @@ if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
     parser.add_argument('input_prefix',
                         help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"). ' +
-                        'If input_format is "iceberg", this argument will be regarded as the value of property ' +
+                        'If --hive or if input_format is "iceberg", this argument will be regarded as the value of property ' +
                         '"spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog ' +
                         'session name "spark_catalog" is supported now, customized catalog is not ' +
                         'yet supported. Note if this points to a Delta Lake table, the path must be ' +
@@ -359,9 +359,6 @@ if __name__ == "__main__":
                         action='store_true',
                         help='use table meta information in Hive metastore directly without ' +
                         'registering temp views.')
-    parser.add_argument('--database',
-                        default='default',
-                        help='use this database instead of default, used together with hive')
     parser.add_argument('--extra_time_log',
                         help='extra path to save time log when running in cloud environment where '+
                         'driver node/pod cannot be accessed easily. User needs to add essential extra ' +
