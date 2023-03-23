@@ -153,6 +153,9 @@ def transcode(args):
     if args.hive:
         session_builder.enableHiveSupport()
     session = session_builder.appName(f"NDS - transcode - {args.output_format}").getOrCreate()
+    if args.hive:
+        session.sql(f"CREATE DATABASE IF NOT EXISTS {args.database}")
+        session.catalog.setCurrentDatabase(args.database)
     session.sparkContext.setLogLevel(args.log_level)
     results = {}
 
@@ -286,6 +289,11 @@ if __name__ == "__main__":
         '--hive',
         action='store_true',
         help='create Hive external tables for the converted data.'
+    )
+    parser.add_argument(
+        '--database',
+        help='the name of a database to use instead of `default`, currently applies only to Hive',
+        default="default"
     )
     args = parser.parse_args()
     transcode(args)

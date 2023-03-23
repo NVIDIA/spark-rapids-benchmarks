@@ -233,6 +233,9 @@ def run_query_stream(input_prefix,
 
     spark_session = session_builder.appName(
         app_name).getOrCreate()
+    if hive_external:
+        spark_session.catalog.setCurrentDatabase(args.database)
+
     if input_format == 'delta' and delta_unmanaged:
         # Register tables for Delta Lake. This is only needed for unmanaged tables.
         execution_time_list = register_delta_tables(spark_session, input_prefix, execution_time_list)
@@ -356,6 +359,9 @@ if __name__ == "__main__":
                         action='store_true',
                         help='use table meta information in Hive metastore directly without ' +
                         'registering temp views.')
+    parser.add_argument('--database',
+                        default='default',
+                        help='use this database instead of default')
     parser.add_argument('--extra_time_log',
                         help='extra path to save time log when running in cloud environment where '+
                         'driver node/pod cannot be accessed easily. User needs to add essential extra ' +
