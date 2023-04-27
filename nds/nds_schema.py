@@ -58,8 +58,14 @@ def get_schemas(use_decimal):
     """
     SCHEMAS = {}
 
+    # The specification states that "Identifier means that the column shall be able to hold any
+    # key value generated for that column". Some tables have more rows than others so we can
+    # choose to use different types per table.
+    identifer_int = IntegerType()
+    identifer_long = LongType()
+
     SCHEMAS["customer_address"] = StructType([
-        StructField("ca_address_sk", IntegerType(), nullable=False),
+        StructField("ca_address_sk", identifier_int, nullable=False),
         StructField("ca_address_id", CharType(16), nullable=False),
         StructField("ca_street_number", CharType(10)),
         StructField("ca_street_name", VarcharType(60)),
@@ -75,11 +81,11 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["customer_demographics"] = StructType([
-        StructField("cd_demo_sk", IntegerType(), nullable=False),
+        StructField("cd_demo_sk", identifier_int, nullable=False),
         StructField("cd_gender", CharType(1)),
         StructField("cd_marital_status", CharType(1)),
         StructField("cd_education_status", CharType(20)),
-        StructField("cd_purchase_estimate", IntegerType()),
+        StructField("cd_purchase_estimate", LongType(),
         StructField("cd_credit_rating", CharType(10)),
         StructField("cd_dep_count", LongType()),
         StructField("cd_dep_employed_count", LongType()),
@@ -87,7 +93,7 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["date_dim"] = StructType([
-        StructField("d_date_sk", IntegerType(), nullable=False),
+        StructField("d_date_sk", identifier_int, nullable=False),
         StructField("d_date_id", CharType(16), nullable=False),
         StructField("d_date", DateType()),
         StructField("d_month_seq", LongType()),
@@ -118,7 +124,7 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["warehouse"] = StructType([
-        StructField("w_warehouse_sk", IntegerType(), nullable=False),
+        StructField("w_warehouse_sk", identifier_int, nullable=False),
         StructField("w_warehouse_id", CharType(16), nullable=False),
         StructField("w_warehouse_name", VarcharType(20)),
         StructField("w_warehouse_sq_ft", LongType()),
@@ -135,7 +141,7 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["ship_mode"] = StructType([
-        StructField("sm_ship_mode_sk", IntegerType(), nullable=False),
+        StructField("sm_ship_mode_sk", identifier_int, nullable=False),
         StructField("sm_ship_mode_id", CharType(16), nullable=False),
         StructField("sm_type", CharType(30)),
         StructField("sm_code", CharType(10)),
@@ -144,7 +150,7 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["time_dim"] = StructType([
-        StructField("t_time_sk", IntegerType(), nullable=False),
+        StructField("t_time_sk", identifier_int, nullable=False),
         StructField("t_time_id", CharType(16), nullable=False),
         StructField("t_time", LongType(), nullable=False),
         StructField("t_hour", LongType()),
@@ -157,19 +163,19 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["reason"] = StructType([
-        StructField("r_reason_sk", IntegerType(), nullable=False),
+        StructField("r_reason_sk", identifier_int, nullable=False),
         StructField("r_reason_id", CharType(16), nullable=False),
         StructField("r_reason_desc", CharType(100))
     ])
 
     SCHEMAS["income_band"] = StructType([
-        StructField("ib_income_band_sk", IntegerType(), nullable=False),
+        StructField("ib_income_band_sk", identifier_int, nullable=False),
         StructField("ib_lower_bound", LongType()),
         StructField("ib_upper_bound", LongType())
     ])
 
     SCHEMAS["item"] = StructType([
-        StructField("i_item_sk", IntegerType(), nullable=False),
+        StructField("i_item_sk", identifier_int, nullable=False),
         StructField("i_item_id", CharType(16), nullable=False),
         StructField("i_rec_start_date", DateType()),
         StructField("i_rec_end_date", DateType()),
@@ -194,11 +200,11 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["store"] = StructType([
-        StructField("s_store_sk", IntegerType(), nullable=False),
+        StructField("s_store_sk", identifier_int, nullable=False),
         StructField("s_store_id", CharType(16), nullable=False),
         StructField("s_rec_start_date", DateType()),
         StructField("s_rec_end_date", DateType()),
-        StructField("s_closed_date_sk", IntegerType()),
+        StructField("s_closed_date_sk", identifier_int),
         StructField("s_store_name", VarcharType(50)),
         StructField("s_number_employees", LongType()),
         StructField("s_floor_space", LongType()),
@@ -226,12 +232,12 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["call_center"] = StructType([
-        StructField("cc_call_center_sk", IntegerType(), nullable=False),
+        StructField("cc_call_center_sk", identifier_int, nullable=False),
         StructField("cc_call_center_id", CharType(16), nullable=False),
         StructField("cc_rec_start_date", DateType()),
         StructField("cc_rec_end_date", DateType()),
-        StructField("cc_closed_date_sk", IntegerType()),
-        StructField("cc_open_date_sk", IntegerType()),
+        StructField("cc_closed_date_sk", identifier_int),
+        StructField("cc_open_date_sk", identifier_int),
         StructField("cc_name", VarcharType(50)),
         StructField("cc_class", VarcharType(50)),
         StructField("cc_employees", LongType()),
@@ -260,13 +266,13 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["customer"] = StructType([
-        StructField("c_customer_sk", IntegerType(), nullable=False),
+        StructField("c_customer_sk", identifier_int, nullable=False),
         StructField("c_customer_id", CharType(16), nullable=False),
-        StructField("c_current_cdemo_sk", IntegerType()),
-        StructField("c_current_hdemo_sk", IntegerType()),
-        StructField("c_current_addr_sk", IntegerType()),
-        StructField("c_first_shipto_date_sk", IntegerType()),
-        StructField("c_first_sales_date_sk", IntegerType()),
+        StructField("c_current_cdemo_sk", identifier_int),
+        StructField("c_current_hdemo_sk", identifier_int),
+        StructField("c_current_addr_sk", identifier_int),
+        StructField("c_first_shipto_date_sk", identifier_int),
+        StructField("c_first_sales_date_sk", identifier_int),
         StructField("c_salutation", CharType(10)),
         StructField("c_first_name", CharType(20)),
         StructField("c_last_name", CharType(30)),
@@ -277,17 +283,17 @@ def get_schemas(use_decimal):
         StructField("c_birth_country", VarcharType(20)),
         StructField("c_login", CharType(13)),
         StructField("c_email_address", CharType(50)),
-        StructField("c_last_review_date_sk", IntegerType())
+        StructField("c_last_review_date_sk", identifier_int)
     ])
 
     SCHEMAS["web_site"] = StructType([
-        StructField("web_site_sk", IntegerType(), nullable=False),
+        StructField("web_site_sk", identifier_int, nullable=False),
         StructField("web_site_id", CharType(16), nullable=False),
         StructField("web_rec_start_date", DateType()),
         StructField("web_rec_end_date", DateType()),
         StructField("web_name", VarcharType(50)),
-        StructField("web_open_date_sk", IntegerType()),
-        StructField("web_close_date_sk", IntegerType()),
+        StructField("web_open_date_sk", identifier_int),
+        StructField("web_close_date_sk", identifier_int),
         StructField("web_class", VarcharType(50)),
         StructField("web_manager", VarcharType(40)),
         StructField("web_mkt_id", LongType()),
@@ -310,19 +316,19 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["store_returns"] = StructType([
-        StructField("sr_returned_date_sk", IntegerType()),
-        StructField("sr_return_time_sk", IntegerType()),
-        StructField("sr_item_sk", IntegerType(), nullable=False),
-        StructField("sr_customer_sk", IntegerType()),
-        StructField("sr_cdemo_sk", IntegerType()),
-        StructField("sr_hdemo_sk", IntegerType()),
-        StructField("sr_addr_sk", IntegerType()),
-        StructField("sr_store_sk", IntegerType()),
-        StructField("sr_reason_sk", IntegerType()),
+        StructField("sr_returned_date_sk", identifier_int),
+        StructField("sr_return_time_sk", identifier_int),
+        StructField("sr_item_sk", identifier_int, nullable=False),
+        StructField("sr_customer_sk", identifier_int),
+        StructField("sr_cdemo_sk", identifier_int),
+        StructField("sr_hdemo_sk", identifier_int),
+        StructField("sr_addr_sk", identifier_int),
+        StructField("sr_store_sk", identifier_int),
+        StructField("sr_reason_sk", identifier_int),
         # Use LongType due to https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1138379596
         # Databricks is using LongType as well in their accepted benchmark reports.
         # See https://www.tpc.org/results/supporting_files/tpcds/databricks~tpcds~100000~databricks_SQL_8.3~sup-1~2021-11-02~v01.zip
-        StructField("sr_ticket_number", LongType(), nullable=False),
+        StructField("sr_ticket_number", identifer_long, nullable=False),
         StructField("sr_return_quantity", LongType()),
         StructField("sr_return_amt", decimalType(use_decimal, 7, 2)),
         StructField("sr_return_tax", decimalType(use_decimal, 7, 2)),
@@ -336,22 +342,22 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["household_demographics"] = StructType([
-        StructField("hd_demo_sk", IntegerType(), nullable=False),
-        StructField("hd_income_band_sk", IntegerType()),
+        StructField("hd_demo_sk", identifier_int, nullable=False),
+        StructField("hd_income_band_sk", identifier_int),
         StructField("hd_buy_potential", CharType(15)),
         StructField("hd_dep_count", LongType()),
         StructField("hd_vehicle_count", LongType())
     ])
 
     SCHEMAS["web_page"] = StructType([
-        StructField("wp_web_page_sk", IntegerType(), nullable=False),
+        StructField("wp_web_page_sk", identifier_int, nullable=False),
         StructField("wp_web_page_id", CharType(16), nullable=False),
         StructField("wp_rec_start_date", DateType()),
         StructField("wp_rec_end_date", DateType()),
-        StructField("wp_creation_date_sk", IntegerType()),
-        StructField("wp_access_date_sk", IntegerType()),
+        StructField("wp_creation_date_sk", identifier_int),
+        StructField("wp_access_date_sk", identifier_int),
         StructField("wp_autogen_flag", CharType(1)),
-        StructField("wp_customer_sk", IntegerType()),
+        StructField("wp_customer_sk", identifier_int),
         StructField("wp_url", VarcharType(100)),
         StructField("wp_type", CharType(50)),
         StructField("wp_char_count", LongType()),
@@ -361,11 +367,11 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["promotion"] = StructType([
-        StructField("p_promo_sk", IntegerType(), nullable=False),
+        StructField("p_promo_sk", identifier_int, nullable=False),
         StructField("p_promo_id", CharType(16), nullable=False),
-        StructField("p_start_date_sk", IntegerType()),
-        StructField("p_end_date_sk", IntegerType()),
-        StructField("p_item_sk", IntegerType()),
+        StructField("p_start_date_sk", identifier_int),
+        StructField("p_end_date_sk", identifier_int),
+        StructField("p_item_sk", identifier_int),
         StructField("p_cost", decimalType(use_decimal, 15, 2)),
         StructField("p_response_target", LongType()),
         StructField("p_promo_name", CharType(50)),
@@ -383,10 +389,10 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["catalog_page"] = StructType([
-        StructField("cp_catalog_page_sk", IntegerType(), nullable=False),
+        StructField("cp_catalog_page_sk", identifier_int, nullable=False),
         StructField("cp_catalog_page_id", CharType(16), nullable=False),
-        StructField("cp_start_date_sk", IntegerType()),
-        StructField("cp_end_date_sk", IntegerType()),
+        StructField("cp_start_date_sk", identifier_int),
+        StructField("cp_end_date_sk", identifier_int),
         StructField("cp_department", VarcharType(50)),
         StructField("cp_catalog_number", LongType()),
         StructField("cp_catalog_page_number", LongType()),
@@ -395,30 +401,30 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["inventory"] = StructType([
-        StructField("inv_date_sk", IntegerType(), nullable=False),
-        StructField("inv_item_sk", IntegerType(), nullable=False),
-        StructField("inv_warehouse_sk", IntegerType(), nullable=False),
+        StructField("inv_date_sk", identifier_int, nullable=False),
+        StructField("inv_item_sk", identifier_int, nullable=False),
+        StructField("inv_warehouse_sk", identifier_int, nullable=False),
         StructField("inv_quantity_on_hand", LongType())
     ])
 
     SCHEMAS["catalog_returns"] = StructType([
-        StructField("cr_returned_date_sk", IntegerType()),
-        StructField("cr_returned_time_sk", IntegerType()),
-        StructField("cr_item_sk", IntegerType(), nullable=False),
-        StructField("cr_refunded_customer_sk", IntegerType()),
-        StructField("cr_refunded_cdemo_sk", IntegerType()),
-        StructField("cr_refunded_hdemo_sk", IntegerType()),
-        StructField("cr_refunded_addr_sk", IntegerType()),
-        StructField("cr_returning_customer_sk", IntegerType()),
-        StructField("cr_returning_cdemo_sk", IntegerType()),
-        StructField("cr_returning_hdemo_sk", IntegerType()),
-        StructField("cr_returning_addr_sk", IntegerType()),
-        StructField("cr_call_center_sk", IntegerType()),
-        StructField("cr_catalog_page_sk", IntegerType()),
-        StructField("cr_ship_mode_sk", IntegerType()),
-        StructField("cr_warehouse_sk", IntegerType()),
-        StructField("cr_reason_sk", IntegerType()),
-        StructField("cr_order_number", IntegerType(), nullable=False),
+        StructField("cr_returned_date_sk", identifier_int),
+        StructField("cr_returned_time_sk", identifier_int),
+        StructField("cr_item_sk", identifier_int, nullable=False),
+        StructField("cr_refunded_customer_sk", identifier_int),
+        StructField("cr_refunded_cdemo_sk", identifier_int),
+        StructField("cr_refunded_hdemo_sk", identifier_int),
+        StructField("cr_refunded_addr_sk", identifier_int),
+        StructField("cr_returning_customer_sk", identifier_int),
+        StructField("cr_returning_cdemo_sk", identifier_int),
+        StructField("cr_returning_hdemo_sk", identifier_int),
+        StructField("cr_returning_addr_sk", identifier_int),
+        StructField("cr_call_center_sk", identifier_int),
+        StructField("cr_catalog_page_sk", identifier_int),
+        StructField("cr_ship_mode_sk", identifier_int),
+        StructField("cr_warehouse_sk", identifier_int),
+        StructField("cr_reason_sk", identifier_int),
+        StructField("cr_order_number", identifier_int, nullable=False),
         StructField("cr_return_quantity", LongType()),
         StructField("cr_return_amount", decimalType(use_decimal, 7, 2)),
         StructField("cr_return_tax", decimalType(use_decimal, 7, 2)),
@@ -432,20 +438,20 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["web_returns"] = StructType([
-        StructField("wr_returned_date_sk", IntegerType()),
-        StructField("wr_returned_time_sk", IntegerType()),
-        StructField("wr_item_sk", IntegerType(), nullable=False),
-        StructField("wr_refunded_customer_sk", IntegerType()),
-        StructField("wr_refunded_cdemo_sk", IntegerType()),
-        StructField("wr_refunded_hdemo_sk", IntegerType()),
-        StructField("wr_refunded_addr_sk", IntegerType()),
-        StructField("wr_returning_customer_sk", IntegerType()),
-        StructField("wr_returning_cdemo_sk", IntegerType()),
-        StructField("wr_returning_hdemo_sk", IntegerType()),
-        StructField("wr_returning_addr_sk", IntegerType()),
-        StructField("wr_web_page_sk", IntegerType()),
-        StructField("wr_reason_sk", IntegerType()),
-        StructField("wr_order_number", IntegerType(), nullable=False),
+        StructField("wr_returned_date_sk", identifier_int),
+        StructField("wr_returned_time_sk", identifier_int),
+        StructField("wr_item_sk", identifier_int, nullable=False),
+        StructField("wr_refunded_customer_sk", identifier_int),
+        StructField("wr_refunded_cdemo_sk", identifier_int),
+        StructField("wr_refunded_hdemo_sk", identifier_int),
+        StructField("wr_refunded_addr_sk", identifier_int),
+        StructField("wr_returning_customer_sk", identifier_int),
+        StructField("wr_returning_cdemo_sk", identifier_int),
+        StructField("wr_returning_hdemo_sk", identifier_int),
+        StructField("wr_returning_addr_sk", identifier_int),
+        StructField("wr_web_page_sk", identifier_int),
+        StructField("wr_reason_sk", identifier_int),
+        StructField("wr_order_number", identifier_int, nullable=False),
         StructField("wr_return_quantity", LongType()),
         StructField("wr_return_amt", decimalType(use_decimal, 7, 2)),
         StructField("wr_return_tax", decimalType(use_decimal, 7, 2)),
@@ -459,24 +465,24 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["web_sales"] = StructType([
-        StructField("ws_sold_date_sk", IntegerType()),
-        StructField("ws_sold_time_sk", IntegerType()),
-        StructField("ws_ship_date_sk", IntegerType()),
-        StructField("ws_item_sk", IntegerType(), nullable=False),
-        StructField("ws_bill_customer_sk", IntegerType()),
-        StructField("ws_bill_cdemo_sk", IntegerType()),
-        StructField("ws_bill_hdemo_sk", IntegerType()),
-        StructField("ws_bill_addr_sk", IntegerType()),
-        StructField("ws_ship_customer_sk", IntegerType()),
-        StructField("ws_ship_cdemo_sk", IntegerType()),
-        StructField("ws_ship_hdemo_sk", IntegerType()),
-        StructField("ws_ship_addr_sk", IntegerType()),
-        StructField("ws_web_page_sk", IntegerType()),
-        StructField("ws_web_site_sk", IntegerType()),
-        StructField("ws_ship_mode_sk", IntegerType()),
-        StructField("ws_warehouse_sk", IntegerType()),
-        StructField("ws_promo_sk", IntegerType()),
-        StructField("ws_order_number", IntegerType(), nullable=False),
+        StructField("ws_sold_date_sk", identifier_int),
+        StructField("ws_sold_time_sk", identifier_int),
+        StructField("ws_ship_date_sk", identifier_int),
+        StructField("ws_item_sk", identifier_int, nullable=False),
+        StructField("ws_bill_customer_sk", identifier_int),
+        StructField("ws_bill_cdemo_sk", identifier_int),
+        StructField("ws_bill_hdemo_sk", identifier_int),
+        StructField("ws_bill_addr_sk", identifier_int),
+        StructField("ws_ship_customer_sk", identifier_int),
+        StructField("ws_ship_cdemo_sk", identifier_int),
+        StructField("ws_ship_hdemo_sk", identifier_int),
+        StructField("ws_ship_addr_sk", identifier_int),
+        StructField("ws_web_page_sk", identifier_int),
+        StructField("ws_web_site_sk", identifier_int),
+        StructField("ws_ship_mode_sk", identifier_int),
+        StructField("ws_warehouse_sk", identifier_int),
+        StructField("ws_promo_sk", identifier_int),
+        StructField("ws_order_number", identifier_int, nullable=False),
         StructField("ws_quantity", LongType()),
         StructField("ws_wholesale_cost", decimalType(use_decimal, 7, 2)),
         StructField("ws_list_price", decimalType(use_decimal, 7, 2)),
@@ -497,24 +503,24 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["catalog_sales"] = StructType([
-        StructField("cs_sold_date_sk", IntegerType()),
-        StructField("cs_sold_time_sk", IntegerType()),
-        StructField("cs_ship_date_sk", IntegerType()),
-        StructField("cs_bill_customer_sk", IntegerType()),
-        StructField("cs_bill_cdemo_sk", IntegerType()),
-        StructField("cs_bill_hdemo_sk", IntegerType()),
-        StructField("cs_bill_addr_sk", IntegerType()),
-        StructField("cs_ship_customer_sk", IntegerType()),
-        StructField("cs_ship_cdemo_sk", IntegerType()),
-        StructField("cs_ship_hdemo_sk", IntegerType()),
-        StructField("cs_ship_addr_sk", IntegerType()),
-        StructField("cs_call_center_sk", IntegerType()),
-        StructField("cs_catalog_page_sk", IntegerType()),
-        StructField("cs_ship_mode_sk", IntegerType()),
-        StructField("cs_warehouse_sk", IntegerType()),
-        StructField("cs_item_sk", IntegerType(), nullable=False),
-        StructField("cs_promo_sk", IntegerType()),
-        StructField("cs_order_number", IntegerType(), nullable=False),
+        StructField("cs_sold_date_sk", identifier_int),
+        StructField("cs_sold_time_sk", identifier_int),
+        StructField("cs_ship_date_sk", identifier_int),
+        StructField("cs_bill_customer_sk", identifier_int),
+        StructField("cs_bill_cdemo_sk", identifier_int),
+        StructField("cs_bill_hdemo_sk", identifier_int),
+        StructField("cs_bill_addr_sk", identifier_int),
+        StructField("cs_ship_customer_sk", identifier_int),
+        StructField("cs_ship_cdemo_sk", identifier_int),
+        StructField("cs_ship_hdemo_sk", identifier_int),
+        StructField("cs_ship_addr_sk", identifier_int),
+        StructField("cs_call_center_sk", identifier_int),
+        StructField("cs_catalog_page_sk", identifier_int),
+        StructField("cs_ship_mode_sk", identifier_int),
+        StructField("cs_warehouse_sk", identifier_int),
+        StructField("cs_item_sk", identifier_int, nullable=False),
+        StructField("cs_promo_sk", identifier_int),
+        StructField("cs_order_number", identifier_int, nullable=False),
         StructField("cs_quantity", LongType()),
         StructField("cs_wholesale_cost", decimalType(use_decimal, 7, 2)),
         StructField("cs_list_price", decimalType(use_decimal, 7, 2)),
@@ -535,16 +541,16 @@ def get_schemas(use_decimal):
     ])
 
     SCHEMAS["store_sales"] = StructType([
-        StructField("ss_sold_date_sk", IntegerType()),
-        StructField("ss_sold_time_sk", IntegerType()),
-        StructField("ss_item_sk", IntegerType(), nullable=False),
-        StructField("ss_customer_sk", IntegerType()),
-        StructField("ss_cdemo_sk", IntegerType()),
-        StructField("ss_hdemo_sk", IntegerType()),
-        StructField("ss_addr_sk", IntegerType()),
-        StructField("ss_store_sk", IntegerType()),
-        StructField("ss_promo_sk", IntegerType()),
-        StructField("ss_ticket_number", LongType(), nullable=False),
+        StructField("ss_sold_date_sk", identifier_int),
+        StructField("ss_sold_time_sk", identifier_int),
+        StructField("ss_item_sk", identifier_int, nullable=False),
+        StructField("ss_customer_sk", identifier_int),
+        StructField("ss_cdemo_sk", identifier_int),
+        StructField("ss_hdemo_sk", identifier_int),
+        StructField("ss_addr_sk", identifier_int),
+        StructField("ss_store_sk", identifier_int),
+        StructField("ss_promo_sk", identifier_int),
+        StructField("ss_ticket_number", identifer_long, nullable=False),
         StructField("ss_quantity", LongType()),
         StructField("ss_wholesale_cost", decimalType(use_decimal, 7, 2)),
         StructField("ss_list_price", decimalType(use_decimal, 7, 2)),
