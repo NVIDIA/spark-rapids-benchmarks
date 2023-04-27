@@ -146,7 +146,7 @@ def get_schemas(use_decimal):
     SCHEMAS["time_dim"] = StructType([
         StructField("t_time_sk", IntegerType(), nullable=False),
         StructField("t_time_id", CharType(16), nullable=False),
-        StructField("t_time", IntegerType()),
+        StructField("t_time", IntegerType(), nullable=False),
         StructField("t_hour", IntegerType()),
         StructField("t_minute", IntegerType()),
         StructField("t_second", IntegerType()),
@@ -277,7 +277,7 @@ def get_schemas(use_decimal):
         StructField("c_birth_country", VarcharType(20)),
         StructField("c_login", CharType(13)),
         StructField("c_email_address", CharType(50)),
-        StructField("c_last_review_date_sk", CharType(10))
+        StructField("c_last_review_date_sk", IntegerType())
     ])
 
     SCHEMAS["web_site"] = StructType([
@@ -544,7 +544,7 @@ def get_schemas(use_decimal):
         StructField("ss_addr_sk", IntegerType()),
         StructField("ss_store_sk", IntegerType()),
         StructField("ss_promo_sk", IntegerType()),
-        StructField("ss_ticket_number", IntegerType(), nullable=False),
+        StructField("ss_ticket_number", LongType(), nullable=False),
         StructField("ss_quantity", IntegerType()),
         StructField("ss_wholesale_cost", decimalType(use_decimal, 7, 2)),
         StructField("ss_list_price", decimalType(use_decimal, 7, 2)),
