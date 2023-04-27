@@ -62,7 +62,7 @@ def get_schemas(use_decimal):
     # key value generated for that column". Some tables have more rows than others so we can
     # choose to use different types per table.
     identifer_int = IntegerType()
-    identifer_long = LongType()
+    identifier_long = LongType()
 
     SCHEMAS["customer_address"] = StructType([
         StructField("ca_address_sk", identifier_int, nullable=False),
@@ -328,7 +328,7 @@ def get_schemas(use_decimal):
         # Use LongType due to https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1138379596
         # Databricks is using LongType as well in their accepted benchmark reports.
         # See https://www.tpc.org/results/supporting_files/tpcds/databricks~tpcds~100000~databricks_SQL_8.3~sup-1~2021-11-02~v01.zip
-        StructField("sr_ticket_number", identifer_long, nullable=False),
+        StructField("sr_ticket_number", identifier_long, nullable=False),
         StructField("sr_return_quantity", LongType()),
         StructField("sr_return_amt", decimalType(use_decimal, 7, 2)),
         StructField("sr_return_tax", decimalType(use_decimal, 7, 2)),
@@ -550,7 +550,7 @@ def get_schemas(use_decimal):
         StructField("ss_addr_sk", identifier_int),
         StructField("ss_store_sk", identifier_int),
         StructField("ss_promo_sk", identifier_int),
-        StructField("ss_ticket_number", identifer_long, nullable=False),
+        StructField("ss_ticket_number", identifier_long, nullable=False),
         StructField("ss_quantity", LongType()),
         StructField("ss_wholesale_cost", decimalType(use_decimal, 7, 2)),
         StructField("ss_list_price", decimalType(use_decimal, 7, 2)),
