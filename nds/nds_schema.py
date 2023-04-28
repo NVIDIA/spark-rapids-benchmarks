@@ -85,7 +85,7 @@ def get_schemas(use_decimal):
         StructField("cd_gender", CharType(1)),
         StructField("cd_marital_status", CharType(1)),
         StructField("cd_education_status", CharType(20)),
-        StructField("cd_purchase_estimate", LongType(),
+        StructField("cd_purchase_estimate", LongType()),
         StructField("cd_credit_rating", CharType(10)),
         StructField("cd_dep_count", LongType()),
         StructField("cd_dep_employed_count", LongType()),
