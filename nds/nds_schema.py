@@ -61,7 +61,7 @@ def get_schemas(use_decimal):
     # The specification states that "Identifier means that the column shall be able to hold any
     # key value generated for that column". Some tables have more rows than others so we can
     # choose to use different types per table.
-    identifer_int = IntegerType()
+    identifier_int = IntegerType()
     identifier_long = LongType()
 
     SCHEMAS["customer_address"] = StructType([
