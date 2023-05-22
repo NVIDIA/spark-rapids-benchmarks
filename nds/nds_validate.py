@@ -35,6 +35,7 @@ import glob
 import json
 import math
 import os
+import re
 import time
 from decimal import *
 
@@ -51,6 +52,7 @@ def compare_results(spark_session: SparkSession,
                     input2_format: str,
                     ignore_ordering: bool,
                     is_q78: bool,
+                    q78_problematic_col: int,
                     use_iterator=False,
                     max_errors=10,
                     epsilon=0.00001) -> bool :
@@ -66,6 +68,7 @@ def compare_results(spark_session: SparkSession,
         ignore_ordering (bool): whether ignoring the order of input data.
             If true, we will order by ourselves.
         is_q78 (bool): whether the query is query78.
+        q78_problematic_col: the column index that has problematic data. Only used for query78.
         use_iterator (bool, optional): When set to true, use `toLocalIterator` to load one partition
             at a time into driver memory, reducing memory usage at the cost of performance because
             processing will be single-threaded. Defaults to False.
@@ -91,7 +94,7 @@ def compare_results(spark_session: SparkSession,
         while i < count1 and errors < max_errors:
             lhs = next(result1)
             rhs = next(result2)
-            if not rowEqual(list(lhs), list(rhs), epsilon, is_q78):
+            if not rowEqual(list(lhs), list(rhs), epsilon, is_q78, q78_problematic_col):
                 print(f"Row {i}: \n{list(lhs)}\n{list(rhs)}\n")
                 errors += 1
             i += 1
@@ -140,26 +143,51 @@ def collect_results(df: DataFrame,
         it = iter(rows)
     return it
 
-def rowEqual(row1, row2, epsilon, is_q78):
+def check_nth_col_problematic_q78(q78_content: str) -> int:
+    """parse the query78 content, return which column is the problematic one.
+    example content: https://github.com/NVIDIA/spark-rapids-benchmarks/issues/101#issuecomment-1217758683
+    parse logic:
+    1. find the content between the last "select" and "from" pair.
+    2. split the content by ", " or ",\n"
+    3. find the index of the string that contains "ratio"
+    4. return the index, if not found, raise exception
+    plus 1 to return to make it more intuitive for users to understand the column index starting from 1.
+    """
+    last_between = q78_content.split("select")[-1].split("from")[0]
+    target_splits = re.split(', |,\n',last_between)
+    nth = -1
+    for index, string in enumerate(target_splits):
+        if 'ratio' in string:
+            nth = index
+    if nth == -1:
+        raise Exception(f"Cannot find the problematic column in the query78 content. Please check the content.\n{q78_content}")
+    return nth + 1
+
+def rowEqual(row1, row2, epsilon, is_q78, q78_problematic_col):
     # only simple types in a row for NDS results
     if is_q78:
         # TODO: make the special compare for q78 more common and make it apply to other queries that contain round function
         # TODO: remove this special case after we resolve https://github.com/NVIDIA/spark-rapids/issues/1573
         # see example error case: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/7#issue-1247422850
-        # Pop the 4th column value in q78, compare it alone.
-        fourth_val_row1 = row1.pop(3)
-        fourth_val_row2 = row2.pop(3)
-        fourth_val_eq = False
+        # Pop the 2nd or 4th column value in q78, compare it alone.
+        # It is possible the problematic column are at different positions in different streams,
+        # see example and more details: https://github.com/NVIDIA/spark-rapids-benchmarks/issues/101#issuecomment-1217758683
+        if q78_problematic_col != 2 and q78_problematic_col != 4:
+            raise Exception(f"q78 problematic column should be 2nd or 4th, but get {q78_problematic_col}")
+        # remember to -1 to get the index in python list
+        problematic_val_row1 = row1.pop(q78_problematic_col-1)
+        problematic_val_row2 = row2.pop(q78_problematic_col-1)
+        problematic_val_eq = False
         # this value could be none in some rows
-        if all([fourth_val_row1, fourth_val_row2]):
+        if all([problematic_val_row1, problematic_val_row2]):
             # this value is rounded to its pencentile: round(ss_qty/(coalesce(ws_qty,0)+coalesce(cs_qty,0)),2)
             # so we allow the diff <= 0.01
-            fourth_val_eq = abs(fourth_val_row1 - fourth_val_row2) <= 0.01
-        elif fourth_val_row1 == None and fourth_val_row2 == None:
-            fourth_val_eq = True
+            problematic_val_eq = abs(problematic_val_row1 - problematic_val_row2) <= 0.01
+        elif problematic_val_row1 == None and problematic_val_row2 == None:
+            problematic_val_eq = True
         else:
-            fourth_val_eq = False
-        return fourth_val_eq and all([compare(lhs, rhs, epsilon) for lhs, rhs in zip(row1, row2)])
+            problematic_val_eq = False
+        return problematic_val_eq and all([compare(lhs, rhs, epsilon) for lhs, rhs in zip(row1, row2)])
     else:
         return all([compare(lhs, rhs, epsilon) for lhs, rhs in zip(row1, row2)])
 
@@ -192,7 +220,7 @@ def iterate_queries(spark_session: SparkSession,
                     input1_format: str,
                     input2_format: str,
                     ignore_ordering: bool,
-                    queries: list,
+                    query_dict: dict,
                     use_iterator=False,
                     max_errors=10,
                     epsilon=0.00001,
@@ -200,28 +228,31 @@ def iterate_queries(spark_session: SparkSession,
     # Iterate each query folder for a Power Run output
     # Providing a list instead of hard-coding all NDS queires is to satisfy the arbitary queries run.
     unmatch_queries = []
-    for query in queries:
-        if query == 'query65':
+    for query_name in query_dict.keys():
+        if query_name == 'query65':
             # query65 is skipped due to: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/7#issuecomment-1147077894
             continue
-        if query == 'query67' and is_float:
+        if query_name == 'query67' and is_float:
             # query67 is skipped due to: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/7#issuecomment-1156214630
             continue
-        sub_input1 = input1 + '/' + query
-        sub_input2 = input2 + '/' + query
-        print(f"=== Comparing Query: {query} ===")
+        sub_input1 = input1 + '/' + query_name
+        sub_input2 = input2 + '/' + query_name
+        print(f"=== Comparing Query: {query_name} ===")
+        if query_name == 'query78':
+            problematic_col = check_nth_col_problematic_q78(query_dict[query_name])
         result_equal = compare_results(spark_session,
                                          sub_input1,
                                          sub_input2,
                                          input1_format,
                                          input2_format,
                                          ignore_ordering,
-                                         query == 'query78',
+                                         query_name == 'query78',
+                                         problematic_col=problematic_col,
                                          use_iterator=use_iterator,
                                          max_errors=max_errors,
                                          epsilon=epsilon)
         if result_equal == False:
-            unmatch_queries.append(query)
+            unmatch_queries.append(query_name)
     if len(unmatch_queries) != 0:
         print(f"=== Unmatch Queries: {unmatch_queries} ===")
     return unmatch_queries
@@ -311,7 +342,7 @@ if __name__ == "__main__":
                                       args.input1_format,
                                       args.input2_format,
                                       args.ignore_ordering,
-                                      query_dict.keys(),
+                                      query_dict,
                                       use_iterator=args.use_iterator,
                                       max_errors=args.max_errors,
                                       epsilon=args.epsilon,
