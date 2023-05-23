@@ -238,6 +238,8 @@ def iterate_queries(spark_session: SparkSession,
         sub_input1 = input1 + '/' + query_name
         sub_input2 = input2 + '/' + query_name
         print(f"=== Comparing Query: {query_name} ===")
+        # default it to 2, which is the 2nd column in the query78
+        problematic_col = 2
         if query_name == 'query78':
             problematic_col = check_nth_col_problematic_q78(query_dict[query_name])
         result_equal = compare_results(spark_session,
