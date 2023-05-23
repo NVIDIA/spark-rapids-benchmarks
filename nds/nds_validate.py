@@ -249,7 +249,7 @@ def iterate_queries(spark_session: SparkSession,
                                          input2_format,
                                          ignore_ordering,
                                          query_name == 'query78',
-                                         problematic_col=problematic_col,
+                                         q78_problematic_col=problematic_col,
                                          use_iterator=use_iterator,
                                          max_errors=max_errors,
                                          epsilon=epsilon)
