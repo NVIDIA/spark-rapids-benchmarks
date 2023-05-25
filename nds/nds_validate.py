@@ -182,13 +182,7 @@ def rowEqual(row1, row2, epsilon, is_q78, q78_problematic_col):
         if all([problematic_val_row1, problematic_val_row2]):
             # this value is rounded to its pencentile: round(ss_qty/(coalesce(ws_qty,0)+coalesce(cs_qty,0)),2)
             # so we allow the diff <= 0.01
-            diff = abs(problematic_val_row2 - problematic_val_row1)
-            # use the same epsilon as the one in `compare` function below
-            if diff != 0.0 and diff >= 0.00001:
-                problematic_val_eq = compare(0.01, abs(problematic_val_row2 - problematic_val_row1))
-                print(problematic_val_eq)
-            else:
-                problematic_val_eq = True
+            problematic_val_eq = abs(problematic_val_row1 - problematic_val_row2) <= 0.01001
         elif problematic_val_row1 == None and problematic_val_row2 == None:
             problematic_val_eq = True
         else:
