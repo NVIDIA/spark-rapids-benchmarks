@@ -181,8 +181,8 @@ def rowEqual(row1, row2, epsilon, is_q78, q78_problematic_col):
         # this value could be none in some rows
         if all([problematic_val_row1, problematic_val_row2]):
             # this value is rounded to its pencentile: round(ss_qty/(coalesce(ws_qty,0)+coalesce(cs_qty,0)),2)
-            # so we allow the diff <= 0.01
-            problematic_val_eq = abs(problematic_val_row1 - problematic_val_row2) <= 0.01
+            # so we allow the diff <= 0.01 + default epsilon 0.00001
+            problematic_val_eq = abs(problematic_val_row1 - problematic_val_row2) <= 0.01001
         elif problematic_val_row1 == None and problematic_val_row2 == None:
             problematic_val_eq = True
         else:
