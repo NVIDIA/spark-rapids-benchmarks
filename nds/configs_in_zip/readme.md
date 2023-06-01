@@ -36,7 +36,7 @@ aws s3 cp nds.zip s3://path/to/this/zip
 ```
 spark.sparkContext.addPyFile("s3://path/to/this/zip")
 from nds import nds_power
-nds_power.run_query_stream_for_zip()
+nds_power.run_query_stream_in_zip()
 ```
 # How to run another Power RUN with different parameters
 Updating the zip file in S3 does not take effective because Spark have caches for the zip file.    
@@ -53,5 +53,5 @@ On Notebook run:
 ```
 spark.sparkContext.addPyFile("s3://<another nds zip path>")
 from <another_nds_name> import nds_power
-nds_power.run_query_stream_for_zip()
+nds_power.run_query_stream_in_zip()
 ```
