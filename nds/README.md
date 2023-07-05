@@ -188,7 +188,7 @@ optional arguments:
   -h, --help            show this help message and exit
   --output_mode {overwrite,append,ignore,error,errorifexists}
                         save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.default value is errorifexists, which is the Spark default behavior.
-  --input_format {csv,parquet,orc}
+  --input_format {csv,parquet,orc, avro, json}
                         input data format to be converted. default value is csv.
   --output_format {parquet,orc,avro,json,iceberg,delta}
                         output data format when converting CSV data sources.
