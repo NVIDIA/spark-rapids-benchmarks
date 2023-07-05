@@ -57,10 +57,10 @@ def load(session, filename, schema, input_format, delimiter="|", header="false",
     data_path = prefix + '/' + filename
     if input_format == 'csv':
         return session.read.option("delimiter", delimiter).option("header", header).csv(data_path, schema=schema)
-    elif input_format in ['parquet', 'orc']:
+    elif input_format in ['parquet', 'orc', 'avro', 'json']:
         return session.read.format(input_format).load(data_path)
     # TODO: all of the output formats should be also supported as input format possibilities
-    # remains 'avro', 'json', 'iceberg', 'delta'
+    # remains 'iceberg', 'delta'
     else:
         raise ValueError("Unsupported input format: {}".format(input_format))
 
@@ -253,7 +253,7 @@ if __name__ == "__main__":
         default="errorifexists")
     parser.add_argument(
         '--input_format',
-        choices=['csv', 'parquet', 'orc'],
+        choices=['csv', 'parquet', 'orc', 'avro', 'json'],
         default='csv',
         help='input data format to be converted. default value is csv.'
     )
