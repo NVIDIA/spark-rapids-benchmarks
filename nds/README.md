@@ -171,7 +171,8 @@ Arguments for `nds_transcode.py`:
 
 ```bash
 python nds_transcode.py -h
-usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--output_format {parquet,orc,avro,json,iceberg,delta}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update] [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION] [--delta_unmanaged] [--hive]
+usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--input_format {csv,parquet,orc}] [--output_format {parquet,orc,avro,json,iceberg,delta}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update]
+                        [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION] [--delta_unmanaged] [--hive] [--database DATABASE]
                         input_prefix output_prefix report_file
 
 positional arguments:
@@ -185,6 +186,8 @@ optional arguments:
   -h, --help            show this help message and exit
   --output_mode {overwrite,append,ignore,error,errorifexists}
                         save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.default value is errorifexists, which is the Spark default behavior.
+  --input_format {csv,parquet,orc}
+                        input data format to be converted. default value is csv.
   --output_format {parquet,orc,avro,json,iceberg,delta}
                         output data format when converting CSV data sources.
   --tables TABLES       specify table names by a comma separated string. e.g. 'catalog_page,catalog_sales'.
@@ -200,6 +203,7 @@ optional arguments:
   --delta_unmanaged     Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without leveraging a
                         Metastore service
   --hive                create Hive external tables for the converted data.
+  --database DATABASE   the name of a database to use instead of `default`, currently applies only to Hive
 ```
 
 Example command to submit via `spark-submit-template` utility:

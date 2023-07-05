@@ -53,9 +53,16 @@ TABLE_PARTITIONING = {
 }
 
 
-def load(session, filename, schema, delimiter="|", header="false", prefix=""):
+def load(session, filename, schema, input_format, delimiter="|", header="false", prefix=""):
     data_path = prefix + '/' + filename
-    return session.read.option("delimiter", delimiter).option("header", header).csv(data_path, schema=schema)
+    if input_format == 'csv':
+        return session.read.option("delimiter", delimiter).option("header", header).csv(data_path, schema=schema)
+    elif input_format in ['parquet', 'orc']:
+        return session.read.format(input_format).load(data_path)
+    # TODO: all of the output formats should be also supported as input format possibilities
+    # remains 'avro', 'json', 'iceberg', 'delta'
+    else:
+        raise ValueError("Unsupported input format: {}".format(input_format))
 
 
 def store(session,
@@ -182,6 +189,7 @@ def transcode(args):
                           load(session,
                                f"{fn}",
                                schema,
+                               input_format=args.input_format,
                                prefix=args.input_prefix),
                           f"{fn}",
                           args.output_format,
@@ -235,6 +243,7 @@ if __name__ == "__main__":
     parser.add_argument(
         'report_file',
         help='location to store a performance report(local)')
+
     parser.add_argument(
         '--output_mode',
         choices=['overwrite', 'append', 'ignore', 'error', 'errorifexists'],
@@ -242,6 +251,12 @@ if __name__ == "__main__":
         "https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes." +
         "default value is errorifexists, which is the Spark default behavior.",
         default="errorifexists")
+    parser.add_argument(
+        '--input_format',
+        choices=['csv', 'parquet', 'orc'],
+        default='csv',
+        help='input data format to be converted. default value is csv.'
+    )
     parser.add_argument(
         '--output_format',
         choices=['parquet', 'orc', 'avro', 'json', 'iceberg', 'delta'],
