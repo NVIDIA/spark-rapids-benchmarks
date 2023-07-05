@@ -141,6 +141,8 @@ The utility requires a pre-defined [template file](./convert_submit_gpu.template
 necessary Spark configurations. Either user can submit the `nds_transcode.py` directly to spark with
 arbitrary Spark parameters.
 
+CSV, Parquet and ORC are supported for input data format at present.
+
 Parquet, Orc, Avro, JSON and Iceberg are supported for output data format at present with CPU. For GPU conversion,
 only Parquet and Orc are supported.
 
