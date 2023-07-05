@@ -173,7 +173,7 @@ Arguments for `nds_transcode.py`:
 
 ```bash
 python nds_transcode.py -h
-usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--input_format {csv,parquet,orc}] [--output_format {parquet,orc,avro,json,iceberg,delta}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update]
+usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--input_format {csv,parquet,orc,avro,json}] [--output_format {parquet,orc,avro,json,iceberg,delta}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update]
                         [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION] [--delta_unmanaged] [--hive] [--database DATABASE]
                         input_prefix output_prefix report_file
 
