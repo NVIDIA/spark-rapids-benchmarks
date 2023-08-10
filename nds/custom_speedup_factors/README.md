@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Speedup factor estimation for the qualification tool is used for determining the estimated runtime for an application on GPU using Spark RAPIDS.  The speedup factors generate multipliers as an exec (and potentially expression) level that are used in the qualification tool for GPU estimates.
+Speedup factor estimation for the qualification tool is used for determining the estimated runtime for an application on GPU using Spark RAPIDS.  The speedup factors generate multipliers at an exec (and potentially expression) level that are used in the qualification tool for GPU estimates.
 
 ## Prerequisites
 
