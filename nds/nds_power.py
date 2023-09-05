@@ -34,14 +34,15 @@ import argparse
 import csv
 import os
 import time
+import uuid
 from collections import OrderedDict
 from pyspark.sql import SparkSession
-from PysparkBenchReport import PysparkBenchReport
+from .PysparkBenchReport import PysparkBenchReport
 from pyspark.sql import DataFrame
 
-from check import check_json_summary_folder, check_query_subset_exists, check_version
-from nds_gen_query_stream import split_special_query
-from nds_schema import get_schemas
+from .check import check_json_summary_folder, check_query_subset_exists, check_version
+from .nds_gen_query_stream import split_special_query
+from .nds_schema import get_schemas
 
 check_version()
 
@@ -57,6 +58,9 @@ def gen_sql_from_stream(query_stream_file_path):
     """
     with open(query_stream_file_path, 'r') as f:
         stream = f.read()
+    gen_sql_from_stream_text(stream)
+
+def gen_sql_from_stream_text(stream):
     all_queries = stream.split('-- start')[1:]
     # split query in query14, query23, query24, query39
     extended_queries = OrderedDict()
@@ -141,9 +145,9 @@ def ensure_valid_column_names(df: DataFrame):
         return char.isalpha() or char.isdigit() or char == '_'
 
     def is_valid(column_name):
-        return len(column_name) > 0 and is_column_start(column_name[0]) and all(
+        len(column_name) > 0 and is_column_start(column_name[0]) and all(
             [is_column_part(char) for char in column_name[1:]])
-
+        
     def make_valid(column_name):
         # To simplify: replace all invalid char with '_'
         valid_name = ''
@@ -157,7 +161,7 @@ def ensure_valid_column_names(df: DataFrame):
             else:
                 valid_name += char
         return valid_name
-
+    
     def deduplicate(column_names):
         # In some queries like q35, it's possible to get columns with the same name. Append a number
         # suffix to resolve this problem.
@@ -182,6 +186,7 @@ def get_query_subset(query_dict, subset):
 
 def run_query_stream(input_prefix,
                      property_file,
+                     spark_properties,
                      query_dict,
                      time_log_output_path,
                      extra_time_log_output_path,
@@ -198,7 +203,9 @@ def run_query_stream(input_prefix,
     for easy accesibility. TempView Creation time is also recorded.
 
     Args:
-        input_prefix (str): path of input data or warehouse if input_format is "iceberg" or hive_external=True.
+        input_prefix (str): path of input data or warehouse if input_format is "iceberg".
+        property_file (str): the path of spark property file
+        spark_properties (Dict): the property dict loaded from above property_file
         query_dict (OrderedDict): ordered dict {query_name: query_content} of all TPC-DS queries runnable in Spark
         time_log_output_path (str): path of the log that contains query execution time, both local
                                     and HDFS path are supported.
@@ -216,26 +223,18 @@ def run_query_stream(input_prefix,
         app_name = "NDS - " + list(query_dict.keys())[0]
     else:
         app_name = "NDS - Power Run"
-    # Execute Power Run or Specific query in Spark
+    # Execute Power Run or Specific query in Spark 
     # build Spark Session
     session_builder = SparkSession.builder
-    if property_file:
-        spark_properties = load_properties(property_file)
-        for k,v in spark_properties.items():
-            session_builder = session_builder.config(k,v)
+    for k,v in spark_properties.items():
+        session_builder = session_builder.config(k,v)
     if input_format == 'iceberg':
         session_builder.config("spark.sql.catalog.spark_catalog.warehouse", input_prefix)
     if input_format == 'delta' and not delta_unmanaged:
         session_builder.config("spark.sql.warehouse.dir", input_prefix)
-        session_builder.enableHiveSupport()
-    if hive_external:
-        session_builder.enableHiveSupport()
-
+        session_builder.config("spark.sql.catalogImplementation", "hive")
     spark_session = session_builder.appName(
         app_name).getOrCreate()
-    if hive_external:
-        spark_session.catalog.setCurrentDatabase(input_prefix)
-
     if input_format == 'delta' and delta_unmanaged:
         # Register tables for Delta Lake. This is only needed for unmanaged tables.
         execution_time_list = register_delta_tables(spark_session, input_prefix, execution_time_list)
@@ -304,14 +303,54 @@ def run_query_stream(input_prefix,
         time_df.coalesce(1).write.csv(extra_time_log_output_path)
 
 def load_properties(filename):
-    myvars = {}
     with open(filename) as myfile:
-        for line in myfile:
-            name, var = line.partition("=")[::2]
-            myvars[name.strip()] = var.strip()
+        lines = myfile.readlines()
+        return load_properties_from_lines(lines)
+
+def load_properties_from_lines(lines):
+    myvars = {}
+    for line in lines:
+        name, var = line.partition("=")[::2]
+        myvars[name.strip()] = var.strip()
     return myvars
 
-if __name__ == "__main__":
+def run_query_stream_in_zip():
+    try:
+        import importlib.resources as pkg_resources
+    except ImportError:
+        # Try backported to PY<37 `importlib_resources`.
+        import importlib_resources as pkg_resources
+    from . import configs_in_zip  # relative-import the *package* containing the templates
+    stream = pkg_resources.read_text(configs_in_zip, 'query_0.sql')
+    parameters = pkg_resources.read_text(configs_in_zip, 'parameter')
+    parser = get_parser(use_local_stream_file = False)
+    args = parser.parse_args(parameters.split())
+    query_dict = gen_sql_from_stream_text(stream)
+
+    if args.property_file is not None:
+        raise Exception("Please do not specify --property_file, " +
+                        "instead update the spark.properies file in NDS zip file, " +
+                        "path is nds/configs_in_zip/spark.properies")
+    spark_properties_text = pkg_resources.read_text(configs_in_zip, 'spark.properties')
+    spark_properties = load_properties_from_lines(spark_properties_text.splitlines())
+
+    run_query_stream(args.input_prefix,
+                     'spark.properties',
+                     spark_properties,
+                     query_dict,
+                     args.time_log,
+                     args.extra_time_log,
+                     args.sub_queries,
+                     args.input_format,
+                     not args.floats,
+                     args.output_prefix,
+                     args.output_format,
+                     args.json_summary_folder + str(uuid.uuid1()), # append uuid to avoid folder conflict
+                     args.delta_unmanaged,
+                     args.keep_sc,
+                     args.hive)
+
+def get_parser(use_local_stream_file = True):
     parser = parser = argparse.ArgumentParser()
     parser.add_argument('input_prefix',
                         help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"). ' +
@@ -320,7 +359,8 @@ if __name__ == "__main__":
                         'session name "spark_catalog" is supported now, customized catalog is not ' +
                         'yet supported. Note if this points to a Delta Lake table, the path must be ' +
                         'absolute. Issue: https://github.com/delta-io/delta/issues/555')
-    parser.add_argument('query_stream_file',
+    if use_local_stream_file:
+        parser.add_argument('query_stream_file',
                         help='query stream file that contains NDS queries in specific order')
     parser.add_argument('time_log',
                         help='path to execution time log, only support local path.',
@@ -371,10 +411,19 @@ if __name__ == "__main__":
                         'in the stream file will be run. e.g. "query1,query2,query3". Note, use ' +
                         '"_part1" and "_part2" suffix for the following query names: ' +
                         'query14, query23, query24, query39. e.g. query14_part1, query39_part2')
+    return parser
+
+if __name__ == "__main__":
+    parser = get_parser()
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
+    if args.property_file:
+        spark_properties = load_properties(args.property_file)
+    else:
+        spark_properties = {}
     run_query_stream(args.input_prefix,
                      args.property_file,
+                     spark_properties,
                      query_dict,
                      args.time_log,
                      args.extra_time_log,

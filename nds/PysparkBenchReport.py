@@ -37,7 +37,7 @@ import traceback
 from typing import Callable
 from pyspark.sql import SparkSession
 
-import python_listener
+from . import python_listener
 
 class PysparkBenchReport:
     """Class to generate json summary report for a benchmark

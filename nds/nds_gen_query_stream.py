@@ -35,7 +35,7 @@ import os
 import subprocess
 import sys
 
-from check import check_build, check_version, get_abs_path
+from .check import check_build, check_version, get_abs_path
 
 check_version()
 

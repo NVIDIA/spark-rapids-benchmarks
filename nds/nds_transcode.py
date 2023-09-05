@@ -39,7 +39,7 @@ from datetime import datetime
 
 from pyspark.sql.types import *
 from pyspark.sql.functions import col
-from nds_schema import *
+from .nds_schema import *
 
 # Note the specific partitioning is applied when save the parquet data files.
 TABLE_PARTITIONING = {

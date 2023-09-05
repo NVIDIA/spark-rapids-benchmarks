@@ -369,6 +369,10 @@ time.csv \
 --output_format parquet
 ```
 
+### Power Run on Notebook
+User can also [run POWER RUN on a notebook](configs_in_zip/readme.md) if user is on EKS, Databricks or other cloud 
+environment.
+
 ### Throughput Run
 
 Throughput Run simulates the scenario that multiple query sessions are running simultaneously in
