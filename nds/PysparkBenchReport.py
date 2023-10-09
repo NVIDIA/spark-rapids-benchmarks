@@ -42,7 +42,7 @@ import python_listener
 class PysparkBenchReport:
     """Class to generate json summary report for a benchmark
     """
-    def __init__(self, spark_session: SparkSession) -> None:
+    def __init__(self, spark_session: SparkSession, query_name) -> None:
         self.spark_session = spark_session
         self.summary = {
             'env': {
@@ -54,6 +54,7 @@ class PysparkBenchReport:
             'exceptions': [],
             'startTime': None,
             'queryTimes': [],
+            'query': query_name,
         }
 
     def report_on(self, fn: Callable, *args):
@@ -106,7 +107,7 @@ class PysparkBenchReport:
                 listener.unregister()
             return self.summary
 
-    def write_summary(self, query_name, prefix=""):
+    def write_summary(self, prefix=""):
         """_summary_
 
         Args:
@@ -115,8 +116,12 @@ class PysparkBenchReport:
         """
         # Power BI side is retrieving some information from the summary file name, so keep this file
         # name format for pipeline compatibility
-        self.summary['query'] = query_name
-        filename = prefix + '-' + query_name + '-' +str(self.summary['startTime']) + '.json'
+        filename = prefix + '-' + self.summary['query'] + '-' +str(self.summary['startTime']) + '.json'
         self.summary['filename'] = filename
         with open(filename, "w") as f:
             json.dump(self.summary, f, indent=2)
+
+    def is_success(self):
+        """Check if the query succeeded, queryStatus == Completed
+        """
+        return self.summary['queryStatus'] == 'Completed'

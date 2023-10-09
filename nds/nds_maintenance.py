@@ -223,7 +223,7 @@ def run_query(spark_session,
         # show query name in Spark web UI
         spark_session.sparkContext.setJobGroup(query_name, query_name)
         print(f"====== Run {query_name} ======")
-        q_report = PysparkBenchReport(spark_session)
+        q_report = PysparkBenchReport(spark_session, query_name)
         summary = q_report.report_on(run_dm_query, spark_session,
                                                        q_content,
                                                        query_name,
@@ -237,7 +237,7 @@ def run_query(spark_session,
                     json_summary_folder, os.path.basename(property_file).split('.')[0])
             else:
                 summary_prefix =  os.path.join(json_summary_folder, '')
-            q_report.write_summary(query_name, prefix=summary_prefix)
+            q_report.write_summary(prefix=summary_prefix)
     if not keep_sc:
         spark_session.sparkContext.stop()
     DM_end = datetime.now()
