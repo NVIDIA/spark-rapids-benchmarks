@@ -124,4 +124,4 @@ class PysparkBenchReport:
     def is_success(self):
         """Check if the query succeeded, queryStatus == Completed
         """
-        return self.summary['queryStatus'] == 'Completed'
+        return self.summary['queryStatus'][0] == 'Completed'

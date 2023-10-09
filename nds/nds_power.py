@@ -312,10 +312,12 @@ def run_query_stream(input_prefix,
         exit_code = 0
         for q in queries_reports:
             if not q.is_success():
+                if exit_code == 0:
+                    print("====== Queries with failure ======")
                 print("{} status: {}".format(q.summary['query'], q.summary['queryStatus']))
                 exit_code = 1
         if exit_code == 1:
-            print("Above queries failed or completed with failed tasks.")
+            print("Above queries failed or completed with failed tasks. Please check the logs for the detailed reason.")
             sys.exit(exit_code)
 
 def load_properties(filename):
