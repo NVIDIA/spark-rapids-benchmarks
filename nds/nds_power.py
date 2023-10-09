@@ -311,7 +311,7 @@ def run_query_stream(input_prefix,
         exit_code = 0
         for q in queries_reports:
             if not q.is_success():
-                print("{} status: {}".format(q.summary['query'], q.summary['queryStatus'])
+                print("{} status: {}".format(q.summary['query'], q.summary['queryStatus']))
                 exit_code = 1
         sys.exit(exit_code)
 
