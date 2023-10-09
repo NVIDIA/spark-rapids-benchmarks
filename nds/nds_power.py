@@ -33,6 +33,7 @@
 import argparse
 import csv
 import os
+import sys
 import time
 from collections import OrderedDict
 from pyspark.sql import SparkSession
@@ -313,7 +314,9 @@ def run_query_stream(input_prefix,
             if not q.is_success():
                 print("{} status: {}".format(q.summary['query'], q.summary['queryStatus']))
                 exit_code = 1
-        sys.exit(exit_code)
+        if exit_code == 1:
+            print("Above queries failed or completed with failed tasks.")
+            sys.exit(exit_code)
 
 def load_properties(filename):
     myvars = {}
