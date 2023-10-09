@@ -308,7 +308,7 @@ def run_query_stream(input_prefix,
         time_df.coalesce(1).write.csv(extra_time_log_output_path)
 
     if not nofailure:
-        # check queries_reports, if there's any task or query failed, exit a non-zero to represent nofailure
+        # check queries_reports, if there's any task or query failed, exit a non-zero to represent the script failure
         exit_code = 0
         for q in queries_reports:
             if not q.is_success():
