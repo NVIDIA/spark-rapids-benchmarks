@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -316,7 +316,7 @@ def run_query_stream(input_prefix,
                     print("====== Queries with failure ======")
                 print("{} status: {}".format(q.summary['query'], q.summary['queryStatus']))
                 exit_code = 1
-        if exit_code == 1:
+        if not exit_code:
             print("Above queries failed or completed with failed tasks. Please check the logs for the detailed reason.")
             sys.exit(exit_code)
 
