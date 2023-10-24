@@ -195,7 +195,7 @@ def run_query_stream(input_prefix,
                      delta_unmanaged=False,
                      keep_sc=False,
                      hive_external=False,
-                     nofailure=False):
+                     allow_failure=False):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
 
@@ -307,18 +307,19 @@ def run_query_stream(input_prefix,
         time_df = spark_session.createDataFrame(data=execution_time_list, schema = header)
         time_df.coalesce(1).write.csv(extra_time_log_output_path)
 
-    if not nofailure:
-        # check queries_reports, if there's any task or query failed, exit a non-zero to represent the script failure
-        exit_code = 0
-        for q in queries_reports:
-            if not q.is_success():
-                if exit_code == 0:
-                    print("====== Queries with failure ======")
-                print("{} status: {}".format(q.summary['query'], q.summary['queryStatus']))
-                exit_code = 1
-        if not exit_code:
-            print("Above queries failed or completed with failed tasks. Please check the logs for the detailed reason.")
-            sys.exit(exit_code)
+    # check queries_reports, if there's any task or query failed, exit a non-zero to represent the script failure
+    exit_code = 0
+    for q in queries_reports:
+        if not q.is_success():
+            if exit_code == 0:
+                print("====== Queries with failure ======")
+            print("{} status: {}".format(q.summary['query'], q.summary['queryStatus']))
+            exit_code = 1
+    if not exit_code:
+        print("Above queries failed or completed with failed tasks. Please check the logs for the detailed reason.")
+
+    if not allow_failure:
+        sys.exit(exit_code)
 
 def load_properties(filename):
     myvars = {}
@@ -387,7 +388,7 @@ if __name__ == "__main__":
                         'in the stream file will be run. e.g. "query1,query2,query3". Note, use ' +
                         '"_part1" and "_part2" suffix for the following query names: ' +
                         'query14, query23, query24, query39. e.g. query14_part1, query39_part2')
-    parser.add_argument('--nofailure',
+    parser.add_argument('--allow_failure',
                         action='store_true',
                         help='Do not exit with non zero when any query failed or any task failed')
     args = parser.parse_args()
@@ -406,4 +407,4 @@ if __name__ == "__main__":
                      args.delta_unmanaged,
                      args.keep_sc,
                      args.hive,
-                     args.nofailure)
+                     args.allow_failure)
