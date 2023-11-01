@@ -56,7 +56,8 @@ TABLE_PARTITIONING = {
 def load(session, filename, schema, input_format, delimiter="|", header="false", prefix=""):
     data_path = prefix + '/' + filename
     if input_format == 'csv':
-        return session.read.option("delimiter", delimiter).option("header", header).csv(data_path, schema=schema)
+        return session.read.option("delimiter", delimiter).option("header", header)\
+            .option("encoding", "ISO-8859-1").csv(data_path, schema=schema)
     elif input_format in ['parquet', 'orc', 'avro', 'json']:
         return session.read.format(input_format).load(data_path)
     # TODO: all of the output formats should be also supported as input format possibilities
