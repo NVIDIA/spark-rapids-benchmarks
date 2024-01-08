@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -387,6 +387,7 @@ def run_full_bench(yaml_params):
     power_property_path = yaml_params['power_test']['property_path']
     power_output_path = yaml_params['power_test']['output_path']
     skip_throughput_test = yaml_params['throughput_test']['skip']
+    throughput_template_path = yaml_params['throughput_test']['spark_template_path']
     throughput_report_base = yaml_params['throughput_test']['report_base_path']
     # temaplte to write to parquet, with GPU
     skip_maintenance_test = yaml_params['maintenance_test']['skip']
@@ -434,7 +435,7 @@ def run_full_bench(yaml_params):
     if not skip_throughput_test:
         throughput_test(num_streams,
                         1,
-                        power_template_path,
+                        throughput_template_path,
                         warehouse_output_path,
                         stream_output_path,
                         throughput_report_base,
@@ -460,7 +461,7 @@ def run_full_bench(yaml_params):
     if not skip_throughput_test:
         throughput_test(num_streams,
                         2,
-                        power_template_path,
+                        throughput_template_path,
                         warehouse_output_path,
                         stream_output_path,
                         throughput_report_base,

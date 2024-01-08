@@ -517,4 +517,11 @@ positional arguments:
   yaml_config  yaml config file for the benchmark
 ```
 
+NOTE: For Throughput Run, user should create a new template file based on the one used for Power Run.
+The only difference between them is that the template for Throughput Run should limit the compute resource
+based on the number of streams used in the Throughput Run.
+For instance: 4 concurrent streams in one Throughput run and the total available cores in the benchmark cluster
+are 1024. Then in the template, `spark.cores.max` should be set to `1024/4=256` so that each stream will have
+compute resource evenly.
+
 ### NDS2.0 is using source code from TPC-DS Tool V3.2.0
