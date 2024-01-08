@@ -30,6 +30,7 @@ power_test: # use load test output as input to avoid duplication
   output_path: # leave it empty to use "collect" as Spark action. Otherwise it can be used for data validation
   skip: false
 throughput_test: # use most parameters from power test to avoid duplication
+  spark_template_path: throughput_run_gpu_iceberg.template # user can copy the one used for Power run and add resource limit
   report_base_path: throughput_report
   skip: false
 maintenance_test:
