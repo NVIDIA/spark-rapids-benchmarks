@@ -110,6 +110,9 @@ def create_spark_session(valid_queries, warehouse_path, warehouse_type):
     else:
         app_name = "NDS - Data Maintenance"
     spark_session_builder = SparkSession.builder
+    if warehouse_type == "delta":
+        # now we only support managed table(by Hive Metastore) for Data Maintenance
+        spark_session_builder.config("spark.sql.catalogImplementation", "hive")
     if warehouse_type == "iceberg":
         spark_session_builder.config("spark.sql.catalog.spark_catalog.warehouse", warehouse_path)
     spark_session = spark_session_builder.appName(app_name).getOrCreate()
