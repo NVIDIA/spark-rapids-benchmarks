@@ -1,6 +1,6 @@
 package com.nvidia.spark.rapids.listener
 
-import org.apache.spark.{Success, TaskEndReason}
+import org.apache.spark.{Success, TaskEndReason, TaskFailedReason, TaskKilled}
 import org.apache.spark.scheduler.{SparkListener, SparkListenerTaskEnd}
 import scala.collection.mutable.ListBuffer
 
@@ -12,8 +12,9 @@ import scala.collection.mutable.ListBuffer
 class TaskFailureListener extends SparkListener {
   override def onTaskEnd(taskEnd: SparkListenerTaskEnd) {
     taskEnd.reason match {
-      case Success =>
-      case reason => Manager.notifyAll(reason.toString)
+      case Success => ()
+      case _: TaskKilled => ()
+      case failedReason: TaskFailedReason => Manager.notifyAll(failedReason.toErrorString)
     }
     super.onTaskEnd(taskEnd)
   }
