@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +33,7 @@
 import argparse
 import csv
 import os
+import sys
 import time
 from collections import OrderedDict
 from pyspark.sql import SparkSession
@@ -193,7 +194,8 @@ def run_query_stream(input_prefix,
                      json_summary_folder=None,
                      delta_unmanaged=False,
                      keep_sc=False,
-                     hive_external=False):
+                     hive_external=False,
+                     allow_failure=False):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
 
@@ -209,6 +211,7 @@ def run_query_stream(input_prefix,
         output_format (str, optional): query output format, choices are csv, orc, parquet. Defaults
         to "parquet".
     """
+    queries_reports = []
     execution_time_list = []
     total_time_start = time.time()
     # check if it's running specific query or Power Run
@@ -253,7 +256,7 @@ def run_query_stream(input_prefix,
         # show query name in Spark web UI
         spark_session.sparkContext.setJobGroup(query_name, query_name)
         print("====== Run {} ======".format(query_name))
-        q_report = PysparkBenchReport(spark_session)
+        q_report = PysparkBenchReport(spark_session, query_name)
         summary = q_report.report_on(run_one_query,spark_session,
                                                    q_content,
                                                    query_name,
@@ -262,6 +265,7 @@ def run_query_stream(input_prefix,
         print(f"Time taken: {summary['queryTimes']} millis for {query_name}")
         query_times = summary['queryTimes']
         execution_time_list.append((spark_app_id, query_name, query_times[0]))
+        queries_reports.append(q_report)
         if json_summary_folder:
             # property_file e.g.: "property/aqe-on.properties" or just "aqe-off.properties"
             if property_file:
@@ -269,7 +273,7 @@ def run_query_stream(input_prefix,
                     json_summary_folder, os.path.basename(property_file).split('.')[0])
             else:
                 summary_prefix =  os.path.join(json_summary_folder, '')
-            q_report.write_summary(query_name, prefix=summary_prefix)
+            q_report.write_summary(prefix=summary_prefix)
     power_end = int(time.time())
     power_elapse = int((power_end - power_start)*1000)
     if not keep_sc:
@@ -302,6 +306,20 @@ def run_query_stream(input_prefix,
         spark_session = SparkSession.builder.getOrCreate()
         time_df = spark_session.createDataFrame(data=execution_time_list, schema = header)
         time_df.coalesce(1).write.csv(extra_time_log_output_path)
+
+    # check queries_reports, if there's any task or query failed, exit a non-zero to represent the script failure
+    exit_code = 0
+    for q in queries_reports:
+        if not q.is_success():
+            if exit_code == 0:
+                print("====== Queries with failure ======")
+            print("{} status: {}".format(q.summary['query'], q.summary['queryStatus']))
+            exit_code = 1
+    if exit_code:
+        print("Above queries failed or completed with failed tasks. Please check the logs for the detailed reason.")
+
+    if not allow_failure and exit_code:
+        sys.exit(exit_code)
 
 def load_properties(filename):
     myvars = {}
@@ -364,13 +382,15 @@ if __name__ == "__main__":
                         'driver node/pod cannot be accessed easily. User needs to add essential extra ' +
                         'jars and configurations to access different cloud storage systems. ' +
                         'e.g. s3, gs etc.')
-
     parser.add_argument('--sub_queries',
                         type=lambda s: [x.strip() for x in s.split(',')],
                         help='comma separated list of queries to run. If not specified, all queries ' +
                         'in the stream file will be run. e.g. "query1,query2,query3". Note, use ' +
                         '"_part1" and "_part2" suffix for the following query names: ' +
                         'query14, query23, query24, query39. e.g. query14_part1, query39_part2')
+    parser.add_argument('--allow_failure',
+                        action='store_true',
+                        help='Do not exit with non zero when any query failed or any task failed')
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
     run_query_stream(args.input_prefix,
@@ -386,4 +406,5 @@ if __name__ == "__main__":
                      args.json_summary_folder,
                      args.delta_unmanaged,
                      args.keep_sc,
-                     args.hive)
+                     args.hive,
+                     args.allow_failure)
