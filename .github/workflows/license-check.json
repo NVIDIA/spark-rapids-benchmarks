@@ -2,6 +2,6 @@
     {
       "include": ["**/**"],
       "exclude": [],
-      "license": "%regexp:^Licensed under the Apache License%"
+      "license": "\\%regexp:\\^Licensed under the Apache License\\%"
     }
 ]
