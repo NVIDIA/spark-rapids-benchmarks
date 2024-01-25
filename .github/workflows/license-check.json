@@ -1,7 +1,0 @@
-[
-    {
-      "include": ["**/**"],
-      "exclude": [],
-      "license": "\\%regexp:\\^Licensed under the Apache License\\%"
-    }
-]
