@@ -2,6 +2,6 @@
     {
       "include": ["**/**"],
       "exclude": [],
-      "license": ".github/workflows/license-check/license.txt"
+      "license": ".github/workflows/license-check/license-Apache.txt"
     }
 ]
