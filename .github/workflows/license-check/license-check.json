@@ -2,6 +2,6 @@
     {
       "include": ["**/**"],
       "exclude": [],
-      "license": "license.txt"
+      "license": ".github/workflows/license-check/license.txt"
     }
 ]
