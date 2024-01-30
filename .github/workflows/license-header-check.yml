@@ -26,9 +26,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Check license headers
-        uses: viperproject/check-license-header@v2
-        with:
-          path: .
-          config: .github/workflows/license-check/license-check.json
-          strict: true
+
+      - name: license-check job
+        run: |
+          set -x
+          python3 .github/workflows/license-check/license-check.py

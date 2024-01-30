@@ -1,7 +1,0 @@
-[
-    {
-      "include": ["**/*"],
-      "exclude": ["**/*.md"],
-      "license": ".github/workflows/license-check/license-Apache.txt"
-    }
-]
