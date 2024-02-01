@@ -25,7 +25,7 @@ from argparse import ArgumentParser
 
 # Configs of the license header check
 includes = ['**/*']
-excludes = ['**/*.md']
+excludes = ['**/*.md', 'NOTICE', 'TPC EULA.txt', '**/*.patch']
 LICENSE_PATTERN = "Licensed under the Apache License"
 
 def filterFiles(repo_path):
