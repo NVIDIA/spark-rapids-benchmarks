@@ -133,7 +133,7 @@ Example command:
 python nds_gen_data.py hdfs 100 100 /data/raw_sf100 --overwrite_output
 ```
 
-### Convert CSV to Parquet or Other data sources
+### Convert DSV to Parquet or Other data sources
 
 To do the data conversion, the `nds_transcode.py` need to be submitted as a Spark job. User can leverage
 the [spark-submit-template](./spark-submit-template) utility to simplify the submission.
@@ -141,7 +141,7 @@ The utility requires a pre-defined [template file](./convert_submit_gpu.template
 necessary Spark configurations. Either user can submit the `nds_transcode.py` directly to spark with
 arbitrary Spark parameters.
 
-CSV is the default input format for data conversion, it can be overridden by `--input_format`.
+DSV ( pipe ) is the default input format for data conversion, it can be overridden by `--input_format`.
 
 Parquet, Orc, Avro, JSON and Iceberg are supported for output data format at present with CPU. For GPU conversion,
 only Parquet and Orc are supported.

@@ -23,15 +23,15 @@
 # If you have any different configuration in a specific template, you can override
 # the variables in that template.
 
-export SPARK_HOME=${SPARK_HOME:-/usr/lib/spark}
-export SPARK_MASTER=${SPARK_MASTER:-yarn}
+export SPARK_HOME=${SPARK_HOME:-/opt/spark/spark-3.4.1-bin-hadoop3}
+export SPARK_MASTER=${SPARK_MASTER:-local}
 export DRIVER_MEMORY=${DRIVER_MEMORY:-10G}
 export EXECUTOR_CORES=${EXECUTOR_CORES:-12}
-export NUM_EXECUTORS=${NUM_EXECUTORS:-8}
+export NUM_EXECUTORS=${NUM_EXECUTORS:-1}
 export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
 
 # The NDS listener jar which is built in jvm_listener directory.
 export NDS_LISTENER_JAR=${NDS_LISTENER_JAR:-./jvm_listener/target/nds-benchmark-listener-1.0-SNAPSHOT.jar}
 # The spark-rapids jar which is required when running on GPU
-export SPARK_RAPIDS_PLUGIN_JAR=${SPARK_RAPIDS_PLUGIN_JAR:-rapids-4-spark_2.12-22.06.0.jar}
+export SPARK_RAPIDS_PLUGIN_JAR=${SPARK_RAPIDS_PLUGIN_JAR:-/home/sbari/project-repos/data/rapids-4-spark_2.12-24.04.0-cuda11.jar}
 export PYTHONPATH=$SPARK_HOME/python:`echo $SPARK_HOME/python/lib/py4j-*.zip`

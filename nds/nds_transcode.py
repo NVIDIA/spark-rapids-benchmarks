@@ -151,7 +151,18 @@ def store(session,
             else:
                 writer.saveAsTable(filename, path=data_path)
 
+
 def transcode(args):
+    """
+    Default function that is triggered post argument parsing
+
+    Parameters: 
+    args ( argparse.Namespace ): returns the parsed arguments in the namespace
+
+    Returns:
+    Nothing
+
+    """
     session_builder = pyspark.sql.SparkSession.builder
     if args.output_format == "iceberg":
         session_builder.config("spark.sql.catalog.spark_catalog.warehouse", args.output_prefix)
