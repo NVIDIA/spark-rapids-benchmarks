@@ -262,7 +262,8 @@ if __name__ == "__main__":
                         choices=["local", "hdfs"],
                         help="file system to save the generated data.")
     parser.add_argument("scale",
-                        help="volume of data to generate in GB."
+                        help="volume of data to generate in GB. Accepted scale values 1,10, 100, 300, 1000 \
+                            ,3000, 10000, 30000,"
     )
     parser.add_argument("parallel",
                         type=parallel_value_type,
