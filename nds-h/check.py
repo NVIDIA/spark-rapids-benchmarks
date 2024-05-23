@@ -56,14 +56,12 @@ def check_build():
     # Check if necessary executable or jars are built.
     # we assume user won't move this script.
     src_dir = Path(__file__).parent.absolute()
-    jar_path = list(
-        Path(src_dir / 'tpcds-gen/target').rglob("tpcds-gen-*.jar"))
-    tool_path = list(Path(src_dir / 'tpcds-gen/target/tools').rglob("dsdgen"))
-    if jar_path == [] or tool_path == []:
-        raise Exception('Target jar file is not found in `target` folder or dsdgen executable is ' +
-                        'not found in `target/tools` folder.' +
+    tool_path = list(Path(src_dir / 'tpch-gen/target/dbgen').rglob("dbgen"))
+    if tool_path == []:
+        raise Exception('dbgen executable is ' +
+                        'not found in `target` folder.' +
                         'Please refer to README document and build this project first.')
-    return jar_path[0], tool_path[0]
+    return tool_path[0]
 
 
 def get_abs_path(input_path):

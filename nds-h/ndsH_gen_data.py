@@ -60,8 +60,6 @@ def generate_data_local(args, range_start, range_end, tool_path):
 
     Args:
         args (Namepace): Namespace from argparser
-        range_start (int): start index of the data portion to be generated
-        range_end (int): end index of the data portion tobe generated
         tool_path (str): path to the dsdgen tool
 
     Raises:
@@ -69,6 +67,7 @@ def generate_data_local(args, range_start, range_end, tool_path):
         Exception: dsdgen failed
     """
     data_dir = get_abs_path(args.data_dir)
+    print(data_dir)
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
     else:
@@ -80,46 +79,46 @@ def generate_data_local(args, range_start, range_end, tool_path):
 
     # working directory for dsdgen
     work_dir = tool_path.parent
+    print(work_dir)
     procs = []
     for i in range(range_start, range_end + 1):
-        dsdgen_args = ["-scale", args.scale,
-                       "-dir", data_dir,
-                       "-parallel", args.parallel,
-                       "-child", str(i),
-                       "-verbose", "Y"]
-        if args.overwrite_output:
-            dsdgen_args += ["-force", "Y"]
-        if args.update:
-            dsdgen_args += ["-update", args.update]
+        dbgen = ["-s", args.scale,
+                    "-C", args.parallel,
+                    "-S", str(i),
+                    "-v", "Y",
+                    "-f","Y"]
         procs.append(subprocess.Popen(
-            ["./dsdgen"] + dsdgen_args, cwd=str(work_dir)))
+            ["./dbgen"] + dbgen, cwd=str(work_dir)))
     # wait for data generation to complete
     for p in procs:
         p.wait()
         if p.returncode != 0:
-            print("dsdgen failed with return code {}".format(p.returncode))
-            raise Exception("dsdgen failed")
+            print("dbgen failed with return code {}".format(p.returncode))
+            raise Exception("dbgen failed")
     # move multi-partition files into table folders
-    if args.update:
-        table_names = maintenance_table_names
-    else:
-        table_names = source_table_names
+    table_names = source_table_names
     for table in table_names:
         print('mkdir -p {}/{}'.format(data_dir, table))
         subprocess.run(['mkdir', '-p', data_dir + '/' + table])
-        for i in range(range_start, range_end + 1):
-            subprocess.run(['mv', f'{data_dir}/{table}_{i}_{args.parallel}.dat',
-                            f'{data_dir}/{table}/'], stderr=subprocess.DEVNULL)
+        if (table != 'region' and table !='nation'):
+            for i in range(range_start, range_end + 1):
+                subprocess.run(['mv', f'{work_dir}/{table}.tbl.{i}',
+                                f'{data_dir}/{table}/'], stderr=subprocess.DEVNULL)
+        else:
+            subprocess.run(['mv', f'{work_dir}/{table}.tbl',
+                                f'{data_dir}/{table}/'], stderr=subprocess.DEVNULL)
         # delete date file has no parallel number suffix in the file name, move separately
-        subprocess.run(['mv', f'{data_dir}/{table}_1.dat',
-                        f'{data_dir}/{table}/'], stderr=subprocess.DEVNULL)
     # show summary
     subprocess.run(['du', '-h', '-d1', data_dir])
 
-
 def generate_data(args):
     tool_path = check_build()
-    generate_data_local(args, tool_path)
+    print(tool_path)
+    range_start = 1
+    range_end = int(args.parallel)
+    if args.range:
+        range_start, range_end = valid_range(args.range, args.parallel)
+    generate_data_local(args, range_start, range_end, tool_path)
 
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
@@ -133,9 +132,10 @@ if __name__ == "__main__":
     )
     parser.add_argument("data_dir",
                         help="generate data in directory.")
-    parser.add_argument("--overwrite_output",
-                        action="store_true",
-                        help="overwrite if there has already existing data in the path provided.")
-    
+    parser.add_argument('--range',
+                        help='Used for incremental data generation, meaning which part of child' +
+                        'chunks are generated in one run. Format: "start,end", both are inclusive. ' +
+                        'e.g. "1,100". Note: the child range must be within the "parallel", ' +
+                        '"--parallel 100 --range 100,200" is illegal.')
     args = parser.parse_args()
     generate_data(args)
