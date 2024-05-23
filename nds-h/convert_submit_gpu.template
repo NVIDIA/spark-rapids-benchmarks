@@ -1,0 +1,41 @@
+#
+# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+source base.template
+export CONCURRENT_GPU_TASKS=${CONCURRENT_GPU_TASKS:-2}
+export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
+
+export SPARK_CONF=("--master" "${SPARK_MASTER}"
+                   "--deploy-mode" "client"
+                   "--conf" "spark.driver.memory=${DRIVER_MEMORY}"
+                   "--conf" "spark.executor.cores=${EXECUTOR_CORES}"
+                   "--conf" "spark.executor.instances=${NUM_EXECUTORS}"
+                   "--conf" "spark.executor.memory=${EXECUTOR_MEMORY}"
+                   "--conf" "spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}"
+                   "--conf" "spark.executor.resource.gpu.amount=1"
+                   "--conf" "spark.executor.resource.gpu.discoveryScript=./getGpusResources.sh"
+                   "--conf" "spark.plugins=com.nvidia.spark.SQLPlugin"
+                   "--conf" "spark.rapids.memory.pinnedPool.size=8g"
+                   "--conf" "spark.rapids.sql.concurrentGpuTasks=${CONCURRENT_GPU_TASKS}"
+                   "--conf" "spark.rapids.sql.explain=NOT_ON_GPU"
+                   "--conf" "spark.rapids.sql.incompatibleOps.enabled=true"
+                   "--conf" "spark.rapids.sql.variableFloatAgg.enabled=true"
+                   "--conf" "spark.sql.files.maxPartitionBytes=2g"
+                   "--conf" "spark.sql.legacy.parquet.datetimeRebaseModeInWrite=CORRECTED"
+                   "--conf" "spark.sql.legacy.charVarcharAsString=true"
+                   "--files" "/opt/spark/getGpusResources.sh"
+                   "--jars" "$SPARK_RAPIDS_PLUGIN_JAR")
