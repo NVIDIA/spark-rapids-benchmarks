@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-all: check-tpch-env prepare-target copy-dbgen modify-makefile build-dbgen
+all: check-tpch-env prepare-target copy-dbgen modify-makefile modify-tpc-h build-dbgen set-env-variables apply-patch-files
 
 check-tpch-env:
 ifndef TPCH_HOME
@@ -27,15 +27,38 @@ prepare-target:
 	mkdir -p target/
 
 copy-dbgen:
-	cd target
+	#Copying all patches to the current query folder
+	cp patches/* "$(TPCH_HOME)/dbgen/queries"
+	# This is required to ensure similar line ending semantics bw patch
+	# file and the sql files
+	cd "$(TPCH_HOME)/dbgen/queries"; dos2unix *.sql
+	cd "$(TPCH_HOME)/dbgen/queries"; dos2unix *.patch
+	# Unapply any patch if already done
+	-cd "$(TPCH_HOME)/dbgen/queries"; cat *.patch | patch -R -p1 -N
+	# apply patches to both source code and templates
+	cd "$(TPCH_HOME)/dbgen/queries" && cat *.patch | patch -p1
 	cp -r "$(TPCH_HOME)/dbgen" target/
-
+	
 modify-makefile:
+	# Create makefile from the template suit
 	cp target/dbgen/makefile.suite target/dbgen/Makefile
 	sed -i '103s/$$/ gcc/' target/dbgen/Makefile
-	sed -i '109s/$$/ SQLSERVER/' target/dbgen/Makefile
+	sed -i '109s/$$/ SPARK/' target/dbgen/Makefile
 	sed -i '110s/$$/ LINUX/' target/dbgen/Makefile
 	sed -i '111s/$$/ TPCH/' target/dbgen/Makefile
 
+modify-tpc-h:
+	# Enter information for the SPARK replacement variables
+	sed -i '115a\
+		#ifdef SPARK\
+		#define GEN_QUERY_PLAN  ""\
+		#define START_TRAN      ""\
+		#define END_TRAN        ""\
+		#define SET_OUTPUT      ""\
+		#define SET_ROWCOUNT    "LIMIT %d"\
+		#define SET_DBASE       ""\
+		#endif' target/dbgen/tpcd.h
+
 build-dbgen:
+	# Build it
 	cd target/dbgen ; make clean; make 2>/dev/null

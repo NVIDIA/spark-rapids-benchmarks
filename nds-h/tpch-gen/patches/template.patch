@@ -1,0 +1,272 @@
+diff --git a/1.sql b/1.sql
+index 407417e..dd89885 100644
+--- a/1.sql
++++ b/1.sql
+@@ -18,11 +18,11 @@ select
+ from
+ 	lineitem
+ where
+-	l_shipdate <= date '1998-12-01' - interval ':1' day (3)
++	l_shipdate <= date '1998-12-01' - interval ':1' day
+ group by
+ 	l_returnflag,
+ 	l_linestatus
+ order by
+ 	l_returnflag,
+-	l_linestatus;
+-:n -1
++	l_linestatus
++:n -1;
+diff --git a/10.sql b/10.sql
+index 2c8810c..1062dff 100644
+--- a/10.sql
++++ b/10.sql
+@@ -34,5 +34,5 @@ group by
+ 	c_address,
+ 	c_comment
+ order by
+-	revenue desc;
+-:n 20
++	revenue desc
++:n 20;
+diff --git a/11.sql b/11.sql
+index 885185c..f486d23 100644
+--- a/11.sql
++++ b/11.sql
+@@ -30,5 +30,5 @@ group by
+ 				and n_name = ':1'
+ 		)
+ order by
+-	value desc;
+-:n -1
++	value desc
++:n -1;
+diff --git a/12.sql b/12.sql
+index 0eb4aec..f5a4b19 100644
+--- a/12.sql
++++ b/12.sql
+@@ -31,5 +31,5 @@ where
+ group by
+ 	l_shipmode
+ order by
+-	l_shipmode;
+-:n -1
++	l_shipmode
++:n -1;
+diff --git a/13.sql b/13.sql
+index 90d0750..177458e 100644
+--- a/13.sql
++++ b/13.sql
+@@ -24,4 +24,4 @@ group by
+ order by
+ 	custdist desc,
+ 	c_count desc;
+-:n -1
++:n -1;
+diff --git a/14.sql b/14.sql
+index b5e45e3..f1a9b25 100644
+--- a/14.sql
++++ b/14.sql
+@@ -16,5 +16,5 @@ from
+ where
+ 	l_partkey = p_partkey
+ 	and l_shipdate >= date ':1'
+-	and l_shipdate < date ':1' + interval '1' month;
+-:n -1
++	and l_shipdate < date ':1' + interval '1' month
++:n -1;
+diff --git a/15.sql b/15.sql
+index 8e7e974..8c5a314 100644
+--- a/15.sql
++++ b/15.sql
+@@ -36,5 +36,5 @@ where
+ order by
+ 	s_suppkey;
+ 
+-drop view revenue:s;
+-:n -1
++drop view revenue:s
++:n -1;
+diff --git a/16.sql b/16.sql
+index 0dabfb5..e5d43d0 100644
+--- a/16.sql
++++ b/16.sql
+@@ -33,5 +33,5 @@ order by
+ 	supplier_cnt desc,
+ 	p_brand,
+ 	p_type,
+-	p_size;
+-:n -1
++	p_size
++:n -1;
+diff --git a/17.sql b/17.sql
+index 3968f54..78795fc 100644
+--- a/17.sql
++++ b/17.sql
+@@ -20,5 +20,5 @@ where
+ 			lineitem
+ 		where
+ 			l_partkey = p_partkey
+-	);
+-:n -1
++	)
++:n -1;
+diff --git a/18.sql b/18.sql
+index cce174f..cc0971c 100644
+--- a/18.sql
++++ b/18.sql
+@@ -35,5 +35,5 @@ group by
+ 	o_totalprice
+ order by
+ 	o_totalprice desc,
+-	o_orderdate;
+-:n 100
++	o_orderdate
++:n 100;
+diff --git a/19.sql b/19.sql
+index 8b7b915..b9d0ddf 100644
+--- a/19.sql
++++ b/19.sql
+@@ -38,5 +38,5 @@ where
+ 		and p_size between 1 and 15
+ 		and l_shipmode in ('AIR', 'AIR REG')
+ 		and l_shipinstruct = 'DELIVER IN PERSON'
+-	);
+-:n -1
++	)
++:n -1;
+diff --git a/2.sql b/2.sql
+index 2308318..e681f91 100644
+--- a/2.sql
++++ b/2.sql
+@@ -46,5 +46,5 @@ order by
+ 	s_acctbal desc,
+ 	n_name,
+ 	s_name,
+-	p_partkey;
+-:n 100
++	p_partkey
++:n 100;
+diff --git a/20.sql b/20.sql
+index 1d358bf..3d4a944 100644
+--- a/20.sql
++++ b/20.sql
+@@ -40,5 +40,5 @@ where
+ 	and s_nationkey = n_nationkey
+ 	and n_name = ':3'
+ order by
+-	s_name;
+-:n -1
++	s_name
++:n -1;
+diff --git a/21.sql b/21.sql
+index 38187dc..665984a 100644
+--- a/21.sql
++++ b/21.sql
+@@ -42,5 +42,5 @@ group by
+ 	s_name
+ order by
+ 	numwait desc,
+-	s_name;
+-:n 100
++	s_name
++:n 100;
+diff --git a/22.sql b/22.sql
+index 9a2aeb7..ecc864d 100644
+--- a/22.sql
++++ b/22.sql
+@@ -40,5 +40,5 @@ from
+ group by
+ 	cntrycode
+ order by
+-	cntrycode;
+-:n -1
++	cntrycode
++:n -1;
+diff --git a/3.sql b/3.sql
+index f054d31..741c0a5 100644
+--- a/3.sql
++++ b/3.sql
+@@ -25,5 +25,5 @@ group by
+ 	o_shippriority
+ order by
+ 	revenue desc,
+-	o_orderdate;
+-:n 10
++	o_orderdate
++:n 10;
+diff --git a/4.sql b/4.sql
+index f068f36..fa4e0e5 100644
+--- a/4.sql
++++ b/4.sql
+@@ -24,5 +24,5 @@ where
+ group by
+ 	o_orderpriority
+ order by
+-	o_orderpriority;
+-:n -1
++	o_orderpriority
++:n -1;
+diff --git a/5.sql b/5.sql
+index 998913d..f6a93c8 100644
+--- a/5.sql
++++ b/5.sql
+@@ -27,5 +27,5 @@ where
+ group by
+ 	n_name
+ order by
+-	revenue desc;
+-:n -1
++	revenue desc
++:n -1;
+diff --git a/6.sql b/6.sql
+index 59a6883..b973c57 100644
+--- a/6.sql
++++ b/6.sql
+@@ -12,5 +12,5 @@ where
+ 	l_shipdate >= date ':1'
+ 	and l_shipdate < date ':1' + interval '1' year
+ 	and l_discount between :2 - 0.01 and :2 + 0.01
+-	and l_quantity < :3;
+-:n -1
++	and l_quantity < :3
++:n -1;
+diff --git a/7.sql b/7.sql
+index 26eafad..b2da0bf 100644
+--- a/7.sql
++++ b/7.sql
+@@ -42,5 +42,5 @@ group by
+ order by
+ 	supp_nation,
+ 	cust_nation,
+-	l_year;
+-:n -1
++	l_year
++:n -1;
+diff --git a/8.sql b/8.sql
+index 977d24e..6b48f09 100644
+--- a/8.sql
++++ b/8.sql
+@@ -40,5 +40,5 @@ from
+ group by
+ 	o_year
+ order by
+-	o_year;
+-:n -1
++	o_year
++:n -1;
+diff --git a/9.sql b/9.sql
+index b262db4..8d7ba7b 100644
+--- a/9.sql
++++ b/9.sql
+@@ -35,5 +35,5 @@ group by
+ 	o_year
+ order by
+ 	nation,
+-	o_year desc;
+-:n -1
++	o_year desc
++:n -1;
+-- 
+2.34.1
+

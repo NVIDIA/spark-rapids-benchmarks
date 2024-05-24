@@ -36,8 +36,14 @@ You may not use NDS except in compliance with the Apache License, Version 2.0 an
     ```bash
     export TPCH_HOME=/PATH/TO/YOUR/TPC-H V3.0.1
     ```
-
     This variable will help find the TPC-H Tool when building essential component for this repository.
+
+    User must set the variables `DSS_QUERY` to the folder queries inside `TPCH_HOME`/dbgen. This helps the query gen utility
+    to find the templates
+
+    ```bash
+    export DSS_QUERY=/PATH/TO/YOUR/TPCH_HOME/dbgen/queries
+    ```
 
 ## Use spark-submit-template with template
 
@@ -77,29 +83,8 @@ When you hope to run multiple steps of NDS, you just need to modify `base.templa
 ### Build the jar for data generation
 
 ```bash
-cd tpcds-gen
+cd tpch-gen
 make
-```
-
-Note that if your OS's default `gcc` version is 10+ the most recent version of
-TPC-DS Tools 3.2 does not link due to errors such as:
-
-```text
-/usr/bin/ld: s_purchase.o:/home/gshegalov/gits/NVIDIA/spark-rapids-benchmarks/nds/tpcds-gen/target/tools/s_purchase.c:55: multiple definition of `nItemIndex'; s_catalog_order.o:/home/gshegalov/gits/NVIDIA/spark-rapids-benchmarks/nds/tpcds-gen/target/tools/s_catalog_order.c:56: first defined here
-```
-
-as a result of defaulting to [`-fno-common`](https://gcc.gnu.org/gcc-10/porting_to.html#common).
-As a workaround re-execute make in `tpcds-gen`:
-
-```bash
-make clean all LINUX_CC='gcc -fcommon'
-```
-
-Then two jars will be built at:
-
-```text
-./target/tpcds-gen-1.0-SNAPSHOT.jar
-./target/lib/dsdgen.jar
 ```
 
 ### Generate data
@@ -117,14 +102,8 @@ positional arguments:
 
 optional arguments:
   -h, --help          show this help message and exit
-  --range RANGE       Used for incremental data generation, meaning which part of childchunks are
-                      generated in one run. Format: "start,end", both are inclusive. e.g. "1,100". Note:
-                      the child range must be within the "parallel", "--parallel 100 --range 100,200" is
-                      illegal.
-  --overwrite_output  overwrite if there has already existing data in the path provided.
-  --replication REPLICATION
-                      the number of replication factor when generating data to HDFS. if not set, the Hadoop job will use the setting in the Hadoop cluster.
-  --update UPDATE     generate update dataset <n>. <n> is identical to the number of streams used in the Throughput Tests of the benchmark
+  --overwrite_output  overwrite if there has already existing data in the path provided
+                      
 ```
 
 Example command:
@@ -145,99 +124,6 @@ DSV ( pipe ) is the default input format for data conversion, it can be overridd
 
 Parquet, Orc, Avro, JSON and Iceberg are supported for output data format at present with CPU. For GPU conversion,
 only Parquet and Orc are supported.
-
-Note: when exporting data from CSV to Iceberg, user needs to set necessary configs for Iceberg in submit template.
-e.g. [convert_submit_cpu_iceberg.template](./convert_submit_cpu_iceberg.template)
-
-User can also specify `--tables` to convert specific table or tables. See argument details below.
-
-if `--floats` is specified in the command, DoubleType will be used to replace DecimalType data in Parquet files,
-otherwise DecimalType will be saved.
-
-#### NOTE: DeltaLake tables
-
-To convert CSV to DeltaLake [managed tables](https://docs.databricks.com/lakehouse/data-objects.html#what-is-a-managed-table),
-user needs to leverage a hive metastore service. For example, on Dataproc, you can use Dataproc Metastore service.
-When [creating a Dataproc Metastore service](https://cloud.google.com/dataproc-metastore/docs/create-service-cluster),
-user needs to specify the `hive.metastore.warehouse.dir` to your desired gs bucket at section `Metastore config overrides`
-as the DeltaLake warehouse directory. e.g. `hive.metastore.warehouse.dir=gs://YOUR_BUCKET/warehouse`.
-This action is required when set `--output_format` to `delta` when transcoding. Note, the `output_prefix`
-will not take effect in this situation.
-Don't forget to `export` Metastore content that contains database and table metadata to a gs bucket
-when you are about to shutdown the Metastore service.
-
-For [unmanaged tables](https://docs.databricks.com/lakehouse/data-objects.html#what-is-an-unmanaged-table),
-user doesn't need to create the Metastore service,  appending `--delta_unmanaged` to arguments will be enough.
-
-Arguments for `nds_transcode.py`:
-
-```bash
-python nds_transcode.py -h
-usage: nds_transcode.py [-h] [--output_mode {overwrite,append,ignore,error,errorifexists}] [--input_format {csv,parquet,orc,avro,json}] [--output_format {parquet,orc,avro,json,iceberg,delta}] [--tables TABLES] [--log_level LOG_LEVEL] [--floats] [--update]
-                        [--iceberg_write_format {parquet,orc,avro}] [--compression COMPRESSION] [--delta_unmanaged] [--hive] [--database DATABASE]
-                        input_prefix output_prefix report_file
-
-positional arguments:
-  input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"; the
-                        default is empty)
-  output_prefix         text to prepend to every output file (e.g., "hdfs:///ds-parquet"; the default is empty). If output_format is "iceberg", this argument will be regarded as the value of property "spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog session
-                        name "spark_catalog" is supported now, customized catalog is not yet supported.
-  report_file           location to store a performance report(local)
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --output_mode {overwrite,append,ignore,error,errorifexists}
-                        save modes as defined by https://spark.apache.org/docs/latest/sql-data-sources-load-save-functions.html#save-modes.default value is errorifexists, which is the Spark default behavior.
-  --input_format {csv,parquet,orc, avro, json}
-                        input data format to be converted. default value is csv.
-  --output_format {parquet,orc,avro,json,iceberg,delta}
-                        output data format when converting CSV data sources.
-  --tables TABLES       specify table names by a comma separated string. e.g. 'catalog_page,catalog_sales'.
-  --log_level LOG_LEVEL
-                        set log level for Spark driver log. Valid log levels include: ALL, DEBUG, ERROR, FATAL, INFO, OFF, TRACE, WARN(default: INFO)
-  --floats              replace DecimalType with DoubleType when saving parquet files. If not specified, decimal data will be saved.
-  --update              transcode the source data or update data
-  --iceberg_write_format {parquet,orc,avro}
-                        File format for the Iceberg table; parquet, avro, or orc
-  --compression COMPRESSION
-                        Compression codec to use when saving data. See https://iceberg.apache.org/docs/latest/configuration/#write-properties for supported codecs in Iceberg. See
-                        https://spark.apache.org/docs/latest/sql-data-sources.html for supported codecs for Spark built-in formats. When not specified, the default for the requested output format will be used.
-  --delta_unmanaged     Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without leveraging a
-                        Metastore service
-  --hive                create Hive external tables for the converted data.
-  --database DATABASE   the name of a database to use instead of `default`, currently applies only to Hive
-```
-
-Example command to submit via `spark-submit-template` utility:
-
-```bash
-./spark-submit-template convert_submit_gpu.template \
-nds_transcode.py  raw_sf3k  parquet_sf3k report.txt
-```
-
-User can also use `spark-submit` to submit `nds_transcode.py` directly.
-
-We provide two basic templates for GPU run(convert_submit_gpu.template) and CPU run(convert_submit_cpu.template).
-To enable GPU run, user needs to download the following jar.
-
-[spark-rapids jar](https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.10.0/rapids-4-spark_2.12-22.10.0.jar)
-
-After that, please set environment variable `SPARK_RAPIDS_PLUGIN_JAR` to the path where the jars are
-downloaded to in spark submit templates.
-
-### Data partitioning
-
-When converting CSV to Parquet data, the script will add data partitioning to some tables:
-
-| Table              | Partition Column    |
-| -----------        | -----------         |
-| catalog_sales      | cs_sold_date_sk     |
-| catalog_returns    | cr_returned_date_sk |
-| inventory          | inv_date_sk         |
-| store_sales        | ss_sold_date_sk     |
-| store_returns      | sr_returned_date_sk |
-| web_sales          | ws_sold_date_sk     |
-| web_returns        | wr_returned_date_sk |
 
 ## Query Generation
 
