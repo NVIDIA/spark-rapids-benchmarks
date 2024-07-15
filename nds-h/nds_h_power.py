@@ -37,7 +37,7 @@ from collections import OrderedDict
 from pyspark.sql import SparkSession
 import os
 import sys
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '..'))
 
 # Construct the path to the utils directory
 utils_dir = os.path.join(parent_dir, 'utils')
