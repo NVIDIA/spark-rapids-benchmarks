@@ -239,7 +239,7 @@ time.csv \
 --property_file ../utils/properties/aqe-on.properties
 ```
 
-User can also use `spark-submit` to submit `ndsH_power.py` directly.
+User can also use `spark-submit` to submit `nds_h_power.py` directly.
 
 To simplify the performance analysis process, the script will create a local CSV file to save query(including TempView creation) and corresponding execution time. Note: please use `client` mode(set in your `power_run_gpu.template` file) when running in Yarn distributed environment to make sure the time log is saved correctly in your local path.
 
@@ -257,4 +257,68 @@ nds_h_power.py \
 parquet_sf3k \
 ./nds_query_streams/query_0.sql \
 time.csv
+```
+
+## Data Validation
+To validate query output between Power Runs with and without GPU, we provide [nds_h_validate.py](nds_h_validate.py) to do the job.
+
+Arguments supported by `nds_h_validate.py`
+
+```text
+usage: nds_h_validate.py [-h] [--input1_format INPUT1_FORMAT]
+                         [--input2_format INPUT2_FORMAT]
+                         [--max_errors MAX_ERRORS] [--epsilon EPSILON]
+                         [--ignore_ordering] [--use_iterator]
+                         [--json_summary_folder JSON_SUMMARY_FOLDER]
+                         [--sub_queries SUB_QUERIES]
+                         input1 input2 query_stream_file
+
+positional arguments:
+  input1                path of the first input data.
+  input2                path of the second input data.
+  query_stream_file     query stream file that contains NDS queries in
+                        specific order.
+
+options:
+  -h, --help            show this help message and exit
+  --input1_format INPUT1_FORMAT
+                        data source type for the first input data. e.g.
+                        parquet, orc. Default is: parquet.
+  --input2_format INPUT2_FORMAT
+                        data source type for the second input data. e.g.
+                        parquet, orc. Default is: parquet.
+  --max_errors MAX_ERRORS
+                        Maximum number of differences to report.
+  --epsilon EPSILON     Allow for differences in precision when comparing
+                        floating point values. Given 2 float numbers: 0.000001
+                        and 0.000000, the diff of them is 0.000001 which is
+                        less than 0.00001, so we regard this as acceptable and
+                        will not report a mismatch.
+  --ignore_ordering     Sort the data collected from the DataFrames before
+                        comparing them.
+  --use_iterator        When set, use `toLocalIterator` to load one partition
+                        at a time into driver memory, reducing memory usage at
+                        the cost of performance because processing will be
+                        single-threaded.
+  --json_summary_folder JSON_SUMMARY_FOLDER
+                        path of a folder that contains json summary file for
+                        each query.
+  --sub_queries SUB_QUERIES
+                        comma separated list of queries to compare. If not
+                        specified, all queries in the stream file will be
+                        compared. e.g. "query1,query2,query3". Note, use
+                        "_part1" and "_part2" suffix e.g. query15_part1,
+                        query15_part2
+```
+
+Example command to compare output data of two queries:
+
+```bash
+cd shared
+./spark-submit-template power_run_cpu.template \
+../nds-h/nds_h_validate.py \
+<query_output_cpu> \
+<query_output_gpu> \
+<query_stream>.sql \ 
+--ignore_ordering 
 ```

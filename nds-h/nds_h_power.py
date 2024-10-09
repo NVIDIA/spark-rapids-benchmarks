@@ -164,7 +164,9 @@ def run_one_query(spark_session,
                   output_path,
                   output_format):
     df = spark_session.sql(query)
-    if not output_path:
+    # query15_part1 and query15_part3 are create/drop view queries
+    empty_output_queries = ['query15_part1', 'query15_part3']
+    if query_name in empty_output_queries or not output_path:
         df.collect()
     else:
         ensure_valid_column_names(df).write.format(output_format).mode('overwrite').save(
