@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +35,8 @@ import csv
 import os
 import sys
 import time
+import subprocess 
+import shlex
 from collections import OrderedDict
 from pyspark.sql import SparkSession
 from PysparkBenchReport import PysparkBenchReport
@@ -45,6 +47,45 @@ from nds_gen_query_stream import split_special_query
 from nds_schema import get_schemas
 
 check_version()
+
+class Profiler:
+    def __init__(self, profiling_hook, output_root):
+        self.profiling_hook = profiling_hook
+        self.output_root = output_root
+        self.is_profiling_enabled = output_root is not None and profiling_hook is not None
+
+        self.query_name = None
+
+    def __call__(self, query_name):
+        self.query_name = query_name
+        return self
+
+    def __enter__(self,):
+        self.start_profiling()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.stop_profiling()
+        self.query_name = None
+
+    def execute_script(self, action):
+        script_path = self.profiling_hook
+        command = f"{script_path} {action} {shlex.quote(self.output_root)} {shlex.quote(self.query_name)}"
+        try:
+            subprocess.run(command, shell=True, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error: Script exited with status {e.returncode}")
+            raise
+
+    def start_profiling(self):
+        if self.is_profiling_enabled:
+            print(f"Profiling started with profiling script: {self.profiling_hook} writing to {self.output_root} for query {self.query_name}.")
+            self.execute_script('start')
+
+    def stop_profiling(self):
+        if self.is_profiling_enabled:
+            self.execute_script('stop')
+            print("Profiling stopped")
 
 
 def gen_sql_from_stream(query_stream_file_path):
@@ -123,16 +164,19 @@ def register_delta_tables(spark_session, input_prefix, execution_time_list):
 
 
 def run_one_query(spark_session,
+                  profiler,
                   query,
                   query_name,
                   output_path,
                   output_format):
-    df = spark_session.sql(query)
-    if not output_path:
-        df.collect()
-    else:
-        ensure_valid_column_names(df).write.format(output_format).mode('overwrite').save(
-                output_path + '/' + query_name)
+    with profiler(query_name=query_name):
+        print(f"Running query {query_name}")
+        df = spark_session.sql(query)
+        if not output_path:
+            df.collect()
+        else:
+            ensure_valid_column_names(df).write.format(output_format).mode('overwrite').save(
+                    output_path + '/' + query_name)
 
 def ensure_valid_column_names(df: DataFrame):
     def is_column_start(char):
@@ -195,7 +239,8 @@ def run_query_stream(input_prefix,
                      delta_unmanaged=False,
                      keep_sc=False,
                      hive_external=False,
-                     allow_failure=False):
+                     allow_failure=False,
+                     profiling_hook=None):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
 
@@ -250,6 +295,10 @@ def run_query_stream(input_prefix,
     check_json_summary_folder(json_summary_folder)
     if sub_queries:
         query_dict = get_query_subset(query_dict, sub_queries)
+    
+    # Setup profiler
+    profiler = Profiler(profiling_hook=profiling_hook, output_root=json_summary_folder)
+
     # Run query
     power_start = int(time.time())
     for query_name, q_content in query_dict.items():
@@ -258,6 +307,7 @@ def run_query_stream(input_prefix,
         print("====== Run {} ======".format(query_name))
         q_report = PysparkBenchReport(spark_session, query_name)
         summary = q_report.report_on(run_one_query,spark_session,
+                                                   profiler,
                                                    q_content,
                                                    query_name,
                                                    output_path,
@@ -391,6 +441,10 @@ if __name__ == "__main__":
     parser.add_argument('--allow_failure',
                         action='store_true',
                         help='Do not exit with non zero when any query failed or any task failed')
+    parser.add_argument('--profiling_hook',
+                        help='Executable that is called just before/after a query executes.' +
+                        'The executable is called like this ' +
+                        './hook {start|stop} output_root query_name.')
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
     run_query_stream(args.input_prefix,
@@ -407,4 +461,5 @@ if __name__ == "__main__":
                      args.delta_unmanaged,
                      args.keep_sc,
                      args.hive,
-                     args.allow_failure)
+                     args.allow_failure,
+                     args.profiling_hook)
