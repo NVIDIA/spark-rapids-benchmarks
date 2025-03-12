@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -186,6 +186,8 @@ def run_query_stream(input_prefix,
                      query_dict,
                      time_log_output_path,
                      sub_queries,
+                     warmup_iterations,
+                     iterations,
                      input_format,
                      output_path=None,
                      keep_sc=False,
@@ -237,7 +239,10 @@ def run_query_stream(input_prefix,
         spark_session.sparkContext.setJobGroup(query_name, query_name)
         print("====== Run {} ======".format(query_name))
         q_report = PysparkBenchReport(spark_session, query_name)
-        summary = q_report.report_on(run_one_query, spark_session,
+        summary = q_report.report_on(run_one_query,
+                                     warmup_iterations,
+                                     iterations,
+                                     spark_session,
                                      q_content,
                                      query_name,
                                      output_path,
@@ -346,6 +351,14 @@ if __name__ == "__main__":
                         default='parquet')
     parser.add_argument('--property_file',
                         help='property file for Spark configuration.')
+    parser.add_argument('--warmup_iterations',
+                        type=int,
+                        help='Number of warmup iterations for each query.',
+                        default=0)
+    parser.add_argument('--iterations',
+                        type=int,
+                        help='Number of iterations for each query.',
+                        default=1)
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
     run_query_stream(args.input_prefix,
@@ -353,6 +366,8 @@ if __name__ == "__main__":
                      query_dict,
                      args.time_log,
                      args.sub_queries,
+                     args.warmup_iterations,
+                     args.iterations,
                      args.input_format,
                      args.output_prefix,
                      args.keep_sc,
