@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -57,7 +57,7 @@ class PysparkBenchReport:
             'query': query_name,
         }
 
-    def report_on(self, fn: Callable, warmup_iterations = 0, iterations = 1, *args):
+    def report_on(self, fn: Callable, *args):
         """Record a function for its running environment, running status etc. and exclude sentive
         information like tokens, secret and password Generate summary in dict format for it.
 
@@ -84,41 +84,28 @@ class PysparkBenchReport:
         if listener is not None:
             print("TaskFailureListener is registered.")
         try:
-            # warmup
-            for i in range(0, warmup_iterations):
-                fn(*args)
+            start_time = int(time.time() * 1000)
+            fn(*args)
+            end_time = int(time.time() * 1000)
+            if listener and len(listener.failures) != 0:
+                self.summary['queryStatus'].append("CompletedWithTaskFailures")
+            else:
+                self.summary['queryStatus'].append("Completed")
         except Exception as e:
-            print('ERROR WHILE WARMUP BEGIN')
+            # print the exception to ease debugging
+            print('ERROR BEGIN')
             print(e)
             traceback.print_tb(e.__traceback__)
-            print('ERROR WHILE WARMUP END')
-
-        start_time = int(time.time() * 1000)
-        self.summary['startTime'] = start_time
-        # run the query
-        for i in range(0, iterations):
-            try:    
-                start_time = int(time.time() * 1000)
-                fn(*args)
-                end_time = int(time.time() * 1000)
-                if listener and len(listener.failures) != 0:
-                    self.summary['queryStatus'].append("CompletedWithTaskFailures")
-                else:
-                    self.summary['queryStatus'].append("Completed")
-            except Exception as e:
-                # print the exception to ease debugging
-                print('ERROR BEGIN')
-                print(e)
-                traceback.print_tb(e.__traceback__)
-                print('ERROR END')
-                end_time = int(time.time() * 1000)
-                self.summary['queryStatus'].append("Failed")
-                self.summary['exceptions'].append(str(e))
-            finally:
-                self.summary['queryTimes'].append(end_time - start_time)
-        if listener is not None:
-            listener.unregister()
-        return self.summary
+            print('ERROR END')
+            end_time = int(time.time() * 1000)
+            self.summary['queryStatus'].append("Failed")
+            self.summary['exceptions'].append(str(e))
+        finally:
+            self.summary['startTime'] = start_time
+            self.summary['queryTimes'].append(end_time - start_time)
+            if listener is not None:
+                listener.unregister()
+            return self.summary
 
     def write_summary(self, prefix=""):
         """_summary_

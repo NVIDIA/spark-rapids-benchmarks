@@ -231,8 +231,6 @@ def run_query_stream(input_prefix,
                      time_log_output_path,
                      extra_time_log_output_path,
                      sub_queries,
-                     warmup_iterations,
-                     iterations,
                      input_format="parquet",
                      use_decimal=True,
                      output_path=None,
@@ -308,9 +306,7 @@ def run_query_stream(input_prefix,
         spark_session.sparkContext.setJobGroup(query_name, query_name)
         print("====== Run {} ======".format(query_name))
         q_report = PysparkBenchReport(spark_session, query_name)
-        summary = q_report.report_on(run_one_query,warmup_iterations,
-                                                   iterations,
-                                                   spark_session,
+        summary = q_report.report_on(run_one_query,spark_session,
                                                    profiler,
                                                    q_content,
                                                    query_name,
@@ -318,8 +314,7 @@ def run_query_stream(input_prefix,
                                                    output_format)
         print(f"Time taken: {summary['queryTimes']} millis for {query_name}")
         query_times = summary['queryTimes']
-        for query_time in query_times:
-            execution_time_list.append((spark_app_id, query_name, query_time))
+        execution_time_list.append((spark_app_id, query_name, query_times[0]))
         queries_reports.append(q_report)
         if json_summary_folder:
             # property_file e.g.: "property/aqe-on.properties" or just "aqe-off.properties"
@@ -450,14 +445,6 @@ if __name__ == "__main__":
                         help='Executable that is called just before/after a query executes.' +
                         'The executable is called like this ' +
                         './hook {start|stop} output_root query_name.')
-    parser.add_argument('--warmup_iterations',
-                        type=int,
-                        help='Number of warmup iterations for each query.',
-                        default=0)
-    parser.add_argument('--iterations',
-                        type=int,
-                        help='Number of iterations for each query.',
-                        default=1)
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
     run_query_stream(args.input_prefix,
@@ -466,8 +453,6 @@ if __name__ == "__main__":
                      args.time_log,
                      args.extra_time_log,
                      args.sub_queries,
-                     args.warmup_iterations,
-                     args.iterations,
                      args.input_format,
                      not args.floats,
                      args.output_prefix,
