@@ -227,10 +227,11 @@ def run_query(spark_session,
         spark_session.sparkContext.setJobGroup(query_name, query_name)
         print(f"====== Run {query_name} ======")
         q_report = PysparkBenchReport(spark_session, query_name)
-        summary = q_report.report_on(run_dm_query, spark_session,
-                                                       q_content,
-                                                       query_name,
-                                                       warehouse_type)
+        summary = q_report.report_on(run_dm_query, 0, 1,
+                                                    spark_session,
+                                                    q_content,
+                                                    query_name,
+                                                    warehouse_type)
         print(f"Time taken: {summary['queryTimes']} millis for {query_name}")
         execution_time_list.append((spark_app_id, query_name, summary['queryTimes']))
         if json_summary_folder:
