@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -237,7 +237,8 @@ def run_query_stream(input_prefix,
         spark_session.sparkContext.setJobGroup(query_name, query_name)
         print("====== Run {} ======".format(query_name))
         q_report = PysparkBenchReport(spark_session, query_name)
-        summary = q_report.report_on(run_one_query, spark_session,
+        summary = q_report.report_on(run_one_query,
+                                     spark_session,
                                      q_content,
                                      query_name,
                                      output_path,
