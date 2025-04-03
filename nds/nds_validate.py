@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -179,14 +179,12 @@ def rowEqual(row1, row2, epsilon, is_q78, q78_problematic_col):
         problematic_val_row2 = row2.pop(q78_problematic_col-1)
         problematic_val_eq = False
         # this value could be none in some rows
-        if all([problematic_val_row1, problematic_val_row2]):
+        if problematic_val_row1 is not None and problematic_val_row2 is not None:
             # this value is rounded to its pencentile: round(ss_qty/(coalesce(ws_qty,0)+coalesce(cs_qty,0)),2)
             # so we allow the diff <= 0.01 + default epsilon 0.00001
             problematic_val_eq = abs(problematic_val_row1 - problematic_val_row2) <= 0.01001
-        elif problematic_val_row1 == None and problematic_val_row2 == None:
-            problematic_val_eq = True
         else:
-            problematic_val_eq = False
+            problematic_val_eq = problematic_val_row1 is None and problematic_val_row2 is None
         return problematic_val_eq and all([compare(lhs, rhs, epsilon) for lhs, rhs in zip(row1, row2)])
     else:
         return all([compare(lhs, rhs, epsilon) for lhs, rhs in zip(row1, row2)])
