@@ -39,7 +39,15 @@ import subprocess
 import shlex
 from collections import OrderedDict
 from pyspark.sql import SparkSession
-from PysparkBenchReport import PysparkBenchReport
+
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '..'))
+
+# Construct the path to the utils directory
+utils_dir = os.path.join(parent_dir, 'utils')
+# Add the utils directory to sys.path
+sys.path.insert(0, utils_dir)
+
+from python_benchmark_reporter.PysparkBenchReport import PysparkBenchReport
 from pyspark.sql import DataFrame
 
 from check import check_json_summary_folder, check_query_subset_exists, check_version
