@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +35,7 @@ import os
 import shutil
 import subprocess
 
-from check import check_build, check_version, get_abs_path, get_dir_size, parallel_value_type, valid_range
+from check import check_build_nds, check_version, get_abs_path, get_dir_size, parallel_value_type, valid_range
 
 check_version()
 
