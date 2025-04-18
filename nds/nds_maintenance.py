@@ -36,7 +36,6 @@ from datetime import datetime
 import os
 
 from pyspark.sql import SparkSession
-
 from PysparkBenchReport import PysparkBenchReport
 
 from check import check_json_summary_folder, get_abs_path
