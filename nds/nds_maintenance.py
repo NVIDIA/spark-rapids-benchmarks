@@ -36,14 +36,8 @@ from datetime import datetime
 import os
 
 from pyspark.sql import SparkSession
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '..'))
 
-# Construct the path to the utils directory
-utils_dir = os.path.join(parent_dir, 'utils')
-# Add the utils directory to sys.path
-sys.path.insert(0, utils_dir)
-
-from python_benchmark_reporter.PysparkBenchReport import PysparkBenchReport
+from PysparkBenchReport import PysparkBenchReport
 
 from check import check_json_summary_folder, get_abs_path
 from nds_schema import get_maintenance_schemas
