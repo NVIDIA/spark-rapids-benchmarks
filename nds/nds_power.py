@@ -193,7 +193,7 @@ def run_one_query(spark_session,
                 ensure_valid_column_names(df).write.format(output_format).mode('overwrite').save(
                         output_path + '/' + query_name)
         if save_plan_path:
-            subprocess.run(f"mkdir -p {save_plan_path}", shell=True)
+            os.makedirs(save_plan_path, exist_ok=True)
             explain_str = spark_session._jvm.PythonSQLUtils.explainString(df._jdf.queryExecution(), 'extended')
             plans = parse_explain_str(explain_str)
             for plan_type in plan_types:
