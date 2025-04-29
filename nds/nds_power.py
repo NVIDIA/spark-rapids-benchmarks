@@ -498,7 +498,8 @@ if __name__ == "__main__":
     parser.add_argument('--skip_execution',
                         action='store_true',
                         help='Skip the execution of the queries. This can be used in conjunction with ' +
-                        '--save_plan_path to only save the execution plans without running the queries.')
+                        '--save_plan_path to only save the execution plans without running the queries.' +
+                        'Note that "spark.sql.adaptive.enabled" should be set to false to get GPU physical plans.')
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
     run_query_stream(args.input_prefix,
