@@ -140,9 +140,11 @@ def check_json_summary_folder(json_summary_folder):
             os.makedirs(json_summary_folder)
         else:
             if os.listdir(json_summary_folder):
-                raise Exception(f"json_summary_folder {json_summary_folder} is not empty. " +
-                                "There may be already some json files there. Please clean the folder " +
-                                "or specify another one.")
+                # Remove all contents from the existing folder
+                for item in os.listdir(json_summary_folder):
+                    item_path = os.path.join(json_summary_folder, item)
+                    if os.path.isfile(item_path):
+                        os.remove(item_path)
 
 def check_query_subset_exists(query_dict, subset_list):
     """check if the query subset exists in the query dictionary"""
