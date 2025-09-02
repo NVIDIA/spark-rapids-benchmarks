@@ -77,11 +77,12 @@ def gen_sql_from_stream(query_stream_file_path):
     for match in matches:
         template_number = match[0]
         queries = match[1].split(";")
-        if len(queries) == 1:
-            extended_queries[f'query{template_number}'] = queries[0].strip()
+        non_empty_queries = [q for q in queries if q.strip()]
+        if len(non_empty_queries) == 1:
+            extended_queries[f'query{template_number}'] = non_empty_queries[0]
         else:
-            for i in range(len(queries)):
-                extended_queries[f'query{template_number}_part{i+1}'] = queries[i].strip()
+            for i in range(len(non_empty_queries)):
+                extended_queries[f'query{template_number}_part{i+1}'] = non_empty_queries[i]
 
     return extended_queries
 
