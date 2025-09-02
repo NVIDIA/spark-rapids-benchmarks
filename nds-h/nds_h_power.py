@@ -77,7 +77,7 @@ def gen_sql_from_stream(query_stream_file_path):
     for match in matches:
         template_number = match[0]
         queries = match[1].split(";")
-        non_empty_queries = [q for q in queries if q.strip()]
+        non_empty_queries = [q.strip() for q in queries if q.strip()]
         if len(non_empty_queries) == 1:
             extended_queries[f'query{template_number}'] = non_empty_queries[0]
         else:
