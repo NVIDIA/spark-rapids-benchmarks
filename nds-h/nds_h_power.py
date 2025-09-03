@@ -76,14 +76,13 @@ def gen_sql_from_stream(query_stream_file_path):
     # Populate the dictionary with template file numbers as keys and queries as values
     for match in matches:
         template_number = match[0]
-        if int(template_number) == 15:
-            new_queries = match[1].split(";")
-            extended_queries[f'query{template_number}_part1'] = new_queries[0].strip()
-            extended_queries[f'query{template_number}_part2'] = new_queries[1].strip()
-            extended_queries[f'query{template_number}_part3'] = new_queries[2].strip()
+        queries = match[1].split(";")
+        non_empty_queries = [q.strip() for q in queries if q.strip()]
+        if len(non_empty_queries) == 1:
+            extended_queries[f'query{template_number}'] = non_empty_queries[0]
         else:
-            sql_query = match[1].strip()
-            extended_queries[f'query{template_number}'] = sql_query
+            for i in range(len(non_empty_queries)):
+                extended_queries[f'query{template_number}_part{i+1}'] = non_empty_queries[i]
 
     return extended_queries
 
