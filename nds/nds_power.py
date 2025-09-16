@@ -105,12 +105,28 @@ def gen_sql_from_stream(query_stream_file_path):
     for q in all_queries:
         # e.g. "-- start query 32 in stream 0 using template query98.tpl"
         query_name = q[q.find('template')+9: q.find('.tpl')]
-        if 'select' in q.split(';')[1]:
-            part_1, part_2 = split_special_query(q)
-            extended_queries[query_name + '_part1'] = part_1
-            extended_queries[query_name + '_part2'] = part_2
+        queries = q.split(';')
+        non_empty_queries = [x.strip() for x in queries if x.strip()]
+        if len(non_empty_queries) == 1:
+            # normal query, just one query in the template
+            extended_queries[query_name] = non_empty_queries[0]
         else:
-            extended_queries[query_name] = q
+            head = queries[0].split('\n')[0]
+            query_part = queries[0].replace('.tpl', '_part1.tpl') + ';'
+            extended_queries[f'{query_name}_part1'] = query_part
+            for i in range(len(non_empty_queries) - 1):
+                # We skip the first one since it's already added
+                index = i + 1
+                query_part_index = index + 1
+                query_part = head.replace('.tpl', f'_part{query_part_index}.tpl') + '\n'
+                query_part += non_empty_queries[index] + ';'
+                extended_queries[f'{query_name}_part{query_part_index}'] = query_part
+        # if 'select' in q.split(';')[1]:
+        #     part_1, part_2 = split_special_query(q)
+        #     extended_queries[query_name + '_part1'] = part_1
+        #     extended_queries[query_name + '_part2'] = part_2
+        # else:
+        #     extended_queries[query_name] = q
 
     # add "-- start" string back to each query
     for q_name, q_content in extended_queries.items():
