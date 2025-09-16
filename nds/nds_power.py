@@ -106,7 +106,11 @@ def gen_sql_from_stream(query_stream_file_path):
         # e.g. "-- start query 32 in stream 0 using template query98.tpl"
         query_name = q[q.find('template')+9: q.find('.tpl')]
         queries = q.split(';')
-        non_empty_queries = [x.strip() for x in queries if x.strip()]
+        non_empty_queries = []
+        for q in queries:
+            q_stripped = q.strip()
+            if q_stripped and not q_stripped.startswith('--'):
+                non_empty_queries.append(q_stripped)
         if len(non_empty_queries) == 1:
             # normal query, just one query in the template
             extended_queries[query_name] = non_empty_queries[0]
