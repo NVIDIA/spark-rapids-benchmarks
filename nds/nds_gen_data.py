@@ -214,7 +214,7 @@ def generate_data_local(args, range_start, range_end, tool_path):
                        "-parallel", args.parallel,
                        "-child", str(i),
                        "-verbose", "Y"]
-        if args.overwrite_output:
+        if args.overwrite_output or args.update:
             dsdgen_args += ["-force", "Y"]
         if args.update:
             dsdgen_args += ["-update", args.update]
