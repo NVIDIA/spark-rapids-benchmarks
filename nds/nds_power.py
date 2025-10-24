@@ -43,7 +43,6 @@ from PysparkBenchReport import PysparkBenchReport
 from pyspark.sql import DataFrame
 
 from check import check_json_summary_folder, check_query_subset_exists, check_version
-from nds_gen_query_stream import split_special_query
 from nds_schema import get_schemas
 
 check_version()
@@ -115,6 +114,9 @@ def gen_sql_from_stream(query_stream_file_path):
             # normal query, just one query in the template
             extended_queries[query_name] = non_empty_queries[0]
         else:
+            # Multiple sub-queries in the query.
+            # We want to update the template name for each part.
+            # See split_special_query function in nds_gen_query_stream.py for more details.
             head = queries[0].split('\n')[0]
             query_part = queries[0].replace('.tpl', '_part1.tpl') + ';'
             extended_queries[f'{query_name}_part1'] = query_part
@@ -125,12 +127,6 @@ def gen_sql_from_stream(query_stream_file_path):
                 query_part = head.replace('.tpl', f'_part{query_part_index}.tpl') + '\n'
                 query_part += non_empty_queries[index] + ';'
                 extended_queries[f'{query_name}_part{query_part_index}'] = query_part
-        # if 'select' in q.split(';')[1]:
-        #     part_1, part_2 = split_special_query(q)
-        #     extended_queries[query_name + '_part1'] = part_1
-        #     extended_queries[query_name + '_part2'] = part_2
-        # else:
-        #     extended_queries[query_name] = q
 
     # add "-- start" string back to each query
     for q_name, q_content in extended_queries.items():
