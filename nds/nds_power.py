@@ -33,6 +33,7 @@
 import argparse
 import csv
 import os
+import re
 import sys
 import time
 import subprocess 
@@ -352,9 +353,19 @@ def get_query_subset(query_dict, subset):
     """Get a subset of queries from query_dict.
     The subset is specified by a list of query names.
     """
-    check_query_subset_exists(query_dict, subset)
-    return dict((k, query_dict[k]) for k in subset)
+    # check_query_subset_exists(query_dict, subset)
+    # return dict((k, query_dict[k]) for k in subset)
 
+    # subset is a list of regex for query names.
+    selected_queries = OrderedDict()
+    for pattern in subset:
+        for query_name in query_dict.keys():
+            if re.match(pattern, query_name):
+                selected_queries[query_name] = query_dict[query_name]
+    if not selected_queries:
+        msg = f"No query matched the specified subset patterns: {subset}"
+        raise Exception(msg)
+    return selected_queries
 
 def run_query_stream(input_prefix,
                      property_file,
