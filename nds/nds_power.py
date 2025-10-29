@@ -102,6 +102,7 @@ def parse_query_content(query_content):
         
     Returns:
         dict: A dictionary with keys:
+            - 'query_tpl': Query name template. This will be updated based on the query type and index.
             - 'setup': SQL string before '-- start benchmark'
             - 'benchmark': SQL string between '-- start benchmark' and '-- end benchmark'
             - 'cleanup': SQL string after '-- end benchmark'
@@ -185,9 +186,9 @@ def get_query_type(query_name):
     Returns:
         str: One of 'setup', 'cleanup', or 'benchmark'
     """
-    if query_name.endswith('_setup') or '_setup_' in query_name:
+    if '_setup' in query_name:
         return 'setup'
-    elif query_name.endswith('_cleanup') or '_cleanup_' in query_name:
+    elif '_cleanup' in query_name:
         return 'cleanup'
     else:
         return 'benchmark'
@@ -213,24 +214,22 @@ def gen_sql_from_stream(query_stream_file_path):
 
         parsed = parse_query_content(q)
 
+        def add_to_extended_queries(query_type, idx, parsed):
+            subquery_cnt = len(parsed[query_type])
+            if query_type == 'benchmark':
+                dict_key = f"{query_name}_part{idx}" if subquery_cnt > 1 else query_name
+            else:
+                dict_key = f"{query_name}_{query_type}{idx}" if subquery_cnt > 1 else f"{query_name}_{query_type}"
+            query_part = parsed['query_tpl'].replace('.tpl', f'_{query_type}{idx}.tpl') + '\n'
+            query_part += parsed[query_type][i] + ';'
+            extended_queries[dict_key] = query_part
+
         for i in range(len(parsed['setup'])):
-            setup_idx = i + 1
-            setup_query_name = f"{query_name}_setup_{setup_idx}"
-            query_part = parsed['query_tpl'].replace('.tpl', f'_setup_{setup_idx}.tpl') + '\n'
-            query_part += parsed['setup'][i] + ';'
-            extended_queries[setup_query_name] = query_part
+            add_to_extended_queries('setup', i + 1, parsed)
         for i in range(len(parsed['benchmark'])):
-            benchmark_idx = i + 1
-            benchmark_query_name = f"{query_name}_part{benchmark_idx}" if len(parsed['benchmark']) > 1 else query_name
-            query_part = parsed['query_tpl'].replace('.tpl', f'_part{benchmark_idx}.tpl') + '\n'
-            query_part += parsed['benchmark'][i] + ';'
-            extended_queries[benchmark_query_name] = query_part
+            add_to_extended_queries('benchmark', i + 1, parsed)
         for i in range(len(parsed['cleanup'])):
-            cleanup_idx = i + 1
-            cleanup_query_name = f"{query_name}_cleanup_{cleanup_idx}"
-            query_part = parsed['query_tpl'].replace('.tpl', f'_cleanup_{cleanup_idx}.tpl') + '\n'
-            query_part += parsed['cleanup'][i] + ';'
-            extended_queries[cleanup_query_name] = query_part
+            add_to_extended_queries('cleanup', i + 1, parsed)
 
     # add "-- start" string back to each query
     for q_name, q_content in extended_queries.items():
@@ -363,12 +362,8 @@ def ensure_valid_column_names(df: DataFrame):
 
 def get_query_subset(query_dict, subset):
     """Get a subset of queries from query_dict.
-    The subset is specified by a list of query names.
+    The subset is specified by a list of regex patterns for the query name.
     """
-    # check_query_subset_exists(query_dict, subset)
-    # return dict((k, query_dict[k]) for k in subset)
-
-    # subset is a list of regex for query names.
     selected_queries = OrderedDict()
     for pattern in subset:
         for query_name in query_dict.keys():
