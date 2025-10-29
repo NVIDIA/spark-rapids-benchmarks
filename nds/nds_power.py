@@ -114,8 +114,7 @@ def parse_query_content(query_content):
     benchmark_lines = []
     cleanup_lines = []
     
-    current_section = 'setup'  # Start in setup section
-    has_tags = False
+    current_section = 'init'
     
     for line in lines:
         line_stripped = line.strip()
@@ -124,36 +123,49 @@ def parse_query_content(query_content):
         if line_stripped.startswith('-- end query'):
             break
 
-        if line_stripped == '-- start benchmark':
-            has_tags = True
+        # Transitions allowed:
+        # init -> (setup) -> benchmark -> (cleanup -> done)
+        # All other transitions are invalid.
+
+        if line_stripped == '-- start setup':
+            if current_section != 'init':
+                raise RuntimeError("The setup section must be the first section if it exists.")
+            current_section = 'setup'
+            continue
+        elif line_stripped == '-- end setup':
+            if current_section != 'setup':
+                raise RuntimeError("Mismatched end setup tag.")
             current_section = 'benchmark'
             continue
-        elif line_stripped == '-- end benchmark':
-            has_tags = True
+        elif line_stripped == '-- start cleanup':
+            if current_section != 'benchmark':
+                raise RuntimeError("The cleanup section must come after the benchmark section.")
             current_section = 'cleanup'
             continue
-        
+        elif line_stripped == '-- end cleanup':
+            if current_section != 'cleanup':
+                raise RuntimeError("Mismatched end cleanup tag.")
+            current_section = 'done'
+            continue
+
+        if current_section == 'init':
+            # No tag has been found yet, so assume this is the benchmark section
+            current_section = 'benchmark'
+
         if current_section == 'setup':
             setup_lines.append(line)
         elif current_section == 'benchmark':
-            print(f"Adding to benchmark: {line}")
             benchmark_lines.append(line)
         elif current_section == 'cleanup':
             cleanup_lines.append(line)
     
+    if current_section != 'benchmark' and current_section != 'done':
+        raise RuntimeError("Unclosed section detected in query content. Current section: " + current_section)
+
     # Convert lists to strings
     setup_sql = '\n'.join(setup_lines).strip()
     benchmark_sql = '\n'.join(benchmark_lines).strip()
     cleanup_sql = '\n'.join(cleanup_lines).strip()
-    
-    # If no tags found, all content is benchmark
-    if not has_tags:
-        return {
-            'query_tpl': head,
-            'setup': [],
-            'benchmark': split_and_strip('\n'.join(lines), ';')[:-1],
-            'cleanup': []
-        }
     
     return {
         'query_tpl': head,
