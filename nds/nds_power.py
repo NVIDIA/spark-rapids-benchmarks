@@ -629,7 +629,8 @@ if __name__ == "__main__":
                         help='comma separated list of queries to run. If not specified, all queries ' +
                         'in the stream file will be run. e.g. "query1,query2,query3". Note, use ' +
                         '"_part1" and "_part2" suffix for the following query names: ' +
-                        'query14, query23, query24, query39. e.g. query14_part1, query39_part2')
+                        'query14, query23, query24, query39. e.g. query14_part1, query39_part2. '
+                        'Regex patterns are also supported to select multiple queries. e.g. "query1,query2,query14*"')
     parser.add_argument('--allow_failure',
                         action='store_true',
                         help='Do not exit with non zero when any query failed or any task failed')
