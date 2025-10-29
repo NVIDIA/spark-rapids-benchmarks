@@ -146,7 +146,7 @@ def setup_tables(spark_session, input_prefix, input_format, use_decimal, executi
     Returns:
         execution_time_list: a list recording query execution time.
     """
-    spark_app_id = spark_session.sparkContext.applicationId
+    spark_app_id = spark_session.conf.get("spark.app.id")
     # Create TempView for tables
     for table_name in get_schemas(False).keys():
         start = int(time.time() * 1000)
@@ -331,7 +331,7 @@ def run_query_stream(input_prefix,
     if input_format == 'delta' and delta_unmanaged:
         # Register tables for Delta Lake. This is only needed for unmanaged tables.
         execution_time_list = register_delta_tables(spark_session, input_prefix, execution_time_list)
-    spark_app_id = spark_session.sparkContext.applicationId
+    spark_app_id = spark_session.conf.get("spark.app.id")
     if input_format != 'iceberg' and input_format != 'delta' and not hive_external:
         execution_time_list = setup_tables(spark_session, input_prefix, input_format, use_decimal,
                                            execution_time_list)
@@ -347,7 +347,9 @@ def run_query_stream(input_prefix,
     power_start = int(time.time())
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
-        spark_session.sparkContext.setJobGroup(query_name, query_name)
+        spark_session.conf.set("spark.job.description", query_name)
+        spark_session.conf.set("spark.jobGroup.id", query_name)
+        spark_session.conf.set("spark.job.interruptOnCancel", "false")
         print("====== Run {} ======".format(query_name))
         q_report = PysparkBenchReport(spark_session, query_name)
         summary = q_report.report_on(run_one_query,warmup_iterations,
@@ -374,10 +376,13 @@ def run_query_stream(input_prefix,
             else:
                 summary_prefix =  os.path.join(json_summary_folder, '')
             q_report.write_summary(prefix=summary_prefix)
+    spark_session.conf.unset("spark.job.description")
+    spark_session.conf.unset("spark.jobGroup.id")
+    spark_session.conf.unset("spark.job.interruptOnCancel")
     power_end = int(time.time())
     power_elapse = int((power_end - power_start)*1000)
     if not keep_sc:
-        spark_session.sparkContext.stop()
+        spark_session.stop()
     total_time_end = time.time()
     total_elapse = int((total_time_end - total_time_start)*1000)
     print("====== Power Test Time: {} milliseconds ======".format(power_elapse))
