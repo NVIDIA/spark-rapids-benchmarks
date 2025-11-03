@@ -33,6 +33,7 @@
 import argparse
 import csv
 import os
+import re
 import sys
 import time
 import subprocess 
@@ -46,6 +47,7 @@ from check import check_json_summary_folder, check_query_subset_exists, check_ve
 from nds_schema import get_schemas
 
 check_version()
+
 
 class Profiler:
     def __init__(self, profiling_hook, output_root):
@@ -87,6 +89,113 @@ class Profiler:
             print("Profiling stopped")
 
 
+def split_and_strip(str, delimiter):
+    return [s.strip() for s in str.split(delimiter) if s.strip()]
+
+
+def parse_query_content(query_content):
+    """
+    Parse query content to identify setup, benchmark, and cleanup sections.
+    
+    Args:
+        query_content (str): The full query content potentially containing timing tags.
+        
+    Returns:
+        dict: A dictionary with keys:
+            - 'query_tpl': Query name template. This will be updated based on the query type and index.
+            - 'setup': SQL string before '-- start benchmark'
+            - 'benchmark': SQL string between '-- start benchmark' and '-- end benchmark'
+            - 'cleanup': SQL string after '-- end benchmark'
+    """
+    lines = split_and_strip(query_content, '\n')
+    head = lines[0]
+    lines = lines[1:]  # Exclude the head line
+    
+    setup_lines = []
+    benchmark_lines = []
+    cleanup_lines = []
+    
+    current_section = 'init'
+    
+    for line in lines:
+        line_stripped = line.strip()
+        if not line_stripped:
+            continue
+        if line_stripped.startswith('-- end query'):
+            break
+
+        # Transitions allowed:
+        # init -> (setup) -> benchmark -> (cleanup -> done)
+        # All other transitions are invalid.
+
+        if line_stripped == '-- start setup':
+            if current_section != 'init':
+                raise RuntimeError(f"Init expected, actual section {current_section}. "
+                                   f"The setup section must be the first section if it exists.")
+            current_section = 'setup'
+            continue
+        elif line_stripped == '-- end setup':
+            if current_section != 'setup':
+                raise RuntimeError("Mismatched end setup tag.")
+            current_section = 'benchmark'
+            continue
+        elif line_stripped == '-- start cleanup':
+            if current_section != 'benchmark':
+                raise RuntimeError(f"benchmark expected, actual section {current_section}. "
+                                   f"The cleanup section must come after the benchmark section.")
+            current_section = 'cleanup'
+            continue
+        elif line_stripped == '-- end cleanup':
+            if current_section != 'cleanup':
+                raise RuntimeError("Mismatched end cleanup tag.")
+            current_section = 'done'
+            continue
+
+        if current_section == 'init':
+            # No tag has been found yet, so assume this is the benchmark section
+            current_section = 'benchmark'
+
+        if current_section == 'setup':
+            setup_lines.append(line)
+        elif current_section == 'benchmark':
+            benchmark_lines.append(line)
+        elif current_section == 'cleanup':
+            cleanup_lines.append(line)
+    
+    if current_section != 'benchmark' and current_section != 'done':
+        raise RuntimeError("Unclosed section detected in query content. Current section: " + current_section)
+
+    # Convert lists to strings
+    setup_sql = '\n'.join(setup_lines).strip()
+    benchmark_sql = '\n'.join(benchmark_lines).strip()
+    cleanup_sql = '\n'.join(cleanup_lines).strip()
+    
+    return {
+        'query_tpl': head,
+        'setup': split_and_strip(setup_sql, ';'),
+        'benchmark': split_and_strip(benchmark_sql, ';'),
+        'cleanup': split_and_strip(cleanup_sql, ';')
+    }
+
+
+def get_query_type(query_name):
+    """
+    Determine the query type based on its name suffix.
+    
+    Args:
+        query_name (str): The name of the query.
+        
+    Returns:
+        str: One of 'setup', 'cleanup', or 'benchmark'
+    """
+    if '_setup' in query_name:
+        return 'setup'
+    elif '_cleanup' in query_name:
+        return 'cleanup'
+    else:
+        return 'benchmark'
+
+
 def gen_sql_from_stream(query_stream_file_path):
     """Read Spark compatible query stream and split them one by one
 
@@ -98,39 +207,37 @@ def gen_sql_from_stream(query_stream_file_path):
     """
     with open(query_stream_file_path, 'r') as f:
         stream = f.read()
-    all_queries = stream.split('-- start')[1:]
+    all_queries = stream.split('-- start query')[1:]
     # split query in query14, query23, query24, query39
     extended_queries = OrderedDict()
     for q in all_queries:
         # e.g. "-- start query 32 in stream 0 using template query98.tpl"
         query_name = q[q.find('template')+9: q.find('.tpl')]
-        queries = q.split(';')
-        non_empty_queries = []
-        for q in queries:
-            q_stripped = q.strip()
-            if q_stripped and not q_stripped.startswith('--'):
-                non_empty_queries.append(q_stripped)
-        if len(non_empty_queries) == 1:
-            # normal query, just one query in the template
-            extended_queries[query_name] = non_empty_queries[0]
-        else:
-            # Multiple sub-queries in the query.
-            # We want to update the template name for each part.
-            # See split_special_query function in nds_gen_query_stream.py for more details.
-            head = queries[0].split('\n')[0]
-            query_part = queries[0].replace('.tpl', '_part1.tpl') + ';'
-            extended_queries[f'{query_name}_part1'] = query_part
-            for i in range(len(non_empty_queries) - 1):
-                # We skip the first one since it's already added
-                index = i + 1
-                query_part_index = index + 1
-                query_part = head.replace('.tpl', f'_part{query_part_index}.tpl') + '\n'
-                query_part += non_empty_queries[index] + ';'
-                extended_queries[f'{query_name}_part{query_part_index}'] = query_part
+
+        parsed = parse_query_content(q)
+
+        def add_to_extended_queries(query_type, i, parsed):
+            idx = i + 1
+            subquery_cnt = len(parsed[query_type])
+            if query_type == 'benchmark':
+                dict_key = f"{query_name}_part{idx}" if subquery_cnt > 1 else query_name
+            else:
+                dict_key = f"{query_name}_{query_type}{idx}" if subquery_cnt > 1 else f"{query_name}_{query_type}"
+            query_part = parsed['query_tpl'].replace('.tpl', f'_{query_type}{idx}.tpl') + '\n'
+            query_part += parsed[query_type][i] + ';'
+            extended_queries[dict_key] = query_part
+
+        for i in range(len(parsed['setup'])):
+            add_to_extended_queries('setup', i, parsed)
+        for i in range(len(parsed['benchmark'])):
+            add_to_extended_queries('benchmark', i, parsed)
+        for i in range(len(parsed['cleanup'])):
+            add_to_extended_queries('cleanup', i, parsed)
 
     # add "-- start" string back to each query
     for q_name, q_content in extended_queries.items():
-        extended_queries[q_name] = '-- start' + q_content
+        extended_queries[q_name] = '-- start query' + q_content
+
     return extended_queries
 
 def setup_tables(spark_session, input_prefix, input_format, use_decimal, execution_time_list):
@@ -258,11 +365,17 @@ def ensure_valid_column_names(df: DataFrame):
 
 def get_query_subset(query_dict, subset):
     """Get a subset of queries from query_dict.
-    The subset is specified by a list of query names.
+    The subset is specified by a list of regex patterns for the query name.
     """
-    check_query_subset_exists(query_dict, subset)
-    return dict((k, query_dict[k]) for k in subset)
-
+    selected_queries = OrderedDict()
+    for pattern in subset:
+        for query_name in query_dict.keys():
+            if re.match(pattern, query_name):
+                selected_queries[query_name] = query_dict[query_name]
+    if not selected_queries:
+        msg = f"No query matched the specified subset patterns: {subset}"
+        raise Exception(msg)
+    return selected_queries
 
 def run_query_stream(input_prefix,
                      property_file,
@@ -345,11 +458,18 @@ def run_query_stream(input_prefix,
 
     # Run query
     power_start = int(time.time())
+    setup_time = 0
+    cleanup_time = 0
+    
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
         spark_session.sparkContext.setJobGroup(query_name, query_name)
         print("====== Run {} ======".format(query_name))
         q_report = PysparkBenchReport(spark_session, query_name)
+        
+        # Determine query type
+        query_type = get_query_type(query_name)
+        
         summary = q_report.report_on(run_one_query,warmup_iterations,
                                                    iterations,
                                                    spark_session,
@@ -365,8 +485,19 @@ def run_query_stream(input_prefix,
         query_times = summary['queryTimes']
         for query_time in query_times:
             execution_time_list.append((spark_app_id, query_name, query_time))
+            
+            # Accumulate setup and cleanup times
+            if query_type == 'setup':
+                setup_time += query_time
+            elif query_type == 'cleanup':
+                cleanup_time += query_time
+        
         queries_reports.append(q_report)
         if json_summary_folder:
+            # Add query type and includeInTotal to the summary
+            q_report.summary['queryType'] = query_type
+            q_report.summary['includeInTotal'] = (query_type == 'benchmark')
+            
             # property_file e.g.: "property/aqe-on.properties" or just "aqe-off.properties"
             if property_file:
                 summary_prefix = os.path.join(
@@ -376,18 +507,32 @@ def run_query_stream(input_prefix,
             q_report.write_summary(prefix=summary_prefix)
     power_end = int(time.time())
     power_elapse = int((power_end - power_start)*1000)
+    
+    # Calculate Power Test Time (excluding setup and cleanup)
+    power_test_time = power_elapse - setup_time - cleanup_time
+    
     if not keep_sc:
         spark_session.sparkContext.stop()
     total_time_end = time.time()
     total_elapse = int((total_time_end - total_time_start)*1000)
-    print("====== Power Test Time: {} milliseconds ======".format(power_elapse))
+    print("====== Power Test Time: {} milliseconds ======".format(power_test_time))
+    if setup_time > 0:
+        print("====== Power Setup Time: {} milliseconds ======".format(setup_time))
+    if cleanup_time > 0:
+        print("====== Power Cleanup Time: {} milliseconds ======".format(cleanup_time))
     print("====== Total Time: {} milliseconds ======".format(total_elapse))
     execution_time_list.append(
         (spark_app_id, "Power Start Time", power_start))
     execution_time_list.append(
         (spark_app_id, "Power End Time", power_end))
     execution_time_list.append(
-        (spark_app_id, "Power Test Time", power_elapse))
+        (spark_app_id, "Power Test Time", power_test_time))
+    if setup_time > 0:
+        execution_time_list.append(
+            (spark_app_id, "Power Setup Time", setup_time))
+    if cleanup_time > 0:
+        execution_time_list.append(
+            (spark_app_id, "Power Cleanup Time", cleanup_time))
     execution_time_list.append(
         (spark_app_id, "Total Time", total_elapse))
 
@@ -487,7 +632,8 @@ if __name__ == "__main__":
                         help='comma separated list of queries to run. If not specified, all queries ' +
                         'in the stream file will be run. e.g. "query1,query2,query3". Note, use ' +
                         '"_part1" and "_part2" suffix for the following query names: ' +
-                        'query14, query23, query24, query39. e.g. query14_part1, query39_part2')
+                        'query14, query23, query24, query39. e.g. query14_part1, query39_part2. '
+                        'Regex patterns are also supported to select multiple queries. e.g. "query1,query2,query14*"')
     parser.add_argument('--allow_failure',
                         action='store_true',
                         help='Do not exit with non zero when any query failed or any task failed')
