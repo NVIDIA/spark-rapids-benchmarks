@@ -256,13 +256,13 @@ def setup_tables(spark_session, input_prefix, input_format, use_decimal, executi
     spark_app_id = spark_session.sparkContext.applicationId
     # Create TempView for tables
     for table_name in get_schemas(False).keys():
-        start = int(time.time() * 1000)
+        start = time.time_ns() // 1_000_000
         table_path = input_prefix + '/' + table_name
         reader =  spark_session.read.format(input_format)
         if input_format in ['csv', 'json']:
             reader = reader.schema(get_schemas(use_decimal)[table_name])
         reader.load(table_path).createOrReplaceTempView(table_name)
-        end = int(time.time() * 1000)
+        end = time.time_ns() // 1_000_000
         print("====== Creating TempView for table {} ======".format(table_name))
         print("Time taken: {} millis for table {}".format(end - start, table_name))
         execution_time_list.append(
@@ -273,12 +273,12 @@ def register_delta_tables(spark_session, input_prefix, execution_time_list):
     spark_app_id = spark_session.sparkContext.applicationId
     # Register tables for Delta Lake
     for table_name in get_schemas(False).keys():
-        start = int(time.time() * 1000)
+        start = time.time_ns() // 1_000_000
         # input_prefix must be absolute path: https://github.com/delta-io/delta/issues/555
         register_sql = f"CREATE TABLE IF NOT EXISTS {table_name} USING DELTA LOCATION '{input_prefix}/{table_name}'"
         print(register_sql)
         spark_session.sql(register_sql)
-        end = int(time.time() * 1000)
+        end = time.time_ns() // 1_000_000
         print("====== Registering for table {} ======".format(table_name))
         print("Time taken: {} millis for table {}".format(end - start, table_name))
         execution_time_list.append(
@@ -415,7 +415,7 @@ def run_query_stream(input_prefix,
     """
     queries_reports = []
     execution_time_list = []
-    total_time_start = time.time()
+    total_time_start = time.time_ns()
     # check if it's running specific query or Power Run
     if len(query_dict) == 1:
         app_name = "NDS - " + list(query_dict.keys())[0]
@@ -457,7 +457,7 @@ def run_query_stream(input_prefix,
     profiler = Profiler(profiling_hook=profiling_hook, output_root=json_summary_folder)
 
     # Run query
-    power_start = int(time.time())
+    power_start = time.time_ns()
     setup_time = 0
     cleanup_time = 0
     
@@ -505,16 +505,16 @@ def run_query_stream(input_prefix,
             else:
                 summary_prefix =  os.path.join(json_summary_folder, '')
             q_report.write_summary(prefix=summary_prefix)
-    power_end = int(time.time())
-    power_elapse = int((power_end - power_start)*1000)
-    
+    power_end = time.time_ns()
+    power_elapse = int((power_end - power_start)/1000)
+
     # Calculate Power Test Time (excluding setup and cleanup)
     power_test_time = power_elapse - setup_time - cleanup_time
     
     if not keep_sc:
         spark_session.sparkContext.stop()
-    total_time_end = time.time()
-    total_elapse = int((total_time_end - total_time_start)*1000)
+    total_time_end = time.time_ns()
+    total_elapse = int((total_time_end - total_time_start)/1000)
     print("====== Power Test Time: {} milliseconds ======".format(power_test_time))
     if setup_time > 0:
         print("====== Power Setup Time: {} milliseconds ======".format(setup_time))
