@@ -415,7 +415,7 @@ def run_query_stream(input_prefix,
     """
     queries_reports = []
     execution_time_list = []
-    total_time_start = time.time_ns()
+    total_time_start_ms = time.time_ns() // 1_000_000
     # check if it's running specific query or Power Run
     if len(query_dict) == 1:
         app_name = "NDS - " + list(query_dict.keys())[0]
@@ -457,9 +457,9 @@ def run_query_stream(input_prefix,
     profiler = Profiler(profiling_hook=profiling_hook, output_root=json_summary_folder)
 
     # Run query
-    power_start = time.time_ns()
-    setup_time = 0
-    cleanup_time = 0
+    power_start_ms = time.time_ns() // 1_000_000
+    setup_time_ms = 0
+    cleanup_time_ms = 0
     
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
@@ -488,9 +488,9 @@ def run_query_stream(input_prefix,
             
             # Accumulate setup and cleanup times
             if query_type == 'setup':
-                setup_time += query_time
+                setup_time_ms += query_time
             elif query_type == 'cleanup':
-                cleanup_time += query_time
+                cleanup_time_ms += query_time
         
         queries_reports.append(q_report)
         if json_summary_folder:
@@ -505,36 +505,36 @@ def run_query_stream(input_prefix,
             else:
                 summary_prefix =  os.path.join(json_summary_folder, '')
             q_report.write_summary(prefix=summary_prefix)
-    power_end = time.time_ns()
-    power_elapse = int((power_end - power_start)/1000)
+    power_end_ms = time.time_ns() // 1_000_000
+    power_elapse_ms = power_end_ms - power_start_ms
 
     # Calculate Power Test Time (excluding setup and cleanup)
-    power_test_time = power_elapse - setup_time - cleanup_time
-    
+    power_test_time_ms = power_elapse_ms - setup_time_ms - cleanup_time_ms
+
     if not keep_sc:
         spark_session.sparkContext.stop()
-    total_time_end = time.time_ns()
-    total_elapse = int((total_time_end - total_time_start)/1000)
-    print("====== Power Test Time: {} milliseconds ======".format(power_test_time))
-    if setup_time > 0:
-        print("====== Power Setup Time: {} milliseconds ======".format(setup_time))
-    if cleanup_time > 0:
-        print("====== Power Cleanup Time: {} milliseconds ======".format(cleanup_time))
-    print("====== Total Time: {} milliseconds ======".format(total_elapse))
+    total_time_end_ms = time.time_ns() // 1_000_000
+    total_elapse_ms = total_time_end_ms - total_time_start_ms
+    print("====== Power Test Time: {} milliseconds ======".format(power_test_time_ms))
+    if setup_time_ms > 0:
+        print("====== Power Setup Time: {} milliseconds ======".format(setup_time_ms))
+    if cleanup_time_ms > 0:
+        print("====== Power Cleanup Time: {} milliseconds ======".format(cleanup_time_ms))
+    print("====== Total Time: {} milliseconds ======".format(total_elapse_ms))
     execution_time_list.append(
-        (spark_app_id, "Power Start Time", power_start))
+        (spark_app_id, "Power Start Time", power_start_ms))
     execution_time_list.append(
-        (spark_app_id, "Power End Time", power_end))
+        (spark_app_id, "Power End Time", power_end_ms))
     execution_time_list.append(
-        (spark_app_id, "Power Test Time", power_test_time))
-    if setup_time > 0:
+        (spark_app_id, "Power Test Time", power_test_time_ms))
+    if setup_time_ms > 0:
         execution_time_list.append(
-            (spark_app_id, "Power Setup Time", setup_time))
-    if cleanup_time > 0:
+            (spark_app_id, "Power Setup Time", setup_time_ms))
+    if cleanup_time_ms > 0:
         execution_time_list.append(
-            (spark_app_id, "Power Cleanup Time", cleanup_time))
+            (spark_app_id, "Power Cleanup Time", cleanup_time_ms))
     execution_time_list.append(
-        (spark_app_id, "Total Time", total_elapse))
+        (spark_app_id, "Total Time", total_elapse_ms))
 
     header = ["application_id", "query", "time/milliseconds"]
     # print to driver stdout for quick view
