@@ -56,12 +56,12 @@ class PysparkBenchReport:
             'query': query_name,
         }
 
-    def _is_above_spark_4(self):
+    def _is_spark_400_or_later(self):
         return self.spark_session.version >= "4.0.0"
 
     def _register_python_listener(self):
         # Register PythonListener
-        if self._is_above_spark_4():
+        if self._is_spark_400_or_later():
             # is_remote_only is added starting from 4.0.0
             from pyspark import is_remote_only
             if is_remote_only():
@@ -78,7 +78,7 @@ class PysparkBenchReport:
         return listener
 
     def _get_spark_conf(self):
-        if self._is_above_spark_4():
+        if self._is_spark_400_or_later():
             from pyspark import is_remote_only
             if is_remote_only():
                 return self.spark_session.conf.getAll
