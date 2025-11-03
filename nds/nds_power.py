@@ -130,7 +130,8 @@ def parse_query_content(query_content):
 
         if line_stripped == '-- start setup':
             if current_section != 'init':
-                raise RuntimeError("The setup section must be the first section if it exists.")
+                raise RuntimeError(f"Init expected, actual section {current_section}. "
+                                   f"The setup section must be the first section if it exists.")
             current_section = 'setup'
             continue
         elif line_stripped == '-- end setup':
@@ -140,7 +141,8 @@ def parse_query_content(query_content):
             continue
         elif line_stripped == '-- start cleanup':
             if current_section != 'benchmark':
-                raise RuntimeError("The cleanup section must come after the benchmark section.")
+                raise RuntimeError(f"benchmark expected, actual section {current_section}. "
+                                   f"The cleanup section must come after the benchmark section.")
             current_section = 'cleanup'
             continue
         elif line_stripped == '-- end cleanup':
