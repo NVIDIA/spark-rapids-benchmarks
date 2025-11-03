@@ -216,7 +216,8 @@ def gen_sql_from_stream(query_stream_file_path):
 
         parsed = parse_query_content(q)
 
-        def add_to_extended_queries(query_type, idx, parsed):
+        def add_to_extended_queries(query_type, i, parsed):
+            idx = i + 1
             subquery_cnt = len(parsed[query_type])
             if query_type == 'benchmark':
                 dict_key = f"{query_name}_part{idx}" if subquery_cnt > 1 else query_name
@@ -227,11 +228,11 @@ def gen_sql_from_stream(query_stream_file_path):
             extended_queries[dict_key] = query_part
 
         for i in range(len(parsed['setup'])):
-            add_to_extended_queries('setup', i + 1, parsed)
+            add_to_extended_queries('setup', i, parsed)
         for i in range(len(parsed['benchmark'])):
-            add_to_extended_queries('benchmark', i + 1, parsed)
+            add_to_extended_queries('benchmark', i, parsed)
         for i in range(len(parsed['cleanup'])):
-            add_to_extended_queries('cleanup', i + 1, parsed)
+            add_to_extended_queries('cleanup', i, parsed)
 
     # add "-- start" string back to each query
     for q_name, q_content in extended_queries.items():
