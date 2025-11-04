@@ -66,6 +66,7 @@ class PysparkBenchReport:
             from pyspark import is_remote_only
             if is_remote_only():
                 # We can't use Py4J in Spark Connect
+                print("Python listener is not registered.")
                 return None
 
         listener = None
