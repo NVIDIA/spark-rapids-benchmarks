@@ -35,9 +35,8 @@ import os
 import time
 import traceback
 from typing import Callable
-from pyspark.sql import SparkSession
 
-import python_listener
+from pyspark.sql import SparkSession
 
 class PysparkBenchReport:
     """Class to generate json summary report for a benchmark
@@ -57,6 +56,37 @@ class PysparkBenchReport:
             'query': query_name,
         }
 
+    def _is_spark_400_or_later(self):
+        return self.spark_session.version >= "4.0.0"
+
+    def _register_python_listener(self):
+        # Register PythonListener
+        if self._is_spark_400_or_later():
+            # is_remote_only is added starting from 4.0.0
+            from pyspark import is_remote_only
+            if is_remote_only():
+                # We can't use Py4J in Spark Connect
+                print("Python listener is not registered.")
+                return None
+
+        listener = None
+        try:
+            import python_listener
+            listener = python_listener.PythonListener()
+            listener.register()
+        except TypeError as e:
+            print("Not found com.nvidia.spark.rapids.listener.Manager", str(e))
+        return listener
+
+    def _get_spark_conf(self):
+        if self._is_spark_400_or_later():
+            from pyspark import is_remote_only
+            if is_remote_only():
+                return self.spark_session.conf.getAll
+
+        return self.spark_session.sparkContext._conf.getAll()
+
+
     def report_on(self, fn: Callable, warmup_iterations = 0, iterations = 1, *args):
         """Record a function for its running environment, running status etc. and exclude sentive
         information like tokens, secret and password Generate summary in dict format for it.
@@ -67,20 +97,14 @@ class PysparkBenchReport:
         Returns:
             dict: summary of the fn
         """
-        spark_conf = dict(self.spark_session.sparkContext._conf.getAll())
+        spark_conf = dict(self._get_spark_conf())
         env_vars = dict(os.environ)
         redacted = ["TOKEN", "SECRET", "PASSWORD"]
         filtered_env_vars = dict((k, env_vars[k]) for k in env_vars.keys() if not (k in redacted))
         self.summary['env']['envVars'] = filtered_env_vars
         self.summary['env']['sparkConf'] = spark_conf
         self.summary['env']['sparkVersion'] = self.spark_session.version
-        listener = None
-        try:
-            listener = python_listener.PythonListener()
-            listener.register()
-        except TypeError as e:
-            print("Not found com.nvidia.spark.rapids.listener.Manager", str(e))
-            listener = None
+        listener = self._register_python_listener()
         if listener is not None:
             print("TaskFailureListener is registered.")
         try:
