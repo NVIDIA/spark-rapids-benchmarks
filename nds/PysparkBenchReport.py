@@ -76,6 +76,7 @@ class PysparkBenchReport:
             listener.register()
         except TypeError as e:
             print("Not found com.nvidia.spark.rapids.listener.Manager", str(e))
+            listener = None
         return listener
 
     def _get_spark_conf(self):
