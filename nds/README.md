@@ -345,7 +345,10 @@ optional arguments:
                         query39_part2
 ```
 
-Example command to submit nds_power.py by spark-submit-template utility:
+#### Power Run with spark-submit
+
+Users can use the `spark-submit-template` script to run the power run with spark-submit.
+An example command to submit nds_power.py by spark-submit-template utility is:
 
 ```bash
 ./spark-submit-template power_run_gpu.template \
@@ -378,7 +381,7 @@ time.csv \
 --output_format parquet
 ```
 
-### Power Run over Spark Connect
+#### Power Run over Spark Connect
 
 Power Run currently supports execution over Spark Connect, starting with Spark 4.0.0. However,
 you cannot run `nds_power.py` via Spark Connect using the associated `spark-submit-template`.
