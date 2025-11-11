@@ -406,7 +406,7 @@ python nds_power.py \
 
 Alternatively, you can import the APIs in a notebook and execute them as follows:
 
-``` shell
+```Python
 
 from nds_power import gen_sql_from_stream, run_query_stream
 
