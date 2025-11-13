@@ -345,7 +345,10 @@ optional arguments:
                         query39_part2
 ```
 
-Example command to submit nds_power.py by spark-submit-template utility:
+#### Power Run with spark-submit
+
+Users can use the `spark-submit-template` script to run the power run with spark-submit.
+An example command to submit nds_power.py by spark-submit-template utility is:
 
 ```bash
 ./spark-submit-template power_run_gpu.template \
@@ -377,6 +380,62 @@ time.csv \
 --output_prefix /data/query_output \
 --output_format parquet
 ```
+
+#### Power Run over Spark Connect
+
+Power Run currently supports execution over Spark Connect, starting with Spark 4.0.0. However,
+you cannot run `nds_power.py` via Spark Connect using the associated `spark-submit-template`.
+Instead, execute it directly.
+
+Before proceeding, ensure `pyspark-client` is installed locally. For example:
+
+- Install `pyspark-client`
+
+``` bash
+pip install pyspark-client==4.0.0
+```
+
+- Run `nds_power.py`
+
+```shell
+export SPARK_REMOTE=sc://localhost
+python nds_power.py \
+    parquet_sf3k \
+    ./nds_query_streams/query_0.sql \
+    time.csv \
+    --output_prefix /data/query_output \
+    --output_format parquet
+```
+
+Alternatively, you can import the APIs in a notebook and execute them as follows:
+
+```Python
+
+from nds_power import gen_sql_from_stream, run_query_stream
+
+import os
+os.environ["SPARK_REMOTE"] = "sc://localhost"
+
+query_stream_file = "nds_query_streams/query_0.sql"
+nds_data_path = "parquet_sf3k"
+time_log_file = "time.csv"
+
+query_dict = gen_sql_from_stream(query_stream_file)
+
+run_query_stream(input_prefix=nds_data_path,
+                 property_file=None,
+                 query_dict=query_dict,
+                 time_log_output_path=time_log_file,
+                 extra_time_log_output_path=None,
+                 sub_queries=None,
+                 warmup_iterations=0,
+                 iterations=1,
+                 plan_types="logical",
+                 )
+```
+
+`Note:` the python listener is disabled when running nds_power.py over Spark Connect, as py4j
+is not available in the Spark Connect environment.
 
 ### Throughput Run
 
