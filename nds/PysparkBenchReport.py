@@ -62,9 +62,9 @@ class PysparkBenchReport:
     def _register_python_listener(self):
         # Register PythonListener
         if self._is_spark_400_or_later():
-            # is_remote_only is added starting from 4.0.0
-            from pyspark import is_remote_only
-            if is_remote_only():
+            # is_remote is added starting from 4.0.0
+            from pyspark.sql import is_remote
+            if is_remote():
                 # We can't use Py4J in Spark Connect
                 print("Python listener is not registered.")
                 return None
@@ -81,8 +81,8 @@ class PysparkBenchReport:
 
     def _get_spark_conf(self):
         if self._is_spark_400_or_later():
-            from pyspark import is_remote_only
-            if is_remote_only():
+            from pyspark.sql import is_remote
+            if is_remote():
                 return self.spark_session.conf.getAll
 
         return self.spark_session.sparkContext._conf.getAll()
