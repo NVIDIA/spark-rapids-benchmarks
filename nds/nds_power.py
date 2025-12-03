@@ -363,17 +363,26 @@ def ensure_valid_column_names(df: DataFrame):
     dedup_col_names = deduplicate(valid_col_names)
     return df.toDF(*dedup_col_names)
 
+
 def get_query_subset(query_dict, subset):
+    """Get a subset of queries from query_dict.
+    The subset is specified by a list of query names.
+    """
+    check_query_subset_exists(query_dict, subset)
+    return dict((k, query_dict[k]) for k in subset)
+
+
+def get_query_subset_by_pattern(query_dict, patterns):
     """Get a subset of queries from query_dict.
     The subset is specified by a list of regex patterns for the query name.
     """
     selected_queries = OrderedDict()
-    for pattern in subset:
+    for pattern in patterns:
         for query_name in query_dict.keys():
             if re.match(pattern, query_name):
                 selected_queries[query_name] = query_dict[query_name]
     if not selected_queries:
-        msg = f"No query matched the specified subset patterns: {subset}"
+        msg = f"No query matched the specified subset patterns: {patterns}"
         raise Exception(msg)
     return selected_queries
 
@@ -383,6 +392,7 @@ def run_query_stream(input_prefix,
                      time_log_output_path,
                      extra_time_log_output_path,
                      sub_queries,
+                     sub_query_patterns,
                      warmup_iterations,
                      iterations,
                      plan_types,
@@ -452,7 +462,9 @@ def run_query_stream(input_prefix,
     check_json_summary_folder(json_summary_folder)
     if sub_queries:
         query_dict = get_query_subset(query_dict, sub_queries)
-    
+    if sub_query_patterns:
+        query_dict = get_query_subset_by_pattern(query_dict, sub_query_patterns)
+
     # Setup profiler
     profiler = Profiler(profiling_hook=profiling_hook, output_root=json_summary_folder)
 
@@ -580,7 +592,9 @@ def load_properties(filename):
     return myvars
 
 if __name__ == "__main__":
-    parser = parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
+    # argument group for query filtering
+    query_filter_group = parser.add_mutually_exclusive_group(required=False)
     parser.add_argument('input_prefix',
                         help='text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"). ' +
                         'If --hive or if input_format is "iceberg", this argument will be regarded as the value of property ' +
@@ -632,13 +646,6 @@ if __name__ == "__main__":
                         'driver node/pod cannot be accessed easily. User needs to add essential extra ' +
                         'jars and configurations to access different cloud storage systems. ' +
                         'e.g. s3, gs etc.')
-    parser.add_argument('--sub_queries',
-                        type=lambda s: [x.strip() for x in s.split(',')],
-                        help='comma separated list of queries to run. If not specified, all queries ' +
-                        'in the stream file will be run. e.g. "query1,query2,query3". Note, use ' +
-                        '"_part1" and "_part2" suffix for the following query names: ' +
-                        'query14, query23, query24, query39. e.g. query14_part1, query39_part2. '
-                        'Regex patterns are also supported to select multiple queries. e.g. "query1,query2,query14*"')
     parser.add_argument('--allow_failure',
                         action='store_true',
                         help='Do not exit with non zero when any query failed or any task failed')
@@ -667,6 +674,19 @@ if __name__ == "__main__":
                         help='Skip the execution of the queries. This can be used in conjunction with ' +
                         '--save_plan_path to only save the execution plans without running the queries.' +
                         'Note that "spark.sql.adaptive.enabled" should be set to false to get GPU physical plans.')
+    query_filter_group.add_argument('--sub_queries',
+                                    type=lambda s: [x.strip() for x in s.split(',')],
+                                    help='comma separated list of queries to run. If this is specified, sub_query_patterns should be empty. ' +
+                                    'If both sub_queries and sub_query_patterns are not specified, all queries ' +
+                                    'in the stream file will be run. Note, use "_part1" and "_part2" suffix for the following query names: ' +
+                                    'query14, query23, query24, and query39. Ex) "query1,query2,query14_part1,query39_part2"')
+    query_filter_group.add_argument('--sub_query_patterns',
+                                    type=lambda s: [x.strip() for x in s.split(',')],
+                                    help='comma separated list of query patterns to run in regex. If this is specified, sub_queries should be empty. ' +
+                                    'If both sub_queries and sub_query_patterns are not specified, all queries ' +
+                                    'in the stream file will be run. ' +
+                                    'For example, query1 will run all queries starting with "query1", ' +
+                                    'and "^query1$,query(2|3)_part1" will run query1, query2_part1, and query3_part1.')
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
     run_query_stream(args.input_prefix,
@@ -675,6 +695,7 @@ if __name__ == "__main__":
                      args.time_log,
                      args.extra_time_log,
                      args.sub_queries,
+                     args.sub_query_patterns,
                      args.warmup_iterations,
                      args.iterations,
                      args.plan_types,
