@@ -473,8 +473,16 @@ def run_query_stream(input_prefix,
     setup_time = 0
     cleanup_time = 0
     
+    # Check if we're running in Spark Connect mode
+    is_spark_connect = False
+    if spark_session.version >= "4.0.0":
+        from pyspark.sql import is_remote
+        is_spark_connect = is_remote()
+
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
+        if not is_spark_connect:
+            spark_session.sparkContext.setJobGroup(query_name, query_name)
         spark_session.conf.set("spark.job.description", query_name)
         spark_session.conf.set("spark.jobGroup.id", query_name)
         spark_session.conf.set("spark.job.interruptOnCancel", "false")
