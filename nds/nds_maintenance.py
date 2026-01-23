@@ -34,6 +34,7 @@ import argparse
 import csv
 from datetime import datetime
 import os
+import sys
 
 from pyspark.sql import SparkSession
 from PysparkBenchReport import PysparkBenchReport
@@ -41,6 +42,14 @@ from PysparkBenchReport import PysparkBenchReport
 from check import check_json_summary_folder, get_abs_path
 from nds_schema import get_maintenance_schemas
 from nds_power import register_delta_tables
+
+# Python doesn't automatically include sibling directories in the import path.
+# We need to explicitly add the utils directory to sys.path to import shared utilities.
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+utils_dir = os.path.join(parent_dir, 'utils')
+if utils_dir not in sys.path:
+    sys.path.insert(0, utils_dir)
+from spark_utils import setQueryName, clearQueryName
 
 INSERT_FUNCS = [
     'LF_CR',
@@ -224,7 +233,7 @@ def run_query(spark_session,
         execution_time_list = register_delta_tables(spark_session, warehouse_path, execution_time_list)
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
-        spark_session.sparkContext.setJobGroup(query_name, query_name)
+        setQueryName(spark_session, query_name)
         print(f"====== Run {query_name} ======")
         q_report = PysparkBenchReport(spark_session, query_name)
         summary = q_report.report_on(run_dm_query, 0, 1,
@@ -242,6 +251,7 @@ def run_query(spark_session,
             else:
                 summary_prefix =  os.path.join(json_summary_folder, '')
             q_report.write_summary(prefix=summary_prefix)
+    clearQueryName(spark_session)
     if not keep_sc:
         spark_session.sparkContext.stop()
     DM_end = datetime.now()
