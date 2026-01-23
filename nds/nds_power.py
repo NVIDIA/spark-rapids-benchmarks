@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,6 +45,14 @@ from pyspark.sql import DataFrame
 
 from check import check_json_summary_folder, check_query_subset_exists, check_version
 from nds_schema import get_schemas
+
+# Python doesn't automatically include sibling directories in the import path.
+# We need to explicitly add the utils directory to sys.path to import shared utilities.
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+utils_dir = os.path.join(parent_dir, 'utils')
+if utils_dir not in sys.path:
+    sys.path.insert(0, utils_dir)
+from spark_utils import setQueryName, clearQueryName
 
 check_version()
 
@@ -475,9 +483,7 @@ def run_query_stream(input_prefix,
     
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
-        spark_session.conf.set("spark.job.description", query_name)
-        spark_session.conf.set("spark.jobGroup.id", query_name)
-        spark_session.conf.set("spark.job.interruptOnCancel", "false")
+        setQueryName(spark_session, query_name)
         print("====== Run {} ======".format(query_name))
         q_report = PysparkBenchReport(spark_session, query_name)
         
@@ -519,9 +525,7 @@ def run_query_stream(input_prefix,
             else:
                 summary_prefix =  os.path.join(json_summary_folder, '')
             q_report.write_summary(prefix=summary_prefix)
-    spark_session.conf.unset("spark.job.description")
-    spark_session.conf.unset("spark.jobGroup.id")
-    spark_session.conf.unset("spark.job.interruptOnCancel")
+    clearQueryName(spark_session)
     power_end = int(time.time())
     power_elapse = int((power_end - power_start)*1000)
     

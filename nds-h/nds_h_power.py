@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,12 +40,13 @@ import sys
 import re
 import subprocess
 
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '..'))
-
-# Construct the path to the utils directory
+# Python doesn't automatically include sibling directories in the import path.
+# We need to explicitly add the utils directory to sys.path to import shared utilities.
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 utils_dir = os.path.join(parent_dir, 'utils')
-# Add the utils directory to sys.path
-sys.path.insert(0, utils_dir)
+if utils_dir not in sys.path:
+    sys.path.insert(0, utils_dir)
+from spark_utils import setQueryName, clearQueryName
 
 from python_benchmark_reporter.PysparkBenchReport import PysparkBenchReport
 from pyspark.sql import DataFrame
@@ -281,7 +282,7 @@ def run_query_stream(input_prefix,
     power_start = int(time.time())
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
-        spark_session.sparkContext.setJobGroup(query_name, query_name)
+        setQueryName(spark_session, query_name)
         print("====== Run {} ======".format(query_name))
         q_report = PysparkBenchReport(spark_session, query_name)
         summary = q_report.report_on(run_one_query,
@@ -307,6 +308,7 @@ def run_query_stream(input_prefix,
             else:
                 summary_prefix = os.path.join(json_summary_folder, '')
             q_report.write_summary(prefix=summary_prefix)
+    clearQueryName(spark_session)
     power_end = int(time.time())
     power_elapse = int((power_end - power_start)*1000)
     if not keep_sc:
