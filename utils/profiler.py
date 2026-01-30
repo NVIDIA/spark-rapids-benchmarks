@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# -----
+#
+# Certain portions of the contents of this file are derived from TPC-DS version 3.2.0
+# (retrieved from www.tpc.org/tpc_documents_current_versions/current_specifications5.asp).
+# Such portions are subject to copyrights held by Transaction Processing Performance Council (“TPC”)
+# and licensed under the TPC EULA (a copy of which accompanies this file as “TPC EULA” and is also
+# available at http://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp) (the “TPC EULA”).
+#
+# You may not use this file except in compliance with the TPC EULA.
+# DISCLAIMER: Portions of this file is derived from the TPC-DS Benchmark and as such any results
+# obtained using this file are not comparable to published TPC-DS Benchmark results, as the results
+# obtained from using this file do not comply with the TPC-DS Benchmark.
+#
+
+import shlex
+import subprocess
+
+
+class Profiler:
+    """Context manager for executing profiling hooks before/after query execution.
+    
+    The profiling hook is an executable script that is called with:
+        ./hook {start|stop} output_root query_name
+    """
+    
+    def __init__(self, profiling_hook, output_root):
+        self.profiling_hook = profiling_hook
+        self.output_root = output_root
+        self.is_profiling_enabled = output_root is not None and profiling_hook is not None
+        self.query_name = None
+
+    def __call__(self, query_name):
+        self.query_name = query_name
+        return self
+
+    def __enter__(self):
+        self.start_profiling()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.stop_profiling()
+        self.query_name = None
+
+    def execute_script(self, action):
+        script_path = self.profiling_hook
+        command = f"{script_path} {action} {shlex.quote(self.output_root)} {shlex.quote(self.query_name)}"
+        try:
+            subprocess.run(command, shell=True, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error: Script exited with status {e.returncode}")
+            raise
+
+    def start_profiling(self):
+        if self.is_profiling_enabled:
+            print(f"Profiling started with profiling script: {self.profiling_hook} "
+                  f"writing to {self.output_root} for query {self.query_name}.")
+            self.execute_script('start')
+
+    def stop_profiling(self):
+        if self.is_profiling_enabled:
+            self.execute_script('stop')
+            print("Profiling stopped")
