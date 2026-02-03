@@ -22,7 +22,7 @@ import org.apache.spark.SparkContext
 object Manager {
   /* Manager class to manage all extra customized listeners.
   */
-  private var listeners: Map[String, Listener] = Map()
+  private var listeners: Map[String, Listener] = Map.empty[String, Listener]
   private val spark_listener = new TaskFailureListener()
   private var isRegistered = false
 

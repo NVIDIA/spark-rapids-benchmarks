@@ -301,11 +301,13 @@ finished. This is often used for test or query monitoring purpose.
 To build:
 
 ```bash
-cd jvm_listener
+cd ../utils/jvm_listener
 mvn package
 ```
 
-`nds-benchmark-listener-1.0-SNAPSHOT.jar` will be generated in `jvm_listener/target` folder.
+`benchmark-listener-1.0-SNAPSHOT.jar` will be generated in `utils/jvm_listener/target` folder.
+
+The listener implementation is binary compatible with both Scala 2.12 and Scala 2.13, so a single JAR works across different Spark versions.
 
 ### Power Run
 
