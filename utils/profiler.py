@@ -62,9 +62,17 @@ class Profiler:
         script_path = self.profiling_hook
         command = [script_path, action, self.output_root, self.query_name]
         try:
-            subprocess.run(command, shell=False, check=True)
+            result = subprocess.run(command, shell=False, check=True, capture_output=True, text=True)
+            if result.stdout:
+                print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
         except subprocess.CalledProcessError as e:
             print(f"Error: Script exited with status {e.returncode}")
+            if e.stdout:
+                print(f"stdout: {e.stdout}")
+            if e.stderr:
+                print(f"stderr: {e.stderr}")
             raise
 
     def start_profiling(self):
