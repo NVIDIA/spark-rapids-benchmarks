@@ -30,7 +30,6 @@
 # obtained from using this file do not comply with the TPC-DS Benchmark.
 #
 
-import shlex
 import subprocess
 
 
@@ -61,9 +60,9 @@ class Profiler:
 
     def execute_script(self, action):
         script_path = self.profiling_hook
-        command = f"{script_path} {action} {shlex.quote(self.output_root)} {shlex.quote(self.query_name)}"
+        command = [script_path, action, self.output_root, self.query_name]
         try:
-            subprocess.run(command, shell=True, check=True)
+            subprocess.run(command, shell=False, check=True)
         except subprocess.CalledProcessError as e:
             print(f"Error: Script exited with status {e.returncode}")
             raise

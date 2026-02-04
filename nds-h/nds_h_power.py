@@ -290,7 +290,7 @@ def run_query_stream(input_prefix,
         setQueryName(spark_session, query_name)
         print("====== Run {} ======".format(query_name))
         q_report = PysparkBenchReport(spark_session, query_name)
-        with profiler(query_name):
+        with profiler(query_name=query_name):
             summary = q_report.report_on(run_one_query,
                                      warmup_iterations,
                                      iterations,
