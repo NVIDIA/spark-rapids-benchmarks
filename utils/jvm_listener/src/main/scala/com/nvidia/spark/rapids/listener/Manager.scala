@@ -18,11 +18,12 @@
 package com.nvidia.spark.rapids.listener
 
 import org.apache.spark.SparkContext
+import java.util.concurrent.ConcurrentHashMap
 
 object Manager {
   /* Manager class to manage all extra customized listeners.
   */
-  private var listeners: Map[String, Listener] = Map.empty[String, Listener]
+  private val listeners = new ConcurrentHashMap[String, Listener]()
   private val spark_listener = new TaskFailureListener()
   private var isRegistered = false
 
@@ -35,19 +36,17 @@ object Manager {
       // We register to the spark listener when the first listener is registered.
       registerSparkListener()
       val uuid = java.util.UUID.randomUUID().toString
-      listeners = listeners.updated(uuid, listener)
+      listeners.put(uuid, listener)
       uuid
     }
   }
 
   def unregister(uuid: String) = {
-    this.synchronized {
-      listeners = listeners.filter { case (k, _) => k != uuid }
-    }
+    listeners.remove(uuid)
   }
 
   def notifyAll(message: String): Unit = {
-    listeners.values.foreach(_.notify(message))
+    listeners.values().forEach(listener => listener.notify(message))
   }
 
   def registerSparkListener() : Unit = {
