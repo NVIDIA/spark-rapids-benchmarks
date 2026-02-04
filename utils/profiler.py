@@ -30,6 +30,7 @@
 # obtained from using this file do not comply with the TPC-DS Benchmark.
 #
 
+import os
 import subprocess
 
 
@@ -60,6 +61,13 @@ class Profiler:
 
     def execute_script(self, action):
         script_path = self.profiling_hook
+        if self.query_name is None:
+            raise ValueError("query_name must be set before executing profiling script. "
+                           "Use profiler(query_name='...') before entering context.")
+        if not os.path.isfile(script_path):
+            raise FileNotFoundError(f"Profiling hook script not found: {script_path}")
+        if not os.access(script_path, os.X_OK):
+            raise PermissionError(f"Profiling hook script is not executable: {script_path}")
         command = [script_path, action, self.output_root, self.query_name]
         try:
             result = subprocess.run(command, shell=False, check=True, capture_output=True, text=True)
