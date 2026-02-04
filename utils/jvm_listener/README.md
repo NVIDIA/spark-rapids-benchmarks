@@ -1,7 +1,5 @@
 # Benchmark Listener - JVM Listener for Spark
 
-A Spark listener implementation that provides Python-accessible callbacks for Spark task events, particularly task failures.
-
 ## Binary Compatibility
 
 This allows a single JAR compiled with Scala 2.12 to run in both:
