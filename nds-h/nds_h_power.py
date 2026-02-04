@@ -47,6 +47,7 @@ utils_dir = os.path.join(parent_dir, 'utils')
 if utils_dir not in sys.path:
     sys.path.insert(0, utils_dir)
 from spark_utils import setQueryName, clearQueryName
+from profiler import Profiler
 
 from python_benchmark_reporter.PysparkBenchReport import PysparkBenchReport
 from pyspark.sql import DataFrame
@@ -235,7 +236,8 @@ def run_query_stream(input_prefix,
                      output_format="parquet",
                      json_summary_folder=None,
                      save_plan_path=None,
-                     skip_execution=False):
+                     skip_execution=False,
+                     profiling_hook=None):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accessibility. TempView Creation time is also recorded.
 
@@ -279,13 +281,17 @@ def run_query_stream(input_prefix,
     if sub_queries:
         query_dict = get_query_subset(query_dict, sub_queries)
 
+    # Setup profiler
+    profiler = Profiler(profiling_hook=profiling_hook, output_root=json_summary_folder)
+
     power_start = int(time.time())
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
         setQueryName(spark_session, query_name)
         print("====== Run {} ======".format(query_name))
         q_report = PysparkBenchReport(spark_session, query_name)
-        summary = q_report.report_on(run_one_query,
+        with profiler(query_name=query_name):
+            summary = q_report.report_on(run_one_query,
                                      warmup_iterations,
                                      iterations,
                                      spark_session,
@@ -422,6 +428,10 @@ if __name__ == "__main__":
                         help='Skip the execution of the queries. This can be used in conjunction with ' +
                         '--save_plan_path to only save the execution plans without running the queries.' +
                         'Note that "spark.sql.adaptive.enabled" should be set to false to get GPU physical plans.')
+    parser.add_argument('--profiling_hook',
+                        help='Executable that is called just before/after a query executes.' +
+                        'The executable is called like this ' +
+                        './hook {start|stop} output_root query_name.')
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
     run_query_stream(args.input_prefix,
@@ -438,4 +448,5 @@ if __name__ == "__main__":
                      args.output_format,
                      args.json_summary_folder,
                      args.save_plan_path,
-                     args.skip_execution)
+                     args.skip_execution,
+                     args.profiling_hook)
