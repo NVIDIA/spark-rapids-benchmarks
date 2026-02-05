@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,6 @@ package com.nvidia.spark.rapids.listener
 
 import org.apache.spark.{Success, TaskEndReason}
 import org.apache.spark.scheduler.{SparkListener, SparkListenerTaskEnd}
-import scala.collection.mutable.ListBuffer
 
 
 /* A simple listener which captures SparkListenerTaskEnd,
