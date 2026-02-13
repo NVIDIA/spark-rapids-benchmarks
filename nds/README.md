@@ -148,6 +148,23 @@ Standalone, or local**.
 
 **Prerequisites:** build tpcds-gen as before (`cd tpcds-gen && make`).
 
+#### Required prerequisites for K8s + HDFS runs
+
+Before submitting `nds_gen_data_spark.py` to Spark on K8s, make sure all of the
+following conditions are true:
+
+1. Driver and executor images include Hadoop client configuration (`core-site.xml`
+   and `hdfs-site.xml`) so both sides can access the same HDFS cluster.
+2. `output_dir` is an explicit HDFS path (for example, `hdfs:///data/raw_sf1000`
+   or `hdfs://<namenode-host>:8020/data/raw_sf1000`) instead of a local path.
+3. The `dsdgen` archive is provided with `--archives` using a shell-quoted value
+   when needed (zsh users should quote `#`):  
+   `--archives 'tpcds-gen/target/lib/dsdgen.tar.gz#dsdgen'`.
+4. Python minor versions are consistent between driver and executor environments
+   (for example, both are Python 3.12).
+5. For incremental generation (`--range`), do not rerun overlapping child ranges,
+   otherwise duplicate data will be produced.
+
 Using the spark-submit-template:
 
 ```bash
@@ -162,7 +179,7 @@ spark-submit --master k8s://https://<k8s-api-server> \
     --deploy-mode cluster \
     --conf spark.kubernetes.container.image=<spark-image> \
     --conf spark.executor.instances=10 \
-    --archives tpcds-gen/target/lib/dsdgen.jar#dsdgen \
+    --archives tpcds-gen/target/lib/dsdgen.tar.gz#dsdgen \
     nds_gen_data_spark.py 1000 200 hdfs:///data/raw_sf1000 --overwrite
 ```
 
@@ -170,11 +187,11 @@ For incremental generation (split across multiple spark-submit runs):
 
 ```bash
 # Run 1: children 1-100
-spark-submit --archives tpcds-gen/target/lib/dsdgen.jar#dsdgen \
+spark-submit --archives tpcds-gen/target/lib/dsdgen.tar.gz#dsdgen \
     nds_gen_data_spark.py 1000 200 hdfs:///data/raw_sf1000 --range 1,100
 
 # Run 2: children 101-200
-spark-submit --archives tpcds-gen/target/lib/dsdgen.jar#dsdgen \
+spark-submit --archives tpcds-gen/target/lib/dsdgen.tar.gz#dsdgen \
     nds_gen_data_spark.py 1000 200 hdfs:///data/raw_sf1000 --range 101,200
 ```
 
@@ -188,6 +205,7 @@ positional arguments:
 
 optional arguments:
   --range START,END     Generate only this child range (inclusive).
+                        Uses append mode automatically for incremental runs.
   --overwrite           Overwrite existing output directory.
   --update N            Generate update/maintenance dataset N.
   --num_executors N     Hint for number of Spark partitions (default: one per child).
@@ -196,6 +214,36 @@ optional arguments:
 **Note:** The dsdgen binary in the archive must be compiled for the same OS/architecture
 as the Spark executor nodes (typically Linux x86_64). If you build on macOS but run on
 K8s (Linux), you need to cross-compile or build inside a Linux container.
+
+**Note for zsh users:** quote the `--archives` value because `#` may be interpreted by shell.
+For example: `--archives 'tpcds-gen/target/lib/dsdgen.tar.gz#dsdgen'`.
+
+#### K8s local filesystem caveat
+
+When `output_dir` is a local path (for example `/tmp/...`) and Spark executors run in K8s pods,
+each pod writes to its own container filesystem by default. You will not see merged results on
+the driver host unless a shared volume is configured.
+
+For production runs, prefer remote/shared storage such as HDFS, S3, GCS, or ABFS.
+For local smoke tests on minikube, mount a shared host path and mount it into executor pods.
+
+#### One-command K8s smoke test
+
+Use the helper script:
+
+```bash
+chmod +x ../scripts/k8s_datagen_smoketest.sh
+../scripts/k8s_datagen_smoketest.sh
+```
+
+What the script does:
+
+- starts minikube if needed
+- configures Spark service account/role
+- mounts `/tmp/nds_shared` into minikube with Spark-compatible UID/GID
+- builds Spark Python image from `nds/Dockerfile.spark-k8s`
+- submits `nds_gen_data_spark.py` on K8s
+- verifies output (`25` source table folders and non-empty `store_sales`)
 
 ### Convert CSV to Parquet or Other data sources
 

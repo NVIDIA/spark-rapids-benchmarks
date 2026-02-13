@@ -1,0 +1,40 @@
+# Custom Spark + PySpark image for K8s data generation testing.
+# Based on Ubuntu 24.04 to match the host Python 3.12 version.
+FROM ubuntu:24.04
+
+ARG spark_uid=185
+
+# Install Java 17 + Python 3.12 (default on 24.04)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        openjdk-17-jre-headless \
+        python3 \
+        python3-pip \
+        tini \
+        procps \
+    && rm -rf /var/cache/apt/* /var/lib/apt/lists/*
+
+# Set up Spark directory structure
+ENV SPARK_HOME=/opt/spark
+ENV PATH="${SPARK_HOME}/bin:${PATH}"
+ENV PYTHONPATH="${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.9.7-src.zip:${PYTHONPATH}"
+
+# Copy Spark distribution
+COPY jars ${SPARK_HOME}/jars
+COPY bin ${SPARK_HOME}/bin
+COPY sbin ${SPARK_HOME}/sbin
+COPY python ${SPARK_HOME}/python
+COPY kubernetes/dockerfiles/spark/entrypoint.sh /opt/
+COPY kubernetes/dockerfiles/spark/decom.sh /opt/
+
+RUN chmod +x /opt/entrypoint.sh /opt/decom.sh && \
+    mkdir -p ${SPARK_HOME}/work-dir && \
+    chmod g+w ${SPARK_HOME}/work-dir && \
+    # Create spark user
+    useradd -u ${spark_uid} -r -g root -d ${SPARK_HOME} -s /sbin/nologin spark
+
+WORKDIR ${SPARK_HOME}/work-dir
+
+ENTRYPOINT [ "/opt/entrypoint.sh" ]
+
+USER ${spark_uid}

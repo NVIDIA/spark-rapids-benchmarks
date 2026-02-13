@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,6 +70,7 @@ Example (local testing):
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -108,15 +109,35 @@ def run_dsdgen_and_read(child_index, scale, parallel, update=None):
     """
     from pyspark import SparkFiles
 
-    # Locate dsdgen binary from the extracted archive
-    archive_root = SparkFiles.getRootDirectory()
+    # Locate dsdgen binary from the extracted archive.
+    # The archive (dsdgen.tar.gz or dsdgen.jar) contains a tools/ directory.
+    # With --archives '<archive>#dsdgen', Spark extracts contents under a
+    # directory named 'dsdgen' in SparkFiles root.
+    # Note: SparkFiles.getRootDirectory() may return a relative path (e.g. ".")
+    # in K8s mode, so we must resolve to absolute paths to avoid issues when
+    # subprocess.run() changes cwd before resolving the executable path.
+    archive_root = os.path.abspath(SparkFiles.getRootDirectory())
     tools_dir = os.path.join(archive_root, "dsdgen", "tools")
     dsdgen_bin = os.path.join(tools_dir, "dsdgen")
 
     if not os.path.isfile(dsdgen_bin):
+        # Provide detailed debug info for troubleshooting archive extraction
+        import glob
+        dsdgen_dir = os.path.join(archive_root, "dsdgen")
+        debug_info = (
+            f"archive_root={archive_root}, "
+            f"dsdgen_dir exists={os.path.exists(dsdgen_dir)}, "
+            f"dsdgen_dir isdir={os.path.isdir(dsdgen_dir)}"
+        )
+        if os.path.isdir(dsdgen_dir):
+            contents = glob.glob(os.path.join(dsdgen_dir, "**"), recursive=True)[:30]
+            debug_info += f", contents={contents}"
+        elif os.path.isdir(archive_root):
+            contents = glob.glob(os.path.join(archive_root, "**"), recursive=True)[:30]
+            debug_info += f", root_contents={contents}"
         raise FileNotFoundError(
-            f"dsdgen binary not found at {dsdgen_bin}. "
-            "Make sure --archives tpcds-gen/target/lib/dsdgen.jar#dsdgen is set."
+            f"dsdgen binary not found at {dsdgen_bin}. {debug_info}. "
+            "Make sure --archives <archive>#dsdgen is set."
         )
 
     # Ensure the binary is executable (archive extraction may lose permissions)
@@ -177,11 +198,8 @@ def run_dsdgen_and_read(child_index, scale, parallel, update=None):
 
             os.remove(filepath)
     finally:
-        # Best-effort cleanup of temp directory
-        try:
-            os.rmdir(work_dir)
-        except OSError:
-            pass
+        # Best-effort cleanup of temp directory (may contain leftover files)
+        shutil.rmtree(work_dir, ignore_errors=True)
 
 
 def rename_partition_dirs(spark, output_dir, table_names):
@@ -303,7 +321,16 @@ def main():
     # each task independently splits its output into per-table files.
     df = spark.createDataFrame(all_data_rdd, ["table_name", "value"])
 
-    write_mode = "overwrite" if args.overwrite else "errorifexists"
+    # Determine write mode:
+    #   --range   → append (incremental generation across multiple spark-submit runs)
+    #   --overwrite → overwrite (fresh start, wipe existing data)
+    #   default   → errorifexists (fail if output already exists)
+    if args.range:
+        write_mode = "append"
+    elif args.overwrite:
+        write_mode = "overwrite"
+    else:
+        write_mode = "errorifexists"
     df.write.partitionBy("table_name").mode(write_mode).text(args.output_dir)
 
     # Rename Hive-style "table_name=xxx" dirs to plain "xxx" for NDS pipeline compat
