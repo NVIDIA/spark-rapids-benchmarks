@@ -138,6 +138,65 @@ Example command:
 python nds_gen_data.py hdfs 100 100 /data/raw_sf100 --overwrite_output
 ```
 
+### Generate data with Spark (recommended for K8s / no MapReduce)
+
+`nds_gen_data_spark.py` is a PySpark application that replaces the Hadoop MapReduce
+approach. It distributes the `dsdgen` binary across Spark executors via `--archives`,
+runs data generation in parallel, and writes output to any Hadoop-compatible filesystem
+(HDFS, S3, GCS, ABFS, or local). It works with any Spark cluster manager: **K8s, YARN,
+Standalone, or local**.
+
+**Prerequisites:** build tpcds-gen as before (`cd tpcds-gen && make`).
+
+Using the spark-submit-template:
+
+```bash
+./spark-submit-template datagen_submit.template \
+    nds_gen_data_spark.py 100 100 hdfs:///data/raw_sf100 --overwrite
+```
+
+Or directly with spark-submit (K8s example):
+
+```bash
+spark-submit --master k8s://https://<k8s-api-server> \
+    --deploy-mode cluster \
+    --conf spark.kubernetes.container.image=<spark-image> \
+    --conf spark.executor.instances=10 \
+    --archives tpcds-gen/target/lib/dsdgen.jar#dsdgen \
+    nds_gen_data_spark.py 1000 200 hdfs:///data/raw_sf1000 --overwrite
+```
+
+For incremental generation (split across multiple spark-submit runs):
+
+```bash
+# Run 1: children 1-100
+spark-submit --archives tpcds-gen/target/lib/dsdgen.jar#dsdgen \
+    nds_gen_data_spark.py 1000 200 hdfs:///data/raw_sf1000 --range 1,100
+
+# Run 2: children 101-200
+spark-submit --archives tpcds-gen/target/lib/dsdgen.jar#dsdgen \
+    nds_gen_data_spark.py 1000 200 hdfs:///data/raw_sf1000 --range 101,200
+```
+
+Arguments:
+
+```text
+positional arguments:
+  scale                 Data scale factor in GB.
+  parallel              Number of parallel dsdgen children (must be >= 2).
+  output_dir            Output directory (hdfs://..., s3a://..., gs://..., or local path).
+
+optional arguments:
+  --range START,END     Generate only this child range (inclusive).
+  --overwrite           Overwrite existing output directory.
+  --update N            Generate update/maintenance dataset N.
+  --num_executors N     Hint for number of Spark partitions (default: one per child).
+```
+
+**Note:** The dsdgen binary in the archive must be compiled for the same OS/architecture
+as the Spark executor nodes (typically Linux x86_64). If you build on macOS but run on
+K8s (Linux), you need to cross-compile or build inside a Linux container.
+
 ### Convert CSV to Parquet or Other data sources
 
 To do the data conversion, the `nds_transcode.py` need to be submitted as a Spark job. User can leverage
