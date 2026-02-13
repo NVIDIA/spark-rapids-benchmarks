@@ -39,12 +39,12 @@ filesystem (HDFS, S3, GCS, ABFS, local). Works with any Spark cluster manager
 
 Prerequisites:
     1. Build tpcds-gen (cd tpcds-gen && make)
-    2. The build produces target/lib/dsdgen.jar which is a jar archive containing
+    2. The build produces target/lib/dsdgen.tar.gz containing
        the tools/ directory (dsdgen binary + *.dst files).
 
 Usage:
     spark-submit [--master k8s://... | yarn | ...] \\
-        --archives tpcds-gen/target/lib/dsdgen.jar#dsdgen \\
+        --archives tpcds-gen/target/lib/dsdgen.tar.gz#dsdgen \\
         nds_gen_data_spark.py \\
         <scale> <parallel> <output_dir> [options]
 
@@ -54,17 +54,17 @@ Example (K8s):
     spark-submit --master k8s://https://<api-server> \\
         --deploy-mode cluster \\
         --conf spark.kubernetes.container.image=<image-with-spark> \\
-        --archives tpcds-gen/target/lib/dsdgen.jar#dsdgen \\
+        --archives tpcds-gen/target/lib/dsdgen.tar.gz#dsdgen \\
         nds_gen_data_spark.py 100 100 hdfs:///data/raw_sf100 --overwrite
 
 Example (YARN):
     spark-submit --master yarn \\
-        --archives tpcds-gen/target/lib/dsdgen.jar#dsdgen \\
+        --archives tpcds-gen/target/lib/dsdgen.tar.gz#dsdgen \\
         nds_gen_data_spark.py 1000 200 hdfs:///data/raw_sf1000
 
 Example (local testing):
     spark-submit --master 'local[4]' \\
-        --archives tpcds-gen/target/lib/dsdgen.jar#dsdgen \\
+        --archives tpcds-gen/target/lib/dsdgen.tar.gz#dsdgen \\
         nds_gen_data_spark.py 1 2 /tmp/nds_test_data --overwrite
 """
 
@@ -101,7 +101,7 @@ def run_dsdgen_and_read(child_index, scale, parallel, update=None):
 
     This function runs inside a Spark executor task. The dsdgen binary and its
     auxiliary files (*.dst) are expected under SparkFiles root, extracted from
-    the archive passed via --archives dsdgen.jar#dsdgen.
+    the archive passed via --archives dsdgen.tar.gz#dsdgen.
 
     Each generated .dat file is read line-by-line and yielded as (table_name, line),
     which Spark then writes to the target filesystem partitioned by table_name.
@@ -110,7 +110,7 @@ def run_dsdgen_and_read(child_index, scale, parallel, update=None):
     from pyspark import SparkFiles
 
     # Locate dsdgen binary from the extracted archive.
-    # The archive (dsdgen.tar.gz or dsdgen.jar) contains a tools/ directory.
+    # The archive (dsdgen.tar.gz) contains a tools/ directory.
     # With --archives '<archive>#dsdgen', Spark extracts contents under a
     # directory named 'dsdgen' in SparkFiles root.
     # Note: SparkFiles.getRootDirectory() may return a relative path (e.g. ".")
@@ -190,7 +190,7 @@ def run_dsdgen_and_read(child_index, scale, parallel, update=None):
             if table_name is None:
                 continue
 
-            with open(filepath, "r") as f:
+            with open(filepath, "r", encoding="utf-8") as f:
                 for line in f:
                     stripped = line.rstrip("\n\r")
                     if stripped:
@@ -217,6 +217,14 @@ def rename_partition_dirs(spark, output_dir, table_names):
     base_path = Path(output_dir)
     fs = jvm.org.apache.hadoop.fs.FileSystem.get(base_path.toUri(), hadoop_conf)
 
+    def _rename_or_raise(src_path, dst_path):
+        if fs.exists(dst_path):
+            raise FileExistsError(
+                f"Refusing to overwrite existing path during rename: {dst_path}"
+            )
+        if not fs.rename(src_path, dst_path):
+            raise RuntimeError(f"HDFS rename failed: {src_path} -> {dst_path}")
+
     for table in table_names:
         hive_dir = Path(output_dir, f"table_name={table}")
         target_dir = Path(output_dir, table)
@@ -233,15 +241,17 @@ def rename_partition_dirs(spark, output_dir, table_names):
                 if src_path.getName().startswith("_"):
                     continue
                 dst_path = Path(target_dir, src_path.getName())
-                fs.rename(src_path, dst_path)
-            fs.delete(hive_dir, True)
+                _rename_or_raise(src_path, dst_path)
+            if not fs.delete(hive_dir, True):
+                raise RuntimeError(f"Failed to delete temporary partition dir: {hive_dir}")
         else:
-            fs.rename(hive_dir, target_dir)
+            _rename_or_raise(hive_dir, target_dir)
 
     # Clean up Hive-style _SUCCESS at root if present
     success_file = Path(output_dir, "_SUCCESS")
     if fs.exists(success_file):
-        fs.delete(success_file, False)
+        if not fs.delete(success_file, False):
+            print(f"WARNING: failed to delete {success_file}", file=sys.stderr)
 
 
 def main():
@@ -305,7 +315,7 @@ def main():
     print(f"  Output:    {args.output_dir}")
     print(f"  Overwrite: {args.overwrite}")
     print(f"  Update:    {update}")
-    print(f"  Partitions:{num_partitions}")
+    print(f"  Partitions: {num_partitions}")
 
     # Create RDD: one element per child index.
     # Each Spark task runs dsdgen for its child, reads output line by line,

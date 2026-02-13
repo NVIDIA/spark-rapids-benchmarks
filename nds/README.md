@@ -165,14 +165,7 @@ following conditions are true:
 5. For incremental generation (`--range`), do not rerun overlapping child ranges,
    otherwise duplicate data will be produced.
 
-Using the spark-submit-template:
-
-```bash
-./spark-submit-template datagen_submit.template \
-    nds_gen_data_spark.py 100 100 hdfs:///data/raw_sf100 --overwrite
-```
-
-Or directly with spark-submit (K8s example):
+Directly with spark-submit (K8s example):
 
 ```bash
 spark-submit --master k8s://https://<k8s-api-server> \
