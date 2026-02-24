@@ -435,7 +435,7 @@ if __name__ == "__main__":
                         './hook {start|stop} output_root query_name.')
     parser.add_argument('--app_name',
                         help='The name of the application. If not specified, the default name will be "NDS-H - Power Run".',
-                        default='NDS-H - Power Run')
+                        default=None)
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
     run_query_stream(args.input_prefix,

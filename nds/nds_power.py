@@ -638,8 +638,9 @@ if __name__ == "__main__":
                         '--save_plan_path to only save the execution plans without running the queries.' +
                         'Note that "spark.sql.adaptive.enabled" should be set to false to get GPU physical plans.')
     parser.add_argument('--app_name',
-                        help='The name of the application. If not specified, the default name will be "NDS - Power Run".',
-                        default='NDS - Power Run')
+                        help='The name of the application. If not specified, the default name will be "NDS - Power Run", '
+                             'or "NDS - <query_name>" when running a single query.',
+                        default=None)
     query_filter_group.add_argument('--sub_queries',
                                     type=lambda s: [x.strip() for x in s.split(',')],
                                     help='comma separated list of queries to run. If this is specified, sub_query_patterns should be empty. ' +
