@@ -340,9 +340,9 @@ optional arguments:
   --delta_unmanaged     Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without leveraging a
                         Metastore service
   --hive                use table meta information in Hive metastore directly without registering temp views.
-  --app_name APP_NAME   The name of the Spark application. If not specified, the default is "NDS - Power Run" (or the
-                        single query name when running only one query, e.g. "NDS - query1"). Useful for identifying runs
-                        in cluster UIs and logs.
+  --app_name APP_NAME   The name of the Spark application. If not specified, the default is "NDS - Power Run". Useful
+                        for identifying runs in cluster UIs and logs. Automatic naming based on a single query (for
+                        example, "NDS - query1") is currently not supported.
   --extra_time_log EXTRA_TIME_LOG
                         extra path to save time log when running in cloud environment where driver node/pod cannot be accessed easily. User needs to add essential extra jars and configurations to access different cloud storage systems. e.g. s3, gs etc.
   --sub_queries SUB_QUERIES
