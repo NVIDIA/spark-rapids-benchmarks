@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
@@ -29,33 +30,31 @@
 # obtained from using this file do not comply with the TPC-DS Benchmark.
 #
 
-from pyspark import SparkContext
-from pyspark.java_gateway import ensure_callback_server_started
+import argparse
 
-from pyspark_spy.interface import SparkListenerInterface
+from pyspark.sql import SparkSession
+
+tables_to_rollback = [
+    'catalog_sales',
+    'inventory',
+    'store_returns',
+    'store_sales',
+    'web_returns',
+    'web_sales']
 
 
-def register_listener(sc: SparkContext, *listeners: SparkListenerInterface):
-    """register SparkListener instance to SparkContext. Start call back server for py4j by pyspark
-    public method.
+def rollback(spark, timestamp, tables_to_rollback):
+    """roll back the tables to the timestamp"""
+    for table in tables_to_rollback:
+        print(f"Rolling back {table} to {timestamp}")
+        rollback_sql = f"CALL spark_catalog.system.rollback_to_timestamp('{table}', TIMESTAMP '{timestamp}')"
+        spark.sql(rollback_sql)
 
-    Args:
-        sc (SparkContext): Spark Context
-    """
-    ensure_callback_server_started(gw = sc._gateway)
 
-    for listener in listeners:
-        sc._jsc.sc().addSparkListener(listener)
-
-class TaskFailureListener(SparkListenerInterface):
-    """Listener to track task failures. Each failed task will provide its failure reason.
-    """
-    def __init__(self):
-        self.reason = ''
-        self.failures = []
-
-    def onTaskEnd(self, taskEnd):
-        self.reason = taskEnd.reason().toString()
-        if self.reason != 'Success':
-            self.failures.append(self.reason)
-        super().onTaskEnd(taskEnd)
+if __name__ == "__main__":
+    parser = parser = argparse.ArgumentParser()
+    parser.add_argument('timestamp', help='timestamp to rollback to')
+    args = parser.parse_args()
+    spark = SparkSession.builder.appName("Rollback").getOrCreate()
+    rollback(spark, args.timestamp, tables_to_rollback)
+    spark.stop()

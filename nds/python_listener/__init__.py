@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
@@ -28,4 +29,4 @@
 # obtained using this file are not comparable to published TPC-DS Benchmark results, as the results
 # obtained from using this file do not comply with the TPC-DS Benchmark.
 #
-from .listeners import register_listener, TaskFailureListener
+from .PythonListener import PythonListener

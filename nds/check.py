@@ -1,5 +1,6 @@
+#!/usr/bin/env python3
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -131,3 +132,23 @@ def get_dir_size(start_path):
             if not os.path.islink(fp):
                 total_size += os.path.getsize(fp)
     return total_size
+
+def check_json_summary_folder(json_summary_folder):
+    if json_summary_folder:
+    # prepare a folder to save json summaries of query results
+        if not os.path.exists(json_summary_folder):
+            os.makedirs(json_summary_folder)
+        else:
+            if os.listdir(json_summary_folder):
+                # Remove all contents from the existing folder
+                for item in os.listdir(json_summary_folder):
+                    item_path = os.path.join(json_summary_folder, item)
+                    if os.path.isfile(item_path):
+                        os.remove(item_path)
+
+def check_query_subset_exists(query_dict, subset_list):
+    """check if the query subset exists in the query dictionary"""
+    for q in subset_list:
+        if q not in query_dict.keys():
+            raise Exception(f"Query {q} is not in the query dictionary. Please check the query subset.")
+    return True

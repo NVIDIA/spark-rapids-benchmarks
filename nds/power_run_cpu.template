@@ -14,20 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-export CUDF_JAR=cudf-22.02.0.jar
-export SPARK_RAPIDS_PLUGIN_JAR=rapids-4-spark_2.12-22.02.0.jar
-export SPARK_HOME=/usr/lib/spark
-export SPARK_CONF=("--master" "yarn"
-                   "--conf" "spark.rapids.sql.enabled=false"
-                   "--conf" "spark.executor.cores=16"
-                   "--conf" "spark.executor.memory=16G"
-                   "--conf" "spark.driver.memory=50G"
-                   "--conf" "spark.sql.adaptive.enabled=true"
-                   "--conf" "spark.locality.wait=0"
-                   "--conf" "spark.sql.shuffle.partitions=128"
-                   "--conf" "spark.executor.instances=8"
-                   "--conf" "spark.dynamicAllocation.enabled=false"
-                   "--conf" "spark.scheduler.mode=FIFO"
-                   "--conf" "spark.sql.autoBroadcastJoinThreshold=10m"
+
+source base.template
+export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
+
+export SPARK_CONF=("--master" "${SPARK_MASTER}"
+                   "--deploy-mode" "client"
+                   "--conf" "spark.driver.memory=${DRIVER_MEMORY}"
+                   "--conf" "spark.executor.cores=${EXECUTOR_CORES}"
+                   "--conf" "spark.executor.instances=${NUM_EXECUTORS}"
+                   "--conf" "spark.executor.memory=${EXECUTOR_MEMORY}"
+                   "--conf" "spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}"
                    "--conf" "spark.scheduler.minRegisteredResourcesRatio=1.0"
-                   "--conf" "spark.sql.broadcastTimeout=1200")
+                   "--conf" "spark.sql.adaptive.enabled=true"
+                   "--conf" "spark.sql.broadcastTimeout=1200"
+                   "--conf" "spark.dynamicAllocation.enabled=false"
+                   "--jars" "$NDS_LISTENER_JAR")

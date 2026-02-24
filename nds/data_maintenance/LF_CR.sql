@@ -29,7 +29,7 @@
 --
 
 DROP VIEW IF EXISTS crv;
-CREATE VIEW crv as
+CREATE TEMP VIEW crv as
 SELECT d_date_sk cr_returned_date_sk
  ,t_time_sk cr_returned_time_sk
  ,i_item_sk cr_item_sk
@@ -75,4 +75,4 @@ LEFT OUTER JOIN ship_mode ON (cret_shipmode_id = sm_ship_mode_id)
 LEFT OUTER JOIN warehouse ON (cret_warehouse_id = w_warehouse_id)
 WHERE i_rec_end_date IS NULL AND cc_rec_end_date IS NULL;
 ------------------------------------------------
-insert into catalog_returns (select * from crv);
+insert into catalog_returns (select * from crv order by cr_returned_date_sk);

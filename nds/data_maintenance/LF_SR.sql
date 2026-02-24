@@ -29,7 +29,7 @@
 --
 
 DROP VIEW IF EXISTS srv;
-CREATE view srv as
+CREATE TEMP view srv as
 SELECT d_date_sk sr_returned_date_sk
  ,t_time_sk sr_return_time_sk
  ,i_item_sk sr_item_sk
@@ -65,4 +65,4 @@ LEFT OUTER JOIN reason ON (sret_reason_id = r_reason_id)
 WHERE i_rec_end_date IS NULL
  AND s_rec_end_date IS NULL;
 ------------------------------------------------
-insert into store_returns (select * from srv);
+insert into store_returns (select * from srv order by sr_returned_date_sk);

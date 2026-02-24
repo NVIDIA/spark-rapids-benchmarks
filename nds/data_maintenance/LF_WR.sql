@@ -29,7 +29,7 @@
 --
 
 DROP VIEW IF EXISTS wrv;
-CREATE VIEW wrv AS
+CREATE TEMP VIEW wrv AS
 SELECT d_date_sk wr_return_date_sk
  ,t_time_sk wr_return_time_sk
  ,i_item_sk wr_item_sk
@@ -65,4 +65,4 @@ LEFT OUTER JOIN reason ON (wret_reason_id = r_reason_id)
 LEFT OUTER JOIN web_page ON (wret_web_page_id = WP_WEB_PAGE_id)
 WHERE i_rec_end_date IS NULL AND wp_rec_end_date IS NULL;
 ------------------------------------------------
-insert into web_returns (select * from wrv);
+insert into web_returns (select * from wrv order by wr_return_date_sk);

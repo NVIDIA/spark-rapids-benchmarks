@@ -1,6 +1,7 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,12 +32,24 @@
 
 import argparse
 import csv
-import time
+from datetime import datetime
+import os
+import sys
 
 from pyspark.sql import SparkSession
 from PysparkBenchReport import PysparkBenchReport
 
-from check import get_abs_path
+from check import check_json_summary_folder, get_abs_path
+from nds_schema import get_maintenance_schemas
+from nds_power import register_delta_tables
+
+# Python doesn't automatically include sibling directories in the import path.
+# We need to explicitly add the utils directory to sys.path to import shared utilities.
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+utils_dir = os.path.join(parent_dir, 'utils')
+if utils_dir not in sys.path:
+    sys.path.insert(0, utils_dir)
+from spark_utils import setQueryName, clearQueryName
 
 INSERT_FUNCS = [
     'LF_CR',
@@ -77,13 +90,44 @@ def replace_date(query_list, date_tuple_list):
     """
     q_updated = []
     for date_tuple in date_tuple_list:
+        date1 = datetime.strptime(date_tuple[0], "%Y-%m-%d")
+        date2 = datetime.strptime(date_tuple[1], "%Y-%m-%d")
+        if date1 > date2:
+            earlier = date_tuple[1]
+            later = date_tuple[0]
+        else:
+            earlier = date_tuple[0]
+            later = date_tuple[1]
         for c in query_list:
-            c = c.replace("DATE1", date_tuple[0])
-            c = c.replace("DATE2", date_tuple[1])
+            c = c.replace("DATE1", earlier)
+            c = c.replace("DATE2", later)
             q_updated.append(c)
     return q_updated
 
-def get_maintenance_queries(folder, spec_queries):
+def get_valid_query_names(spec_queries):
+    global DM_FUNCS
+    if spec_queries:
+        for q in spec_queries:
+            if q not in DM_FUNCS:
+                raise Exception(f"invalid Data Maintenance query: {q}. Valid  are: {DM_FUNCS}")
+        DM_FUNCS = spec_queries
+    return DM_FUNCS
+
+def create_spark_session(valid_queries, warehouse_path, warehouse_type):
+    if len(valid_queries) == 1:
+        app_name = "NDS - Data Maintenance - " + valid_queries[0]
+    else:
+        app_name = "NDS - Data Maintenance"
+    spark_session_builder = SparkSession.builder
+    if warehouse_type == "delta":
+        # now we only support managed table(by Hive Metastore) for Data Maintenance
+        spark_session_builder.config("spark.sql.catalogImplementation", "hive")
+    if warehouse_type == "iceberg":
+        spark_session_builder.config("spark.sql.catalog.spark_catalog.warehouse", warehouse_path)
+    spark_session = spark_session_builder.appName(app_name).getOrCreate()
+    return spark_session
+
+def get_maintenance_queries(spark_session, folder, valid_queries):
     """get query content from DM query files
 
     Args:
@@ -92,20 +136,10 @@ def get_maintenance_queries(folder, spec_queries):
     Returns:
         dict{str: list[str]}: a dict contains Data Maintenance query name and its content.
     """
-    # need a spark session to get delete date
-    spark = SparkSession.builder.appName("GET DELETE DATES").getOrCreate()
-    delete_date_dict = get_delete_date(spark)
-    # exclude this "get_delte_date" step from main DM process.
-    spark.stop()
-    global DM_FUNCS
-    if spec_queries:
-        for q in spec_queries:
-            if q not in DM_FUNCS:
-                raise Exception(f"invalid Data Maintenance query: {q}. Valid  are: {DM_FUNCS}")
-        DM_FUNCS = [q for q in spec_queries if q in DM_FUNCS]
+    delete_date_dict = get_delete_date(spark_session)
     folder_abs_path = get_abs_path(folder)
     q_dict = {}
-    for q in DM_FUNCS:
+    for q in valid_queries:
         with open(folder_abs_path + '/' + q + '.sql', 'r') as f:
             # file content e.g.
             # " LICENSE CONTENT ... ;"
@@ -121,49 +155,117 @@ def get_maintenance_queries(folder, spec_queries):
             q_dict[q] = q_content
     return q_dict
 
-def run_dm_query(spark, query_list):
+def run_subquery_for_delta(spark_session, delete_query):
+    """DeltaLake doesn't support DELETE with subquery, so run the subquery at first as workaround.
+    return: a query that can be run on Delta Lake after subquery replacement.
+    See issue: https://github.com/delta-io/delta/issues/730
+    Note this method is very tricky and is totally based on the query content itself.
+    TODO: remove this method when the issue above is resolved.
+    """
+    # first strip out the license part
+    delete_query = delete_query.split('--')[-1]
+    if not "min" in delete_query:
+        # e.g. "delete ... in (select ...);"
+        subquery_start_pos = delete_query.find("(") + 1
+        subquery_end_pos = delete_query.find(")")
+        if subquery_start_pos == -1 or subquery_end_pos == -1:
+            raise Exception("invalid delete query")
+        subquery = delete_query[subquery_start_pos:subquery_end_pos]
+        subquery_df = spark_session.sql(subquery)
+        # only 1 column, so retrive directly at index 0
+        col_name = subquery_df.schema.fields[0].name
+        subquery_result = subquery_df.collect()
+        # form the string then drop "[" and "]"
+        subquery_result = str([row[col_name] for row in subquery_result])[1:-1]
+        final_query = delete_query.replace(subquery, subquery_result)
+        return final_query
+    else:
+        # e.g. "delete ... (select min(d_date_sk) ... )... and ... ( select max(d_date_sk) ... );"
+        # subquery_1 is between first "(" and second ")"
+        # subquery_2 is only different from subquery_1 in the "min" and "max" keyword.
+        subquery_start_pos1 = delete_query.find("(") + 1
+        first_right_parenthesis = delete_query.find(")")
+        subquery_end_pos1 = delete_query.find(")", first_right_parenthesis + 1)
+        subquery_1 = delete_query[subquery_start_pos1:subquery_end_pos1]
+        subquery_2 = subquery_1.replace("min", "max")
+        # result only 1 row.
+        subquery_1_result = str(spark_session.sql(subquery_1).collect()[0][0])
+        subquery_2_result = str(spark_session.sql(subquery_2).collect()[0][0])
+        final_query = delete_query.replace(
+            subquery_1, subquery_1_result).replace(
+            subquery_2, subquery_2_result)
+        return final_query
+
+
+def run_dm_query(spark, query_list, query_name, warehouse_type):
     """Run data maintenance query.
     For delete queries, they can run on Spark 3.2.2 but not Spark 3.2.1
     See: https://issues.apache.org/jira/browse/SPARK-39454
-    See: data_maintenance/DF_*.sql for insert query details.
-    See data_maintenance/LF_*.sql for delete query details.
+    See: data_maintenance/DF_*.sql for delete query details.
+    See data_maintenance/LF_*.sql for insert query details.
 
     Args:
         spark (SparkSession):  SparkSession instance.
         query_list ([str]): INSERT query list.
     """
     for q in query_list:
+        if query_name in DELETE_FUNCS + INVENTORY_DELETE_FUNC and warehouse_type == "delta":
+            q = run_subquery_for_delta(spark, q)
         spark.sql(q)
 
-def run_query(query_dict, time_log_output_path):
+def run_query(spark_session,
+              query_dict,
+              time_log_output_path,
+              json_summary_folder,
+              property_file,
+              warehouse_path,
+              warehouse_type,
+              keep_sc,
+              delta_unmanaged=False):
     # TODO: Duplicate code in nds_power.py. Refactor this part, make it general.
     execution_time_list = []
-    total_time_start = time.time()
-    if len(query_dict) == 1:
-        app_name = "NDS - Data Maintenance - " + list(query_dict.keys())[0]
-    else:
-        app_name = "NDS - Data Maintenance"
-    
-    spark_session = SparkSession.builder.appName(
-        app_name).getOrCreate()
+    check_json_summary_folder(json_summary_folder)
+    # Run query
+    total_time_start = datetime.now()
     spark_app_id = spark_session.sparkContext.applicationId
-    DM_start = time.time()
+    DM_start = datetime.now()
+    if warehouse_type == 'delta' and delta_unmanaged:
+        execution_time_list = register_delta_tables(spark_session, warehouse_path, execution_time_list)
     for query_name, q_content in query_dict.items():
         # show query name in Spark web UI
-        spark_session.sparkContext.setJobGroup(query_name, query_name)
+        setQueryName(spark_session, query_name)
         print(f"====== Run {query_name} ======")
-        q_report = PysparkBenchReport(spark_session)
-        summary = q_report.report_on(run_dm_query, spark_session,
-                                                       q_content)
+        q_report = PysparkBenchReport(spark_session, query_name)
+        summary = q_report.report_on(run_dm_query, 0, 1,
+                                                    spark_session,
+                                                    q_content,
+                                                    query_name,
+                                                    warehouse_type)
         print(f"Time taken: {summary['queryTimes']} millis for {query_name}")
         execution_time_list.append((spark_app_id, query_name, summary['queryTimes']))
-        q_report.write_summary(query_name, prefix="")
-    spark_session.sparkContext.stop()
-    DM_end = time.time()
-    DM_elapse = DM_end - DM_start
-    total_elapse = DM_end - total_time_start
-    print("====== Data Maintenance Time: {} s ======".format(DM_elapse))
-    print("====== Total Time: {} s ======".format(total_elapse))
+        if json_summary_folder:
+            # property_file e.g.: "property/aqe-on.properties" or just "aqe-off.properties"
+            if property_file:
+                summary_prefix = os.path.join(
+                    json_summary_folder, os.path.basename(property_file).split('.')[0])
+            else:
+                summary_prefix =  os.path.join(json_summary_folder, '')
+            q_report.write_summary(prefix=summary_prefix)
+    clearQueryName(spark_session)
+    if not keep_sc:
+        spark_session.sparkContext.stop()
+    DM_end = datetime.now()
+    DM_elapse = (DM_end - DM_start).total_seconds()
+    total_elapse = (DM_end - total_time_start).total_seconds()
+    print(f"====== Data Maintenance Start Time: {DM_start}")
+    print(f"====== Data Maintenance Time: {DM_elapse} s ======")
+    print(f"====== Total Time: {total_elapse} s ======")
+    execution_time_list.append(
+        (spark_app_id, "Data Maintenance Start Time", DM_start)
+    )
+    execution_time_list.append(
+        (spark_app_id, "Data Maintenance End Time", DM_end)
+    )
     execution_time_list.append(
         (spark_app_id, "Data Maintenance Time", DM_elapse))
     execution_time_list.append(
@@ -176,9 +278,18 @@ def run_query(query_dict, time_log_output_path):
         writer.writerow(header)
         writer.writerows(execution_time_list)
     
+def register_temp_views(spark_session, refresh_data_path):
+    refresh_tables = get_maintenance_schemas(True)
+    for table, schema in refresh_tables.items():
+        spark_session.read.option("delimiter", '|').option(
+            "header", "false").csv(refresh_data_path + '/' + table, schema=schema).createOrReplaceTempView(table)
 
 if __name__ == "__main__":
     parser = parser = argparse.ArgumentParser()
+    parser.add_argument('warehouse_path',
+                        help='warehouse path for Data Maintenance test.')
+    parser.add_argument('refresh_data_path',
+                        help='path to refresh data')
     parser.add_argument('maintenance_queries_folder',
                         help='folder contains all NDS Data Maintenance queries. If ' +
                         '"--maintenance_queries" is not set, all queries under the folder will be' +
@@ -190,8 +301,30 @@ if __name__ == "__main__":
                         type=lambda s: s.split(','),
                         help='specify Data Maintenance query names by a comma seprated string.' +
                         ' e.g. "LF_CR,LF_CS"')
-
+    parser.add_argument('--property_file',
+                        help='property file for Spark configuration.')
+    parser.add_argument('--json_summary_folder',
+                        help='Empty folder/path (will create if not exist) to save JSON summary file for each query.')
+    parser.add_argument('--warehouse_type',
+                        help='Type of the warehouse used for Data Maintenance test.',
+                        choices=['iceberg', 'delta'],
+                        default='iceberg')
+    parser.add_argument('--keep_sc',
+                        action='store_true',
+                        help='Keep SparkContext alive after running all queries. This is a ' +
+                        'limitation on Databricks runtime environment. User should always attach ' +
+                        'this flag when running on Databricks.')
+    parser.add_argument('--delta_unmanaged',
+                        action='store_true',
+                        help='Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without ' +
+        '               leveraging a Metastore service.')
     args = parser.parse_args()
-    query_dict = get_maintenance_queries(args.maintenance_queries_folder,
-                                         args.maintenance_queries)
-    run_query(query_dict, args.time_log)
+    valid_queries = get_valid_query_names(args.maintenance_queries)
+    spark_session = create_spark_session(valid_queries, args.warehouse_path, args.warehouse_type)
+    register_temp_views(spark_session, args.refresh_data_path)
+    query_dict = get_maintenance_queries(spark_session,
+                                         args.maintenance_queries_folder,
+                                         valid_queries)
+    run_query(spark_session, query_dict, args.time_log, args.json_summary_folder,
+              args.property_file, args.warehouse_path, args.warehouse_type, args.keep_sc,
+              args.delta_unmanaged)

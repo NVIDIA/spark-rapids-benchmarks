@@ -15,22 +15,23 @@
 # limitations under the License.
 #
 
-# 1. The iceberg-spark-runtime-3.2_2.12:0.13.1 only works on Spark 3.2.x
+# 1. The iceberg-spark-runtime-3.1_2.12:0.13.2 only works on Spark 3.1.x
 #    Please refer to https://iceberg.apache.org/releases/ for other Spark versions.
 # 2. The Iceberg catalog/tables is expected to be in current directory.
 #    see `spark.sql.catalog.spark_catalog.warehouse`.
 
-export SPARK_HOME=/usr/lib/spark
-export SPARK_CONF=("--master" "yarn"
-                   "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.2_2.12:0.13.1"
-                   "--conf" "spark.driver.memory=50G"
-                   "--conf" "spark.executor.cores=16"
-                   "--conf" "spark.executor.instances=8"
-                   "--conf" "spark.executor.memory=16G"
-                   "--conf" "spark.locality.wait=0"
-                   "--conf" "spark.sql.catalog.spark_catalog.type=hadoop"
-                   "--conf" "spark.sql.catalog.spark_catalog.warehouse=hdfs:///data/iceberg"
-                   "--conf" "spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog"
+source base.template
+export SHUFFLE_PARTITIONS=${SHUFFLE_PARTITIONS:-200}
+
+export SPARK_CONF=("--master" "${SPARK_MASTER}"
+                   "--deploy-mode" "client"
+                   "--conf" "spark.driver.memory=${DRIVER_MEMORY}"
+                   "--conf" "spark.executor.cores=${EXECUTOR_CORES}"
+                   "--conf" "spark.executor.instances=${NUM_EXECUTORS}"
+                   "--conf" "spark.executor.memory=${EXECUTOR_MEMORY}"
+                   "--conf" "spark.sql.shuffle.partitions=${SHUFFLE_PARTITIONS}"
+                   "--packages" "org.apache.iceberg:iceberg-spark-runtime-3.2_2.12:0.13.2"
                    "--conf" "spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
-                   "--conf" "spark.sql.files.maxPartitionBytes=128m"
-                   "--conf" "spark.sql.shuffle.partitions=1024")
+                   "--conf" "spark.sql.catalog.spark_catalog=org.apache.iceberg.spark.SparkSessionCatalog"
+                   "--conf" "spark.sql.catalog.spark_catalog.type=hadoop"
+                   "--jars" "$NDS_LISTENER_JAR")

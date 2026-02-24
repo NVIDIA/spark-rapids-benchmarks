@@ -131,5 +131,52 @@ By making a contribution to this project, I certify that:
     this project or the open source license(s) involved.
 ```
 
+### Pre-commit hooks
+
+We provide a basic config `.pre-commit-config.yaml` for [pre-commit](https://pre-commit.com/) to
+automate some aspects of the development process. As a convenience you can enable automatic
+copyright year updates by following the installation instructions on the
+[pre-commit homepage](https://pre-commit.com/).
+
+To this end, first install `pre-commit` itself using the method most suitable for your development
+environment. Then you will need to run `pre-commit install` to enable it in your local git
+repository. Using `--allow-missing-config` will make it easy to work with older branches
+that do not have `.pre-commit-config.yaml`.
+
+```bash
+pre-commit install --allow-missing-config
+```
+
+and setting the environment variable:
+
+```bash
+export SPARK_RAPIDS_BENCHMARKS_AUTO_COPYRIGHTER=ON
+```
+The default value of `SPARK_RAPIDS_BENCHMARKS_AUTO_COPYRIGHTER` is `OFF`.
+
+When automatic copyright updater is enabled and you modify a file with a prior
+year in the copyright header it will be updated on `git commit` to the current year automatically.
+However, this will abort the [commit process](https://github.com/pre-commit/pre-commit/issues/532)
+with the following error message:
+```
+Update copyright year....................................................Failed
+- hook id: auto-copyrighter
+- duration: 0.01s
+- files were modified by this hook
+```
+You can confirm that the update has actually happened by either inspecting its effect with
+`git diff` first or simply re-executing `git commit` right away. The second time no file
+modification should be triggered by the copyright year update hook and the commit should succeed.
+
+There is a known issue for macOS users if they use the default version of `sed`. The copyright update
+script may fail and generate an unexpected file named `source-file-E`. As a workaround, please
+install GNU sed
+
+```bash
+brew install gnu-sed
+# and add to PATH to make it as default sed for your shell
+export PATH="/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
+```
+
 ## Attribution
 Portions adopted from https://github.com/NVIDIA/spark-rapids/blob/main/CONTRIBUTING.md
