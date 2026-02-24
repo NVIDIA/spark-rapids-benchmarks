@@ -395,8 +395,11 @@ def run_query_stream(input_prefix,
     execution_time_list = []
     total_time_start = time.time()
     # check if it's running specific query or Power Run
-    if app_name is None and len(query_dict) == 1:
-        app_name = "NDS - " + list(query_dict.keys())[0]
+    if app_name is None:
+        if len(query_dict) == 1:
+            app_name = "NDS - " + list(query_dict.keys())[0]
+        else:
+            app_name = "NDS - Power Run"
 
     # Execute Power Run or Specific query in Spark
     # build Spark Session
