@@ -316,7 +316,7 @@ _After_ user generates query streams, Power Run can be executed using one of the
 Arguments supported by `nds_power.py`:
 
 ```text
-usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json,iceberg,delta}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] [--json_summary_folder JSON_SUMMARY_FOLDER] [--delta_unmanaged] [--hive] input_prefix query_stream_file time_log
+usage: nds_power.py [-h] [--input_format {parquet,orc,avro,csv,json,iceberg,delta}] [--output_prefix OUTPUT_PREFIX] [--output_format OUTPUT_FORMAT] [--property_file PROPERTY_FILE] [--floats] [--json_summary_folder JSON_SUMMARY_FOLDER] [--delta_unmanaged] [--hive] [--app_name APP_NAME] input_prefix query_stream_file time_log
 
 positional arguments:
   input_prefix          text to prepend to every input file path (e.g., "hdfs:///ds-generated-data"). If input_format is "iceberg", this argument will be regarded as the value of property "spark.sql.catalog.spark_catalog.warehouse". Only default Spark catalog session name
@@ -340,6 +340,9 @@ optional arguments:
   --delta_unmanaged     Use unmanaged tables for DeltaLake. This is useful for testing DeltaLake without leveraging a
                         Metastore service
   --hive                use table meta information in Hive metastore directly without registering temp views.
+  --app_name APP_NAME   The name of the Spark application. If not specified, the default is "NDS - Power Run" (or the
+                        single query name when running only one query, e.g. "NDS - query1"). Useful for identifying runs
+                        in cluster UIs and logs.
   --extra_time_log EXTRA_TIME_LOG
                         extra path to save time log when running in cloud environment where driver node/pod cannot be accessed easily. User needs to add essential extra jars and configurations to access different cloud storage systems. e.g. s3, gs etc.
   --sub_queries SUB_QUERIES

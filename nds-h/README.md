@@ -203,6 +203,7 @@ Arguments supported by `nds_h_power.py`:
 usage: nds_h_power.py [-h] [--input_format {parquet,}] 
                            [--output_format OUTPUT_FORMAT] 
                            [--property_file PROPERTY_FILE]
+                           [--app_name APP_NAME]
                            <input_data_location> 
                            <query_stream_file>
                            <time_log_file>
@@ -227,6 +228,8 @@ optional arguments:
   --sub_queries SUB_QUERIES
                         comma separated list of queries to run. If not specified, all queries in the stream file will be run. 
                         e.g. "query1,query2,query3". Note, use "_part1","_part2" and "part_3" suffix for the following query names: query15
+  --app_name APP_NAME   The name of the Spark application. If not specified, the default is "NDS-H - Power Run".
+                        Useful for identifying runs in cluster UIs and logs.
 ```
 
 Example command to submit nds_h_power.py by spark-submit-template utility:

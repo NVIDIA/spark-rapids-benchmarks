@@ -85,7 +85,6 @@ def gen_sql_from_stream(query_stream_file_path):
         else:
             for i in range(len(non_empty_queries)):
                 extended_queries[f'query{template_number}_part{i+1}'] = non_empty_queries[i]
-
     return extended_queries
 
 
@@ -237,7 +236,8 @@ def run_query_stream(input_prefix,
                      json_summary_folder=None,
                      save_plan_path=None,
                      skip_execution=False,
-                     profiling_hook=None):
+                     profiling_hook=None,
+                     app_name=None):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accessibility. TempView Creation time is also recorded.
 
@@ -259,7 +259,8 @@ def run_query_stream(input_prefix,
     execution_time_list = []
     total_time_start = time.time()
     # check if it's running specific query or Power Run
-    app_name = "NDS-H - Power Run"
+    if app_name is None:
+        app_name = "NDS-H - Power Run"
     # Execute Power Run or Specific query in Spark
     # build Spark Session
     session_builder = SparkSession.builder
@@ -432,6 +433,9 @@ if __name__ == "__main__":
                         help='Executable that is called just before/after a query executes.' +
                         'The executable is called like this ' +
                         './hook {start|stop} output_root query_name.')
+    parser.add_argument('--app_name',
+                        help='The name of the application. If not specified, the default name will be "NDS-H - Power Run".',
+                        default='NDS-H - Power Run')
     args = parser.parse_args()
     query_dict = gen_sql_from_stream(args.query_stream_file)
     run_query_stream(args.input_prefix,
@@ -449,4 +453,5 @@ if __name__ == "__main__":
                      args.json_summary_folder,
                      args.save_plan_path,
                      args.skip_execution,
-                     args.profiling_hook)
+                     args.profiling_hook,
+                     args.app_name)
