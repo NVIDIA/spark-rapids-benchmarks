@@ -42,7 +42,7 @@ import subprocess
 
 # Python doesn't automatically include sibling directories in the import path.
 # We need to explicitly add the utils directory to sys.path to import shared utilities.
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__ if '__file__' in dir() else sys.argv[0]), '..'))
 utils_dir = os.path.join(parent_dir, 'utils')
 if utils_dir not in sys.path:
     sys.path.insert(0, utils_dir)

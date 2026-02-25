@@ -34,7 +34,7 @@ import os
 import subprocess
 import sys
 
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__ if '__file__' in dir() else sys.argv[0]), '..'))
 utils_dir = os.path.join(parent_dir, 'utils')
 sys.path.insert(0, utils_dir)
 
