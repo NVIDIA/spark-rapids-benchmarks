@@ -39,8 +39,8 @@ filesystem (HDFS, S3, GCS, ABFS, local). Works with any Spark cluster manager
 
 Prerequisites:
     1. Build tpcds-gen (cd tpcds-gen && make)
-    2. The build produces target/lib/dsdgen.tar.gz containing
-       the tools/ directory (dsdgen binary + *.dst files).
+    2. Package the tools directory as a tar.gz archive:
+       cd tpcds-gen/target && tar czf lib/dsdgen.tar.gz tools/
 
 Usage:
     spark-submit [--master k8s://... | yarn | ...] \\
@@ -233,11 +233,9 @@ def rename_partition_dirs(spark, output_dir, table_names):
             continue
 
         if fs.exists(target_dir):
-            # Merge into existing directory (e.g., incremental range generation)
             statuses = fs.listStatus(hive_dir)
             for status in statuses:
                 src_path = status.getPath()
-                # Skip _SUCCESS / hidden files
                 if src_path.getName().startswith("_"):
                     continue
                 dst_path = Path(target_dir, src_path.getName())

@@ -146,7 +146,12 @@ runs data generation in parallel, and writes output to any Hadoop-compatible fil
 (HDFS, S3, GCS, ABFS, or local). It works with any Spark cluster manager: **K8s, YARN,
 Standalone, or local**.
 
-**Prerequisites:** build tpcds-gen as before (`cd tpcds-gen && make`).
+**Prerequisites:** build tpcds-gen as before (`cd tpcds-gen && make`), then package the
+dsdgen tools as a tar.gz archive:
+
+```bash
+cd tpcds-gen/target && tar czf lib/dsdgen.tar.gz tools/
+```
 
 #### Required prerequisites for K8s + HDFS runs
 
