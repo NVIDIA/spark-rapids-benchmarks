@@ -374,7 +374,8 @@ def run_query_stream(input_prefix,
                      allow_failure=False,
                      profiling_hook=None,
                      save_plan_path=None,
-                     skip_execution=False):
+                     skip_execution=False,
+                     app_name=None):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
 
@@ -394,10 +395,12 @@ def run_query_stream(input_prefix,
     execution_time_list = []
     total_time_start = time.time()
     # check if it's running specific query or Power Run
-    if len(query_dict) == 1:
-        app_name = "NDS - " + list(query_dict.keys())[0]
-    else:
-        app_name = "NDS - Power Run"
+    if app_name is None:
+        if len(query_dict) == 1:
+            app_name = "NDS - " + list(query_dict.keys())[0]
+        else:
+            app_name = "NDS - Power Run"
+
     # Execute Power Run or Specific query in Spark
     # build Spark Session
     session_builder = SparkSession.builder
@@ -637,6 +640,10 @@ if __name__ == "__main__":
                         help='Skip the execution of the queries. This can be used in conjunction with ' +
                         '--save_plan_path to only save the execution plans without running the queries.' +
                         'Note that "spark.sql.adaptive.enabled" should be set to false to get GPU physical plans.')
+    parser.add_argument('--app_name',
+                        help='The name of the application. If not specified, the default name will be "NDS - Power Run", '
+                             'or "NDS - <query_name>" when running a single query.',
+                        default=None)
     query_filter_group.add_argument('--sub_queries',
                                     type=lambda s: [x.strip() for x in s.split(',')],
                                     help='comma separated list of queries to run. If this is specified, sub_query_patterns should be empty. ' +
@@ -673,4 +680,5 @@ if __name__ == "__main__":
                      args.allow_failure,
                      args.profiling_hook,
                      args.save_plan_path,
-                     args.skip_execution)
+                     args.skip_execution,
+                     args.app_name)
