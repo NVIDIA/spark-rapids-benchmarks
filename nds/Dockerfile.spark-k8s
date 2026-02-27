@@ -17,7 +17,7 @@ RUN apt-get update && \
 # Set up Spark directory structure
 ENV SPARK_HOME=/opt/spark
 ENV PATH="${SPARK_HOME}/bin:${PATH}"
-ENV PYTHONPATH="${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-0.10.9.7-src.zip:${PYTHONPATH}"
+ENV PYTHONPATH="${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-src.zip"
 
 # Copy Spark distribution
 COPY jars ${SPARK_HOME}/jars
@@ -30,6 +30,9 @@ COPY kubernetes/dockerfiles/spark/decom.sh /opt/
 RUN chmod +x /opt/entrypoint.sh /opt/decom.sh && \
     mkdir -p ${SPARK_HOME}/work-dir && \
     chmod g+w ${SPARK_HOME}/work-dir && \
+    # Create a stable symlink so PYTHONPATH works across py4j versions
+    ln -sf $(ls ${SPARK_HOME}/python/lib/py4j-*-src.zip | head -1) \
+           ${SPARK_HOME}/python/lib/py4j-src.zip && \
     # Create spark user
     useradd -u ${spark_uid} -r -g root -d ${SPARK_HOME} -s /sbin/nologin spark
 

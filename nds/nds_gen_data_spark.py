@@ -286,7 +286,11 @@ def main():
         if len(parts) != 2:
             print("ERROR: --range must be 'start,end'", file=sys.stderr)
             sys.exit(1)
-        range_start, range_end = int(parts[0]), int(parts[1])
+        try:
+            range_start, range_end = int(parts[0]), int(parts[1])
+        except ValueError as e:
+            print(f"ERROR: --range values must be integers: {e}", file=sys.stderr)
+            sys.exit(1)
         if range_start < 1 or range_end > args.parallel or range_start > range_end:
             print("ERROR: range must satisfy 1 <= start <= end <= parallel", file=sys.stderr)
             sys.exit(1)

@@ -305,6 +305,7 @@ spec:
     requests:
       storage: 2Gi
 EOF
+kubectl wait --for=jsonpath='{.status.phase}'=Bound pvc/nds-data --timeout=60s
 
 # 5. Run a small-scale data generation (scale=1, parallel=2)
 kubectl run nds-test --image=nds-datagen:<tag> --image-pull-policy=Never \
