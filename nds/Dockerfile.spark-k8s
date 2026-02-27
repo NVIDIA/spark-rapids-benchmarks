@@ -1,5 +1,13 @@
-# Custom Spark + PySpark image for K8s data generation testing.
-# Based on Ubuntu 24.04 to match the host Python 3.12 version.
+# Standalone Spark + PySpark image for K8s deployment.
+# Builds a complete Spark image from a Spark distribution directory.
+# Build context must be $SPARK_HOME (the unpacked Spark distribution).
+#
+# Usage:
+#   cd $SPARK_HOME
+#   docker build -f <repo>/nds/Dockerfile.spark-k8s -t spark-custom:<tag> .
+#
+# For a simpler setup, use Dockerfile.k8s-test instead, which layers on top
+# of the official pre-built Spark Python image.
 FROM ubuntu:24.04
 
 ARG spark_uid=185
@@ -31,8 +39,9 @@ RUN chmod +x /opt/entrypoint.sh /opt/decom.sh && \
     mkdir -p ${SPARK_HOME}/work-dir && \
     chmod g+w ${SPARK_HOME}/work-dir && \
     # Create a stable symlink so PYTHONPATH works across py4j versions
-    ln -sf $(ls ${SPARK_HOME}/python/lib/py4j-*-src.zip | head -1) \
-           ${SPARK_HOME}/python/lib/py4j-src.zip && \
+    PY4J_ZIP=$(ls ${SPARK_HOME}/python/lib/py4j-*-src.zip 2>/dev/null | head -1) && \
+    [ -n "$PY4J_ZIP" ] || { echo "ERROR: no py4j-*-src.zip found in ${SPARK_HOME}/python/lib/"; exit 1; } && \
+    ln -sf "$PY4J_ZIP" ${SPARK_HOME}/python/lib/py4j-src.zip && \
     # Create spark user
     useradd -u ${spark_uid} -r -g root -d ${SPARK_HOME} -s /sbin/nologin spark
 

@@ -245,9 +245,16 @@ cd dsdgen-package && tar czf <path-to-repo>/nds/tpcds-gen/target/lib/dsdgen.tar.
 
 #### Building the Spark K8s container image
 
-For K8s deployment, you need a Docker image that contains Spark, the data generation script,
-and the dsdgen archive. The provided `Dockerfile.k8s-test` builds such an image on top of the
-official Spark Python image:
+Two Dockerfiles are provided for different use cases:
+
+| Dockerfile | Base | Build context | Use case |
+|---|---|---|---|
+| `Dockerfile.k8s-test` | Official `spark-py` image | `nds/` | Quick setup — layers datagen scripts on top of a pre-built Spark image |
+| `Dockerfile.spark-k8s` | `ubuntu:24.04` | `$SPARK_HOME` | Standalone build — constructs a full Spark + PySpark image from a Spark distribution (no pre-built image needed) |
+
+**Option A: `Dockerfile.k8s-test` (recommended)**
+
+Requires building the official Spark Python image first:
 
 ```bash
 # Step 1: Build the Spark Python base image (from your Spark distribution)
@@ -257,11 +264,31 @@ cd $SPARK_HOME
 
 # Step 2: Build the data generation image
 cd <path-to-repo>/nds
-# Edit Dockerfile.k8s-test if needed to match your Spark image tag
-docker build -f Dockerfile.k8s-test -t nds-datagen:<tag> .
+docker build -f Dockerfile.k8s-test \
+    --build-arg BASE_IMAGE=spark-py:<tag> \
+    -t nds-datagen:<tag> .
 ```
 
-The resulting image includes `/opt/spark/work-dir/nds_gen_data_spark.py` and
+**Option B: `Dockerfile.spark-k8s`**
+
+Builds everything from scratch using a Spark distribution directory as build context.
+No pre-built Spark image needed, but the build context **must** be `$SPARK_HOME`:
+
+```bash
+cd $SPARK_HOME
+docker build -f <path-to-repo>/nds/Dockerfile.spark-k8s -t spark-custom:<tag> .
+```
+
+Then copy datagen scripts into the image:
+
+```bash
+cd <path-to-repo>/nds
+docker build -f Dockerfile.k8s-test \
+    --build-arg BASE_IMAGE=spark-custom:<tag> \
+    -t nds-datagen:<tag> .
+```
+
+Both options produce an image with `/opt/spark/work-dir/nds_gen_data_spark.py` and
 `/opt/spark/work-dir/dsdgen.tar.gz`, ready for `spark-submit` with:
 
 ```bash
