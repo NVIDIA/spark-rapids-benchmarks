@@ -1,0 +1,8 @@
+FROM ubuntu:22.04 AS builder
+RUN apt-get update && apt-get install -y build-essential byacc flex && rm -rf /var/lib/apt/lists/*
+COPY target/tools /build/tools
+WORKDIR /build/tools
+RUN make clean && make LINUX_CFLAGS="-g -Wall -fcommon"
+FROM ubuntu:22.04
+COPY --from=builder /build/tools /tools
+CMD ["true"]

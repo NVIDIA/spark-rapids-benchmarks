@@ -209,12 +209,64 @@ optional arguments:
   --num_executors N     Hint for number of Spark partitions (default: one per child).
 ```
 
-**Note:** The dsdgen binary in the archive must be compiled for the same OS/architecture
-as the Spark executor nodes (typically Linux x86_64). If you build on macOS but run on
-K8s (Linux), you need to cross-compile or build inside a Linux container.
+You can also use the provided `datagen_submit.template` with `spark-submit-template`:
+
+```bash
+./spark-submit-template datagen_submit.template \
+    nds_gen_data_spark.py 100 100 hdfs:///data/raw_sf100 --overwrite
+```
 
 **Note for zsh users:** quote the `--archives` value because `#` may be interpreted by shell.
 For example: `--archives 'tpcds-gen/target/lib/dsdgen.tar.gz#dsdgen'`.
+
+#### Cross-compiling dsdgen for Linux (K8s)
+
+The dsdgen binary in the archive must be compiled for the same OS/architecture as the Spark
+executor nodes (typically Linux x86_64 or Linux ARM64). If you build on macOS but run on
+K8s (Linux), use the provided `tpcds-gen/Dockerfile.dsdgen` to build dsdgen inside a Linux
+container:
+
+```bash
+cd tpcds-gen
+
+# Build dsdgen for Linux (automatically handles gcc -fcommon for GCC 10+)
+docker build -f Dockerfile.dsdgen -t dsdgen-builder .
+
+# Extract the built tools directory
+CID=$(docker create dsdgen-builder) && \
+docker cp "$CID":/tools/ /tmp/dsdgen-tools-linux/ && \
+docker rm "$CID"
+
+# Package as dsdgen.tar.gz
+mkdir -p target/lib
+cd /tmp && mkdir -p dsdgen-package && cp -r dsdgen-tools-linux dsdgen-package/tools
+cd dsdgen-package && tar czf <path-to-repo>/nds/tpcds-gen/target/lib/dsdgen.tar.gz tools/
+```
+
+#### Building the Spark K8s container image
+
+For K8s deployment, you need a Docker image that contains Spark, the data generation script,
+and the dsdgen archive. The provided `Dockerfile.k8s-test` builds such an image on top of the
+official Spark Python image:
+
+```bash
+# Step 1: Build the Spark Python base image (from your Spark distribution)
+cd $SPARK_HOME
+./bin/docker-image-tool.sh -t <tag> \
+    -p kubernetes/dockerfiles/spark/bindings/python/Dockerfile build
+
+# Step 2: Build the data generation image
+cd <path-to-repo>/nds
+# Edit Dockerfile.k8s-test if needed to match your Spark image tag
+docker build -f Dockerfile.k8s-test -t nds-datagen:<tag> .
+```
+
+The resulting image includes `/opt/spark/work-dir/nds_gen_data_spark.py` and
+`/opt/spark/work-dir/dsdgen.tar.gz`, ready for `spark-submit` with:
+
+```bash
+--archives local:///opt/spark/work-dir/dsdgen.tar.gz#dsdgen
+```
 
 #### K8s local filesystem caveat
 
@@ -223,25 +275,81 @@ each pod writes to its own container filesystem by default. You will not see mer
 the driver host unless a shared volume is configured.
 
 For production runs, prefer remote/shared storage such as HDFS, S3, GCS, or ABFS.
-For local smoke tests on minikube, mount a shared host path and mount it into executor pods.
+For local smoke tests on minikube, use a PersistentVolumeClaim mounted into the pod.
 
-#### One-command K8s smoke test
+#### Local K8s testing with minikube
 
-Use the helper script:
+To verify data generation on a local K8s cluster:
 
 ```bash
-chmod +x ../scripts/k8s_datagen_smoketest.sh
-../scripts/k8s_datagen_smoketest.sh
+# 1. Start minikube (requires Docker runtime, e.g. Colima, Docker Desktop)
+minikube start --driver=docker --cpus=4 --memory=6g
+
+# 2. Load the container image into minikube
+minikube image load nds-datagen:<tag>
+
+# 3. Create Spark RBAC
+kubectl create serviceaccount spark
+kubectl create clusterrolebinding spark-role \
+    --clusterrole=edit --serviceaccount=default:spark
+
+# 4. Create a PersistentVolumeClaim for output
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nds-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 2Gi
+EOF
+
+# 5. Run a small-scale data generation (scale=1, parallel=2)
+kubectl run nds-test --image=nds-datagen:<tag> --image-pull-policy=Never \
+    --restart=Never --overrides='{
+  "spec": {
+    "serviceAccountName": "spark",
+    "volumes": [{"name": "data", "persistentVolumeClaim": {"claimName": "nds-data"}}],
+    "containers": [{
+      "name": "nds-test",
+      "image": "nds-datagen:<tag>",
+      "imagePullPolicy": "Never",
+      "command": ["/opt/spark/bin/spark-submit", "--master", "local[2]",
+        "--archives", "/opt/spark/work-dir/dsdgen.tar.gz#dsdgen",
+        "/opt/spark/work-dir/nds_gen_data_spark.py",
+        "1", "2", "/data/nds_test", "--overwrite"],
+      "resources": {"requests": {"memory": "2Gi", "cpu": "2"}},
+      "volumeMounts": [{"name": "data", "mountPath": "/data"}]
+    }]
+  }
+}'
+
+# 6. Wait for completion and check logs
+kubectl wait --for=condition=Ready=false pod/nds-test --timeout=300s
+kubectl logs nds-test | tail -5
+# Expected: "=== Data generation complete: /data/nds_test ==="
+
+# 7. Verify output (25 TPC-DS tables)
+kubectl run nds-check --image=nds-datagen:<tag> --image-pull-policy=Never \
+    --restart=Never --overrides='{
+  "spec": {
+    "volumes": [{"name": "data", "persistentVolumeClaim": {"claimName": "nds-data"}}],
+    "containers": [{
+      "name": "check", "image": "nds-datagen:<tag>", "imagePullPolicy": "Never",
+      "command": ["ls", "/data/nds_test/"],
+      "volumeMounts": [{"name": "data", "mountPath": "/data"}]
+    }]
+  }
+}'
+sleep 10 && kubectl logs nds-check
+# Should list: call_center, catalog_page, ..., web_site (25 directories)
+
+# 8. Cleanup
+kubectl delete pod nds-test nds-check --ignore-not-found
+kubectl delete pvc nds-data --ignore-not-found
 ```
-
-What the script does:
-
-- starts minikube if needed
-- configures Spark service account/role
-- mounts `/tmp/nds_shared` into minikube with Spark-compatible UID/GID
-- builds Spark Python image from `nds/Dockerfile.spark-k8s`
-- submits `nds_gen_data_spark.py` on K8s
-- verifies output (`25` source table folders and non-empty `store_sales`)
 
 ### Convert CSV to Parquet or Other data sources
 

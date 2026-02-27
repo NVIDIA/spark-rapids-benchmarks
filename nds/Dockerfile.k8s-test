@@ -1,0 +1,8 @@
+FROM spark-py:spark-3.5.6
+
+USER root
+
+COPY nds_gen_data_spark.py /opt/spark/work-dir/
+COPY tpcds-gen/target/lib/dsdgen.tar.gz /opt/spark/work-dir/
+
+USER ${spark_uid}
