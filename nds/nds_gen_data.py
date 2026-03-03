@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -127,6 +127,118 @@ def move_delete_date_tables(base_path, update):
         subprocess.run(mkdir, check=True)
         subprocess.run(move, check=True)
 
+
+def _check_existing_update_data(data_dir):
+    """Check if data_dir already contains maintenance/update table data.
+
+    Regular maintenance table filenames encode only child index and parallel
+    count (e.g. s_catalog_order_1_4.dat), not the update number, so files
+    from different update runs would collide. Any existing maintenance data
+    therefore requires --overwrite_output to proceed.
+
+    Returns:
+        list: maintenance table names that have existing data in data_dir.
+    """
+    existing = []
+    for table_name in maintenance_table_names:
+        table_dir = os.path.join(data_dir, table_name)
+        if os.path.isdir(table_dir) and os.listdir(table_dir):
+            existing.append(table_name)
+    return existing
+
+
+def _merge_update_data_local(temp_base, data_dir, range_start, range_end,
+                             parallel, update, overwrite_output=False):
+    """Merge update data from per-child temp directories into data_dir.
+
+    Each parallel child generates to its own temp directory to avoid file collisions.
+    Delete/inventory_delete tables produce identical content across all children,
+    so only the first child's copy is kept — consistent with the HDFS approach
+    in move_delete_date_tables().
+    """
+    delete_tables = {'delete', 'inventory_delete'}
+    for table in maintenance_table_names:
+        target_dir = os.path.join(data_dir, table)
+        os.makedirs(target_dir, exist_ok=True)
+
+        if table in delete_tables:
+            target_file = os.path.join(target_dir, f'{table}_{update}.dat')
+            if os.path.exists(target_file) and not overwrite_output:
+                print("Skipping {} (already present from a previous run)".format(target_file))
+                continue
+            src = os.path.join(temp_base, f'child_{range_start}',
+                               f'{table}_{update}.dat')
+            if os.path.exists(src):
+                shutil.move(src, target_file)
+            else:
+                print("Warning: expected delete source not found, skipping: {}".format(src))
+        else:
+            for i in range(range_start, range_end + 1):
+                filename = f'{table}_{i}_{parallel}.dat'
+                src = os.path.join(temp_base, f'child_{i}', filename)
+                if os.path.exists(src):
+                    shutil.move(src, os.path.join(target_dir, filename))
+                else:
+                    print("Warning: expected source not found, skipping: {}".format(src))
+
+
+def _generate_update_data_local(args, data_dir, range_start, range_end, tool_path):
+    """Generate update/maintenance data to local filesystem.
+
+    Uses per-child temp directories to avoid dsdgen file collisions (particularly
+    for delete tables where all children produce an identically-named file).
+    This eliminates the need for dsdgen's -force flag and prevents silent overwrites,
+    consistent with the HDFS approach in generate_data_hdfs().
+
+    Raises:
+        Exception: if update data already exists and --overwrite_output is not set
+        Exception: if dsdgen fails
+    """
+    if not os.path.isdir(data_dir):
+        os.makedirs(data_dir)
+
+    existing = _check_existing_update_data(data_dir)
+    if existing and not args.overwrite_output:
+        raise Exception(
+            "Update data already exists in directory {} for tables: {}. "
+            "Use '--overwrite_output' to overwrite.".format(data_dir, existing))
+
+    temp_base = os.path.join(data_dir, '_temp_update')
+    if os.path.exists(temp_base):
+        print("Warning: removing stale temp directory from a previous run: {}".format(temp_base))
+        shutil.rmtree(temp_base)
+
+    work_dir = tool_path.parent
+    procs = []
+    try:
+        for i in range(range_start, range_end + 1):
+            child_dir = os.path.join(temp_base, f'child_{i}')
+            os.makedirs(child_dir)
+            dsdgen_args = ["-scale", args.scale,
+                           "-dir", child_dir,
+                           "-parallel", args.parallel,
+                           "-child", str(i),
+                           "-verbose", "Y",
+                           "-update", args.update]
+            procs.append(subprocess.Popen(
+                ["./dsdgen"] + dsdgen_args, cwd=str(work_dir)))
+        for p in procs:
+            p.wait()
+            if p.returncode != 0:
+                print("dsdgen failed with return code {}".format(p.returncode))
+                raise Exception("dsdgen failed")
+        _merge_update_data_local(temp_base, data_dir, range_start, range_end,
+                                 args.parallel, args.update, args.overwrite_output)
+    finally:
+        for p in procs:
+            if p.poll() is None:
+                p.terminate()
+            p.wait()
+        if os.path.exists(temp_base):
+            shutil.rmtree(temp_base)
+    subprocess.run(['du', '-h', '-d1', data_dir])
+
+
 def generate_data_hdfs(args, jar_path):
     """generate data to hdfs using TPC-DS dsdgen tool. Support incremental generation: due to the
     limit of hdfs, each range data will be generated under a temporary folder then move to target
@@ -196,6 +308,11 @@ def generate_data_local(args, range_start, range_end, tool_path):
         Exception: dsdgen failed
     """
     data_dir = get_abs_path(args.data_dir)
+
+    if args.update:
+        _generate_update_data_local(args, data_dir, range_start, range_end, tool_path)
+        return
+
     if not os.path.isdir(data_dir):
         os.makedirs(data_dir)
     else:
@@ -216,8 +333,6 @@ def generate_data_local(args, range_start, range_end, tool_path):
                        "-verbose", "Y"]
         if args.overwrite_output:
             dsdgen_args += ["-force", "Y"]
-        if args.update:
-            dsdgen_args += ["-update", args.update]
         procs.append(subprocess.Popen(
             ["./dsdgen"] + dsdgen_args, cwd=str(work_dir)))
     # wait for data generation to complete
@@ -227,17 +342,12 @@ def generate_data_local(args, range_start, range_end, tool_path):
             print("dsdgen failed with return code {}".format(p.returncode))
             raise Exception("dsdgen failed")
     # move multi-partition files into table folders
-    if args.update:
-        table_names = maintenance_table_names
-    else:
-        table_names = source_table_names
-    for table in table_names:
+    for table in source_table_names:
         print('mkdir -p {}/{}'.format(data_dir, table))
         subprocess.run(['mkdir', '-p', data_dir + '/' + table])
         for i in range(range_start, range_end + 1):
             subprocess.run(['mv', f'{data_dir}/{table}_{i}_{args.parallel}.dat',
                             f'{data_dir}/{table}/'], stderr=subprocess.DEVNULL)
-        # delete date file has no parallel number suffix in the file name, move separately
         subprocess.run(['mv', f'{data_dir}/{table}_1.dat',
                         f'{data_dir}/{table}/'], stderr=subprocess.DEVNULL)
     # show summary
