@@ -163,6 +163,8 @@ def _merge_update_data_local(temp_base, data_dir, range_start, range_end,
 
         if table in delete_tables:
             target_file = os.path.join(target_dir, f'{table}_{update}.dat')
+            # All children produce identical delete content for a given update number.
+            # Preserve any existing copy unless the caller explicitly requested overwrite.
             if os.path.exists(target_file) and not overwrite_output:
                 print("Skipping {} (already present from a previous run)".format(target_file))
                 continue
@@ -238,7 +240,7 @@ def _generate_update_data_local(args, data_dir, range_start, range_end, tool_pat
             p.wait()
         if os.path.exists(temp_base):
             shutil.rmtree(temp_base)
-    subprocess.run(['du', '-h', '-d1', data_dir])
+    subprocess.run(['du', '-h', '-d1', data_dir], check=False)
 
 
 def generate_data_hdfs(args, jar_path):
