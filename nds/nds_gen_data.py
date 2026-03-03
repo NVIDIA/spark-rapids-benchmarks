@@ -227,6 +227,8 @@ def _generate_update_data_local(args, data_dir, range_start, range_end, tool_pat
             if p.returncode != 0:
                 print("dsdgen failed with return code {}".format(p.returncode))
                 raise Exception("dsdgen failed")
+        # Note: if merge partially succeeds before raising (e.g. disk-full),
+        # data_dir may be incomplete; re-run with --overwrite_output to recover.
         _merge_update_data_local(temp_base, data_dir, range_start, range_end,
                                  args.parallel, args.update, args.overwrite_output)
     finally:
@@ -310,6 +312,9 @@ def generate_data_local(args, range_start, range_end, tool_path):
     data_dir = get_abs_path(args.data_dir)
 
     if args.update:
+        if os.path.isdir(data_dir) and get_dir_size(data_dir) > 0:
+            print("Warning: data_dir '{}' is non-empty; update data will be written "
+                  "alongside existing content.".format(data_dir))
         _generate_update_data_local(args, data_dir, range_start, range_end, tool_path)
         return
 
