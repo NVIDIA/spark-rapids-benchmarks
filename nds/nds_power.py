@@ -56,6 +56,17 @@ from profiler import Profiler
 check_version()
 
 
+def _get_app_id(spark_session):
+    # Spark Connect may not expose applicationId through sparkContext.
+    try:
+        return spark_session.conf.get("spark.app.id")
+    except Exception:
+        try:
+            return spark_session.sparkContext.applicationId
+        except Exception:
+            return "spark-connect"
+
+
 def split_and_strip(str, delimiter):
     return [s.strip() for s in str.split(delimiter) if s.strip()]
 
@@ -220,7 +231,7 @@ def setup_tables(spark_session, input_prefix, input_format, use_decimal, executi
     Returns:
         execution_time_list: a list recording query execution time.
     """
-    spark_app_id = spark_session.conf.get("spark.app.id")
+    spark_app_id = _get_app_id(spark_session)
     # Create TempView for tables
     for table_name in get_schemas(False).keys():
         start = int(time.time() * 1000)
@@ -237,7 +248,7 @@ def setup_tables(spark_session, input_prefix, input_format, use_decimal, executi
     return execution_time_list
 
 def register_delta_tables(spark_session, input_prefix, execution_time_list):
-    spark_app_id = spark_session.sparkContext.applicationId
+    spark_app_id = _get_app_id(spark_session)
     # Register tables for Delta Lake
     for table_name in get_schemas(False).keys():
         start = int(time.time() * 1000)
@@ -375,7 +386,8 @@ def run_query_stream(input_prefix,
                      profiling_hook=None,
                      save_plan_path=None,
                      skip_execution=False,
-                     app_name=None):
+                     app_name=None,
+                     spark_connect=None):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
 
@@ -404,6 +416,8 @@ def run_query_stream(input_prefix,
     # Execute Power Run or Specific query in Spark
     # build Spark Session
     session_builder = SparkSession.builder
+    if spark_connect:
+        session_builder = session_builder.remote(spark_connect)
     if property_file:
         spark_properties = load_properties(property_file)
         for k,v in spark_properties.items():
@@ -424,7 +438,7 @@ def run_query_stream(input_prefix,
     if input_format == 'delta' and delta_unmanaged:
         # Register tables for Delta Lake. This is only needed for unmanaged tables.
         execution_time_list = register_delta_tables(spark_session, input_prefix, execution_time_list)
-    spark_app_id = spark_session.conf.get("spark.app.id")
+    spark_app_id = _get_app_id(spark_session)
     if input_format != 'iceberg' and input_format != 'delta' and not hive_external:
         execution_time_list = setup_tables(spark_session, input_prefix, input_format, use_decimal,
                                            execution_time_list)
@@ -635,6 +649,8 @@ if __name__ == "__main__":
                         help='Comma separated list of plan types to save. ' +
                         'e.g. "physical, logical". Default is "logical".',
                         default='logical')
+    parser.add_argument('--spark_connect',
+                        help='Spark Connect URI, e.g. sc://localhost:15002/;use_ssl=true;token=spark-secret-token')
     parser.add_argument('--skip_execution',
                         action='store_true',
                         help='Skip the execution of the queries. This can be used in conjunction with ' +
@@ -681,4 +697,5 @@ if __name__ == "__main__":
                      args.profiling_hook,
                      args.save_plan_path,
                      args.skip_execution,
-                     args.app_name)
+                     args.app_name,
+                     args.spark_connect)
