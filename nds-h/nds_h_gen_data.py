@@ -36,8 +36,16 @@ import sys
 import subprocess
 import shutil
 
-#For adding utils to path
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# Python doesn't automatically include sibling directories in the import path.
+# We need to explicitly add the utils directory to sys.path to import shared utilities.
+# Note: __file__ is not defined when Databricks runs scripts via exec(compile(...)),
+# so fall back to inspect to retrieve the filename from the compiled bytecode.
+try:
+    parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+except NameError:
+    import inspect
+    _this_file = inspect.getfile(inspect.currentframe())
+    parent_dir = os.path.abspath(os.path.join(os.path.dirname(_this_file), '..'))
 utils_dir = os.path.join(parent_dir, 'utils')
 sys.path.insert(0, utils_dir)
 
