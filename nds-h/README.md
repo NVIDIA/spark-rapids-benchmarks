@@ -264,6 +264,30 @@ parquet_sf3k \
 time.csv
 ```
 
+#### Power Run over Spark Connect
+
+`nds_h_power.py` also supports direct execution over Spark Connect. As with NDS power runs, do not
+use `spark-submit-template` for this path; run the script directly and pass `--spark_connect`.
+
+Example:
+
+```bash
+python nds_h_power.py \
+    parquet_sf3k \
+    ./nds_query_streams/query_0.sql \
+    time.csv \
+    --spark_connect sc://localhost
+```
+
+Expected smoke-test warnings are the same as for NDS:
+
+- Listener registration may be skipped when the RAPIDS Python listener is unavailable from the
+  client runtime.
+- Spark Connect may reject non-updatable Spark configs from client-side property files or defaults.
+  One example seen in smoke testing is `spark.locality.wait`.
+
+These warnings do not by themselves indicate a benchmark failure.
+
 ## Data Validation
 To validate query output between Power Runs with and without GPU, we provide [nds_h_validate.py](nds_h_validate.py) to do the job.
 

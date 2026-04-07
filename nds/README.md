@@ -443,6 +443,19 @@ run_query_stream(input_prefix=nds_data_path,
 `Note:` the python listener is disabled when running nds_power.py over Spark Connect, as py4j
 is not available in the Spark Connect environment.
 
+#### Expected Spark Connect warnings
+
+When running over Spark Connect, some warnings are expected during smoke testing:
+
+- Listener registration may be skipped when the RAPIDS Python listener is unavailable from the
+  client runtime. This is expected in Spark Connect environments where the classic Py4J listener
+  path is not available.
+- Spark Connect may reject non-updatable Spark configs from client-side property files or defaults.
+  One example seen in smoke testing is `spark.locality.wait`.
+
+These warnings do not by themselves indicate a benchmark failure. Review the final query status and
+time log output to determine whether the run completed successfully.
+
 ### Throughput Run
 
 Throughput Run simulates the scenario that multiple query sessions are running simultaneously in
