@@ -42,7 +42,11 @@ import subprocess
 
 # Python doesn't automatically include sibling directories in the import path.
 # We need to explicitly add the utils directory to sys.path to import shared utilities.
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# Note: __file__ is not defined when Databricks runs scripts via exec(), so fall back to sys.argv[0].
+try:
+    parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+except NameError:
+    parent_dir = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), '..'))
 utils_dir = os.path.join(parent_dir, 'utils')
 if utils_dir not in sys.path:
     sys.path.insert(0, utils_dir)
