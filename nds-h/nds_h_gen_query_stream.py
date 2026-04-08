@@ -34,16 +34,8 @@ import os
 import subprocess
 import sys
 
-# Note: __file__ is not defined when Databricks runs scripts via exec(compile(...)),
-# so fall back to inspect to retrieve the filename from the compiled bytecode.
-try:
-    parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-except NameError:
-    import inspect
-    _this_file = inspect.getfile(inspect.currentframe())
-    parent_dir = os.path.abspath(os.path.join(os.path.dirname(_this_file), '..'))
-utils_dir = os.path.join(parent_dir, 'utils')
-sys.path.insert(0, utils_dir)
+from setup_utils import add_utils_to_sys_path
+add_utils_to_sys_path()
 
 from check import check_build_nds_h, check_version, get_abs_path
 

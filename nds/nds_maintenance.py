@@ -43,19 +43,8 @@ from check import check_json_summary_folder, get_abs_path
 from nds_schema import get_maintenance_schemas
 from nds_power import register_delta_tables
 
-# Python doesn't automatically include sibling directories in the import path.
-# We need to explicitly add the utils directory to sys.path to import shared utilities.
-# Note: __file__ is not defined when Databricks runs scripts via exec(compile(...)),
-# so fall back to inspect to retrieve the filename from the compiled bytecode.
-try:
-    parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-except NameError:
-    import inspect
-    _this_file = inspect.getfile(inspect.currentframe())
-    parent_dir = os.path.abspath(os.path.join(os.path.dirname(_this_file), '..'))
-utils_dir = os.path.join(parent_dir, 'utils')
-if utils_dir not in sys.path:
-    sys.path.insert(0, utils_dir)
+from setup_utils import add_utils_to_sys_path
+add_utils_to_sys_path()
 from spark_utils import setQueryName, clearQueryName
 
 INSERT_FUNCS = [
