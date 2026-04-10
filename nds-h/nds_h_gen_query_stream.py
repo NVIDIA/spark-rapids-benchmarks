@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,9 +34,8 @@ import os
 import subprocess
 import sys
 
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-utils_dir = os.path.join(parent_dir, 'utils')
-sys.path.insert(0, utils_dir)
+from setup_utils import add_utils_to_sys_path
+add_utils_to_sys_path()
 
 from check import check_build_nds_h, check_version, get_abs_path
 

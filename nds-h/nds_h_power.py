@@ -40,12 +40,8 @@ import sys
 import re
 import subprocess
 
-# Python doesn't automatically include sibling directories in the import path.
-# We need to explicitly add the utils directory to sys.path to import shared utilities.
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-utils_dir = os.path.join(parent_dir, 'utils')
-if utils_dir not in sys.path:
-    sys.path.insert(0, utils_dir)
+from setup_utils import add_utils_to_sys_path
+add_utils_to_sys_path()
 from spark_utils import setQueryName, clearQueryName
 from profiler import Profiler
 
