@@ -34,6 +34,7 @@ import argparse
 import csv
 import os
 import re
+import shutil
 import sys
 import time
 from collections import OrderedDict
@@ -327,6 +328,31 @@ def ensure_valid_column_names(df: DataFrame):
     return df.toDF(*dedup_col_names)
 
 
+def clean_block_manager_dirs(spark_session):
+    """Remove shuffle/block data from Spark's block manager local directories.
+
+    Uses Spark's internal DiskBlockManager to get the exact directories owned by
+    this application, then deletes files while preserving the directory structure
+    (Spark's DiskBlockManager pre-creates a hash-based subdirectory pool and
+    expects those subdirectories to exist).
+    """
+    jsc = spark_session.sparkContext._jsc
+    JArray = spark_session.sparkContext._gateway.jvm.java.lang.reflect.Array
+    local_dirs = jsc.sc().env().blockManager().diskBlockManager().localDirs()
+    total_freed = 0
+    for i in range(JArray.getLength(local_dirs)):
+        dir_path = JArray.get(local_dirs, i).getAbsolutePath()
+        if not os.path.isdir(dir_path):
+            continue
+        for dp, _, fns in os.walk(dir_path):
+            for f in fns:
+                fp = os.path.join(dp, f)
+                total_freed += os.path.getsize(fp)
+                os.remove(fp)
+    if total_freed > 0:
+        print(f"Cleaned block manager local dirs, freed {total_freed / (1024**3):.2f} GB")
+
+
 def get_query_subset(query_dict, subset):
     """Get a subset of queries from query_dict.
     The subset is specified by a list of query names.
@@ -371,7 +397,8 @@ def run_query_stream(input_prefix,
                      profiling_hook=None,
                      save_plan_path=None,
                      skip_execution=False,
-                     app_name=None):
+                     app_name=None,
+                     clean_local_dir=False):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
 
@@ -483,6 +510,8 @@ def run_query_stream(input_prefix,
             else:
                 summary_prefix =  os.path.join(json_summary_folder, '')
             q_report.write_summary(prefix=summary_prefix)
+        if clean_local_dir:
+            clean_block_manager_dirs(spark_session)
     clearQueryName(spark_session)
     power_end = int(time.time())
     power_elapse = int((power_end - power_start)*1000)
@@ -640,6 +669,10 @@ if __name__ == "__main__":
                         help='The name of the application. If not specified, the default name will be "NDS - Power Run", '
                              'or "NDS - <query_name>" when running a single query.',
                         default=None)
+    parser.add_argument('--clean_local_dir',
+                        action='store_true',
+                        help='Clean Spark block manager local directories after each query to free disk space. '
+                             'Useful for large scale factors where shuffle data can fill up the disk.')
     query_filter_group.add_argument('--sub_queries',
                                     type=lambda s: [x.strip() for x in s.split(',')],
                                     help='comma separated list of queries to run. If this is specified, sub_query_patterns should be empty. ' +
@@ -677,4 +710,5 @@ if __name__ == "__main__":
                      args.profiling_hook,
                      args.save_plan_path,
                      args.skip_execution,
-                     args.app_name)
+                     args.app_name,
+                     args.clean_local_dir)
