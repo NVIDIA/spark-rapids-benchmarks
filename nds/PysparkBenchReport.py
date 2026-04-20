@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -74,7 +74,7 @@ class PysparkBenchReport:
             import python_listener
             listener = python_listener.PythonListener()
             listener.register()
-        except TypeError as e:
+        except Exception as e:
             print("Not found com.nvidia.spark.rapids.listener.Manager", str(e))
             listener = None
         return listener
@@ -83,9 +83,14 @@ class PysparkBenchReport:
         if self._is_spark_400_or_later():
             from pyspark.sql import is_remote
             if is_remote():
-                return self.spark_session.conf.getAll
+                get_all = getattr(self.spark_session.conf, 'getAll', None)
+                return get_all() if callable(get_all) else (get_all or [])
 
-        return self.spark_session.sparkContext._conf.getAll()
+        try:
+            return self.spark_session.sparkContext._conf.getAll()
+        except Exception:
+            get_all = getattr(self.spark_session.conf, 'getAll', None)
+            return get_all() if callable(get_all) else (get_all or [])
 
 
     def report_on(self, fn: Callable, warmup_iterations = 0, iterations = 1, *args):

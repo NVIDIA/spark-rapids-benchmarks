@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,6 +56,13 @@ class PysparkBenchReport:
             'query': query_name,
         }
 
+    def _get_spark_conf(self):
+        try:
+            return self.spark_session.sparkContext._conf.getAll()
+        except Exception:
+            get_all = getattr(self.spark_session.conf, 'getAll', None)
+            return get_all() if callable(get_all) else (get_all or [])
+
     def report_on(self, fn: Callable, warmup_iterations = 0, iterations = 1, *args):
         """Record a function for its running environment, running status etc. and exclude sentive
         information like tokens, secret and password Generate summary in dict format for it.
@@ -67,7 +74,7 @@ class PysparkBenchReport:
         Returns:
             dict: summary of the fn
         """
-        spark_conf = dict(self.spark_session.sparkContext._conf.getAll())
+        spark_conf = dict(self._get_spark_conf())
         env_vars = dict(os.environ)
         redacted = ["TOKEN", "SECRET", "PASSWORD"]
         filtered_env_vars = dict((k, env_vars[k]) for k in env_vars.keys() if not (k in redacted))
@@ -78,7 +85,7 @@ class PysparkBenchReport:
         try:
             listener = PythonListener()
             listener.register()
-        except TypeError as e:
+        except Exception as e:
             print("Not found com.nvidia.spark.rapids.listener.Manager", str(e))
             listener = None
         if listener is not None:
