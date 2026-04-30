@@ -432,7 +432,7 @@ def run_query_stream(input_prefix,
                      spark_connect=None,
                      analyze_tables=False):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
-    for easy accesibility. TempView Creation time is also recorded.
+    for easy accessibility. TempView Creation time is also recorded.
 
     Args:
         input_prefix (str): path of input data or warehouse if input_format is "iceberg" or hive_external=True.
@@ -440,8 +440,8 @@ def run_query_stream(input_prefix,
         time_log_output_path (str): path of the log that contains query execution time, both local
                                     and HDFS path are supported.
         input_format (str, optional): type of input data source.
-        use_deciaml(bool, optional): use decimal type for certain columns when loading data of text type.
-        output_path (str, optional): path of query output, optinal. If not specified, collect()
+        use_decimal(bool, optional): use decimal type for certain columns when loading data of text type.
+        output_path (str, optional): path of query output, optional. If not specified, collect()
                                      action will be applied to each query. Defaults to None.
         output_format (str, optional): query output format, choices are csv, orc, parquet. Defaults
         to "parquet".
@@ -641,8 +641,7 @@ if __name__ == "__main__":
                         default='parquet')
     parser.add_argument('--analyze_tables',
                         action='store_true',
-                        default=False,
-                        help='Run ANALYZE TABLE <table> COMPUTE STATISTICS after creating each TempView.')
+                        help='Run ANALYZE TABLE <table> COMPUTE STATISTICS after creating each table.')
     parser.add_argument('--output_prefix',
                         help='text to prepend to every output file (e.g., "hdfs:///ds-parquet")')
     parser.add_argument('--output_format',

@@ -298,7 +298,7 @@ def run_query_stream(input_prefix,
         :param time_log_output_path : path of the log that contains query execution time, both local
                                     and HDFS path are supported.
         :param input_format : type of input data source.
-        :param output_path : path of query output, optinal. If not specified, collect()
+        :param output_path : path of query output, optional. If not specified, collect()
                                      action will be applied to each query. Defaults to None.
         :param output_format : query output format, choices are csv, orc, parquet. Defaults to "parquet".
         :param keep_sc : Databricks specific to keep the spark context alive. Defaults to False.
@@ -449,8 +449,7 @@ if __name__ == "__main__":
                         default='parquet')
     parser.add_argument('--analyze_tables',
                         action='store_true',
-                        default=False,
-                        help='Run ANALYZE TABLE <table> COMPUTE STATISTICS after creating each TempView.')
+                        help='Run ANALYZE TABLE <table> COMPUTE STATISTICS after creating each table.')
     parser.add_argument('--output_prefix',
                         help='text to prepend to every output file (e.g., "hdfs:///ds-parquet")')
     parser.add_argument('--json_summary_folder',
