@@ -64,6 +64,29 @@ def _get_app_id(spark_session):
         except Exception:
             return "spark-connect"
 
+def _quote_identifier(identifier):
+    return "`{}`".format(identifier.replace("`", "``"))
+
+def _quote_sql_string(value):
+    return "'{}'".format(value.replace("'", "''"))
+
+def _schema_to_ddl(schema):
+    return ", ".join([
+        "{} {}".format(_quote_identifier(field.name), field.dataType.simpleString())
+        for field in schema.fields
+    ])
+
+def _create_data_source_table(spark_session, table_name, table_path, input_format, schema=None):
+    table_identifier = _quote_identifier(table_name)
+    schema_clause = " ({})".format(_schema_to_ddl(schema)) if schema else ""
+    create_sql = "CREATE TABLE IF NOT EXISTS {}{} USING {} LOCATION {}".format(
+        table_identifier,
+        schema_clause,
+        input_format,
+        _quote_sql_string(table_path))
+    print(create_sql)
+    spark_session.catalog.dropTempView(table_name)
+    spark_session.sql(create_sql)
 
 def gen_sql_from_stream(query_stream_file_path):
     """Read Spark compatible query stream and split them one by one
@@ -95,7 +118,7 @@ def gen_sql_from_stream(query_stream_file_path):
     return extended_queries
 
 
-def setup_tables(spark_session, input_prefix, input_format, execution_time_list):
+def setup_tables(spark_session, input_prefix, input_format, execution_time_list, analyze_tables=False):
     """set up data tables in Spark before running the Power Run queries.
 
     Args:
@@ -103,26 +126,44 @@ def setup_tables(spark_session, input_prefix, input_format, execution_time_list)
         input_prefix (str): path of input data.
         input_format (str): type of input data source, e.g. parquet, orc, csv, json.
         execution_time_list ([(str, str, int)]): a list to record query and its execution time.
+        analyze_tables (bool): whether to compute table statistics after creating TempViews.
 
     Returns:
         execution_time_list: a list recording que15ry execution time.
     """
     spark_app_id = _get_app_id(spark_session)
-    # Create TempView for tables
+    # Create TempViews or data source tables
     for table_name in get_schemas().keys():
         start = int(time.time() * 1000)
         table_path = input_prefix + '/' + table_name
         reader = spark_session.read.format(input_format)
+        schema = None
         if input_format in ['csv', 'json']:
-            reader = reader.schema(get_schemas()[table_name])
+            schema = get_schemas()[table_name]
+            reader = reader.schema(schema)
         print("Loading table ", table_path)
         print("table name ", table_name)
-        reader.load(table_path).createOrReplaceTempView(table_name)
+        if analyze_tables:
+            _create_data_source_table(spark_session, table_name, table_path, input_format, schema)
+        else:
+            reader.load(table_path).createOrReplaceTempView(table_name)
         end = int(time.time() * 1000)
-        print("====== Creating TempView for table {} ======".format(table_name))
+        create_action = "Table" if analyze_tables else "TempView"
+        print("====== Creating {} for table {} ======".format(create_action, table_name))
         print("Time taken: {} millis for table {}".format(end - start, table_name))
         execution_time_list.append(
-            (spark_app_id, "CreateTempView {}".format(table_name), end - start))
+            (spark_app_id, "Create{} {}".format(create_action, table_name), end - start))
+
+        if analyze_tables:
+            start = int(time.time() * 1000)
+            analyze_sql = "ANALYZE TABLE `{}` COMPUTE STATISTICS".format(table_name)
+            print(analyze_sql)
+            spark_session.sql(analyze_sql)
+            end = int(time.time() * 1000)
+            print("====== Analyzing table {} ======".format(table_name))
+            print("Time taken: {} millis for table {}".format(end - start, table_name))
+            execution_time_list.append(
+                (spark_app_id, "AnalyzeTable {}".format(table_name), end - start))
     return execution_time_list
 
 
@@ -245,7 +286,8 @@ def run_query_stream(input_prefix,
                      skip_execution=False,
                      profiling_hook=None,
                      app_name=None,
-                     spark_connect=None):
+                     spark_connect=None,
+                     analyze_tables=False):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accessibility. TempView Creation time is also recorded.
 
@@ -256,12 +298,12 @@ def run_query_stream(input_prefix,
         :param time_log_output_path : path of the log that contains query execution time, both local
                                     and HDFS path are supported.
         :param input_format : type of input data source.
-        :param output_path : path of query output, optinal. If not specified, collect()
+        :param output_path : path of query output, optional. If not specified, collect()
                                      action will be applied to each query. Defaults to None.
         :param output_format : query output format, choices are csv, orc, parquet. Defaults to "parquet".
         :param keep_sc : Databricks specific to keep the spark context alive. Defaults to False.
         :param json_summary_folder : path to save JSON summary files for each query.
-        to "parquet".
+        :param analyze_tables : whether to compute table statistics after creating tables.
     """
     queries_reports = []
     execution_time_list = []
@@ -283,7 +325,8 @@ def run_query_stream(input_prefix,
     spark_app_id = _get_app_id(spark_session)
     if input_format != 'iceberg' and input_format != 'delta':
         execution_time_list = setup_tables(spark_session, input_prefix, input_format,
-                                           execution_time_list)
+                                           execution_time_list,
+                                           analyze_tables)
     elif input_format == 'delta':
         execution_time_list = register_delta_tables(spark_session, input_prefix,
                                                      execution_time_list)
@@ -403,6 +446,9 @@ if __name__ == "__main__":
                              'for more details.',
                         choices=['parquet', 'orc', 'avro', 'csv', 'json', 'iceberg', 'delta'],
                         default='parquet')
+    parser.add_argument('--analyze_tables',
+                        action='store_true',
+                        help='Run ANALYZE TABLE <table> COMPUTE STATISTICS after creating each table.')
     parser.add_argument('--output_prefix',
                         help='text to prepend to every output file (e.g., "hdfs:///ds-parquet")')
     parser.add_argument('--json_summary_folder',
@@ -467,4 +513,5 @@ if __name__ == "__main__":
                      args.skip_execution,
                      args.profiling_hook,
                      args.app_name,
-                     args.spark_connect)
+                     args.spark_connect,
+                     args.analyze_tables)
