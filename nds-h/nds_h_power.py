@@ -303,8 +303,7 @@ def run_query_stream(input_prefix,
         :param output_format : query output format, choices are csv, orc, parquet. Defaults to "parquet".
         :param keep_sc : Databricks specific to keep the spark context alive. Defaults to False.
         :param json_summary_folder : path to save JSON summary files for each query.
-        :param analyze_tables : whether to compute table statistics after creating TempViews.
-        to "parquet".
+        :param analyze_tables : whether to compute table statistics after creating tables.
     """
     queries_reports = []
     execution_time_list = []

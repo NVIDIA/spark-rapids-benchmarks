@@ -445,7 +445,7 @@ def run_query_stream(input_prefix,
                                      action will be applied to each query. Defaults to None.
         output_format (str, optional): query output format, choices are csv, orc, parquet. Defaults
         to "parquet".
-        analyze_tables (bool, optional): whether to compute table statistics after creating TempViews.
+        analyze_tables (bool, optional): whether to compute table statistics after creating tables.
     """
     queries_reports = []
     execution_time_list = []
