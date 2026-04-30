@@ -63,6 +63,34 @@ def _get_app_id(spark_session):
             return "spark-connect"
 
 
+def _quote_identifier(identifier):
+    return "`{}`".format(identifier.replace("`", "``"))
+
+
+def _quote_sql_string(value):
+    return "'{}'".format(value.replace("'", "''"))
+
+
+def _schema_to_ddl(schema):
+    return ", ".join([
+        "{} {}".format(_quote_identifier(field.name), field.dataType.simpleString())
+        for field in schema.fields
+    ])
+
+
+def _create_data_source_table(spark_session, table_name, table_path, input_format, schema=None):
+    table_identifier = _quote_identifier(table_name)
+    schema_clause = " ({})".format(_schema_to_ddl(schema)) if schema else ""
+    create_sql = "CREATE TABLE IF NOT EXISTS {}{} USING {} LOCATION {}".format(
+        table_identifier,
+        schema_clause,
+        input_format,
+        _quote_sql_string(table_path))
+    print(create_sql)
+    spark_session.catalog.dropTempView(table_name)
+    spark_session.sql(create_sql)
+
+
 def split_and_strip(str, delimiter):
     return [s.strip() for s in str.split(delimiter) if s.strip()]
 
@@ -230,19 +258,25 @@ def setup_tables(spark_session, input_prefix, input_format, use_decimal, executi
         execution_time_list: a list recording query execution time.
     """
     spark_app_id = _get_app_id(spark_session)
-    # Create TempView for tables
+    # Create TempViews or data source tables
     for table_name in get_schemas(False).keys():
         start = int(time.time() * 1000)
         table_path = input_prefix + '/' + table_name
         reader =  spark_session.read.format(input_format)
+        schema = None
         if input_format in ['csv', 'json']:
-            reader = reader.schema(get_schemas(use_decimal)[table_name])
-        reader.load(table_path).createOrReplaceTempView(table_name)
+            schema = get_schemas(use_decimal)[table_name]
+            reader = reader.schema(schema)
+        if analyze_tables:
+            _create_data_source_table(spark_session, table_name, table_path, input_format, schema)
+        else:
+            reader.load(table_path).createOrReplaceTempView(table_name)
         end = int(time.time() * 1000)
-        print("====== Creating TempView for table {} ======".format(table_name))
+        create_action = "Table" if analyze_tables else "TempView"
+        print("====== Creating {} for table {} ======".format(create_action, table_name))
         print("Time taken: {} millis for table {}".format(end - start, table_name))
         execution_time_list.append(
-            (spark_app_id, "CreateTempView {}".format(table_name), end - start))
+            (spark_app_id, "Create{} {}".format(create_action, table_name), end - start))
         if analyze_tables:
             start = int(time.time() * 1000)
             analyze_sql = "ANALYZE TABLE `{}` COMPUTE STATISTICS".format(table_name)
