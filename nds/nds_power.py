@@ -214,7 +214,8 @@ def gen_sql_from_stream(query_stream_file_path):
 
     return extended_queries
 
-def setup_tables(spark_session, input_prefix, input_format, use_decimal, execution_time_list):
+def setup_tables(spark_session, input_prefix, input_format, use_decimal, execution_time_list,
+                 analyze_tables=False):
     """set up data tables in Spark before running the Power Run queries.
 
     Args:
@@ -223,6 +224,7 @@ def setup_tables(spark_session, input_prefix, input_format, use_decimal, executi
         input_format (str): type of input data source, e.g. parquet, orc, csv, json.
         use_decimal (bool): use decimal type for certain columns when loading data of text type.
         execution_time_list ([(str, str, int)]): a list to record query and its execution time.
+        analyze_tables (bool): whether to compute table statistics after creating TempViews.
 
     Returns:
         execution_time_list: a list recording query execution time.
@@ -241,6 +243,16 @@ def setup_tables(spark_session, input_prefix, input_format, use_decimal, executi
         print("Time taken: {} millis for table {}".format(end - start, table_name))
         execution_time_list.append(
             (spark_app_id, "CreateTempView {}".format(table_name), end - start))
+        if analyze_tables:
+            start = int(time.time() * 1000)
+            analyze_sql = "ANALYZE TABLE `{}` COMPUTE STATISTICS".format(table_name)
+            print(analyze_sql)
+            spark_session.sql(analyze_sql)
+            end = int(time.time() * 1000)
+            print("====== Analyzing table {} ======".format(table_name))
+            print("Time taken: {} millis for table {}".format(end - start, table_name))
+            execution_time_list.append(
+                (spark_app_id, "AnalyzeTable {}".format(table_name), end - start))
     return execution_time_list
 
 def register_delta_tables(spark_session, input_prefix, execution_time_list):
@@ -383,7 +395,8 @@ def run_query_stream(input_prefix,
                      save_plan_path=None,
                      skip_execution=False,
                      app_name=None,
-                     spark_connect=None):
+                     spark_connect=None,
+                     analyze_tables=False):
     """run SQL in Spark and record execution time log. The execution time log is saved as a CSV file
     for easy accesibility. TempView Creation time is also recorded.
 
@@ -398,6 +411,7 @@ def run_query_stream(input_prefix,
                                      action will be applied to each query. Defaults to None.
         output_format (str, optional): query output format, choices are csv, orc, parquet. Defaults
         to "parquet".
+        analyze_tables (bool, optional): whether to compute table statistics after creating TempViews.
     """
     queries_reports = []
     execution_time_list = []
@@ -437,7 +451,8 @@ def run_query_stream(input_prefix,
     spark_app_id = _get_app_id(spark_session)
     if input_format != 'iceberg' and input_format != 'delta' and not hive_external:
         execution_time_list = setup_tables(spark_session, input_prefix, input_format, use_decimal,
-                                           execution_time_list)
+                                           execution_time_list,
+                                           analyze_tables)
 
     check_json_summary_folder(json_summary_folder)
     if sub_queries:
@@ -590,6 +605,10 @@ if __name__ == "__main__":
                         'for more details.',
                         choices=['parquet', 'orc', 'avro', 'csv', 'json', 'iceberg', 'delta'],
                         default='parquet')
+    parser.add_argument('--analyze_tables',
+                        action='store_true',
+                        default=False,
+                        help='Run ANALYZE TABLE <table> COMPUTE STATISTICS after creating each TempView.')
     parser.add_argument('--output_prefix',
                         help='text to prepend to every output file (e.g., "hdfs:///ds-parquet")')
     parser.add_argument('--output_format',
@@ -694,4 +713,5 @@ if __name__ == "__main__":
                      args.save_plan_path,
                      args.skip_execution,
                      args.app_name,
-                     args.spark_connect)
+                     args.spark_connect,
+                     args.analyze_tables)
