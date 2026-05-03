@@ -1,5 +1,8 @@
+// File: utils/spark_utils.py
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,10 +17,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-from pyspark.sql import SparkSession
+# -----
+#
 import os
-
+from pyspark.sql import SparkSession
 
 def get_spark_session(app_name: str) -> SparkSession:
     """
@@ -29,3 +32,9 @@ def get_spark_session(app_name: str) -> SparkSession:
     builder = (
         SparkSession.builder.appName(app_name)
         .config("spark.sql.adaptive.enabled", "true")
+        .config("spark.sql.shuffle.partitions", "200")
+        .config("spark.executor.memory", "8g")
+        .config("spark.executor.cores", "4")
+        .config("spark.driver.memory", "8g")
+    )
+    return builder.getOrCreate()
