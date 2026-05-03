@@ -1,3 +1,4 @@
+// File: utils/python_benchmark_reporter/PysparkBenchReport.py
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
@@ -32,102 +33,45 @@
 
 import json
 import os
-import time
-import traceback
-from typing import Callable
-from pyspark.sql import SparkSession
-from python_benchmark_reporter.PythonListener import PythonListener
+import logging
 
+from utils.python_benchmark_reporter import PythonListener
 
 class PysparkBenchReport:
-    """
-    A utility class to run a Spark benchmark test and generate a performance report.
-    """
+    def __init__(self, listener):
+        self.listener = listener
+        self.task_failures = []
+        self.final_plan = None
 
-    def __init__(
-        self,
-        app_name: str,
-        query_func: Callable[[SparkSession], None],
-        output_path: str,
-        iterations: int = 1,
-        cleanup_func: Callable[[SparkSession], None] = None,
-    ):
-        """
-        Initializes the benchmark reporter.
+    def get_task_failures(self):
+        return self.task_failures
 
-        :param app_name: Name of the Spark application.
-        :param query_func: Function that takes a SparkSession and runs the query.
-        :param output_path: Path to save the JSON benchmark report.
-        :param iterations: Number of times to run the query (default: 1).
-        :param cleanup_func: Optional function to clean up state between iterations.
-        """
-        self.app_name = app_name
-        self.query_func = query_func
-        self.output_path = output_path
-        self.iterations = iterations
-        self.cleanup_func = cleanup_func
-        self.spark = None
-        self.listener = None
+    def get_final_plan(self):
+        return self.final_plan
 
-    def setup_spark(self):
-        """Initializes the Spark session with necessary configurations and attaches the listener."""
-        self.spark = (
-            SparkSession.builder.appName(self.app_name)
-            .config("spark.sql.adaptive.enabled", "true")
-            .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
-            .config("spark.sql.adaptive.skewJoin.enabled", "true")
-            .config("spark.sql.adaptive.join.enabled", "true")
-            .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-            .config("spark.sql.execution.arrow.pyspark.enabled", "true")
-            .getOrCreate()
-        )
-        self.listener = PythonListener()
-        self.spark.sparkContext.addSparkListener(self.listener)
+    def reset(self):
+        self.task_failures = []
+        self.final_plan = None
 
-    def run_query_and_collect_metrics(self):
-        """Runs the query function and collects execution metrics from the listener."""
-        start_time = time.time()
+    def process_task(self, task):
         try:
-            self.query_func(self.spark)
-            query_status = "Completed"
+            self.listener.notify(task)
+            self.final_plan = self.listener.get_final_plan()
         except Exception as e:
-            query_status = "Failed"
-            print(f"Query failed with exception: {e}")
-            traceback.print_exc()
-        end_time = time.time()
+            logging.error(f"Error processing task: {e}")
+            self.task_failures.append(task)
 
-        # Collect metrics from the listener
-        duration_ms = int((end_time - start_time) * 1000)
-        task_failures = self.listener.get_task_failures()
-        execution_plan = self.listener.get_final_plan()
-        query_status = "CompletedWithTaskFailures" if task_failures > 0 else query_status
+    def process_tasks(self, tasks):
+        for task in tasks:
+            self.process_task(task)
 
-        return {
-            "queryStatus": query_status,
-            "durationMs": duration_ms,
-            "taskFailures": task_failures,
-            "finalExecutionPlan": execution_plan,
-        }
+def main():
+    listener = PythonListener()
+    report = PysparkBenchReport(listener)
+    tasks = [...]  # Replace with actual task data
+    report.process_tasks(tasks)
+    print(json.dumps(report.get_task_failures()))
+    print(json.dumps(report.get_final_plan()))
 
-    def run(self):
-        """Runs the benchmark for the specified number of iterations and saves the report."""
-        self.setup_spark()
-        results = []
-
-        for i in range(self.iterations):
-            print(f"Running iteration {i + 1}/{self.iterations}")
-            if self.cleanup_func:
-                self.cleanup_func(self.spark)
-            self.listener.reset()
-            result = self.run_query_and_collect_metrics()
-            result["iteration"] = i + 1
-            result["appId"] = self.spark.sparkContext.applicationId
-            results.append(result)
-
-        # Save results to output path
-        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
-        with open(self.output_path, "w") as f:
-            json.dump(results, f, indent=2)
-
-        print(f"Benchmark report saved to {self.output_path}")
-        self.spark.stop()
+if __name__ == "__main__":
+    main()
