@@ -32,129 +32,137 @@
 import json
 import os
 import time
-import traceback
-from typing import Callable, Dict, Any, Optional
+import logging
+from typing import Optional, Dict, Any
 
-from utils.python_benchmark_reporter.PythonListener import PythonListener
-
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class PysparkBenchReport:
     """
-    A benchmark reporter that integrates with PySpark to capture execution metrics
-    via a PythonListener. It collects and reports task-level performance data.
+    A reporter class that collects and writes benchmarking metadata
+    using a PythonListener for Spark instrumentation.
     """
 
-    def __init__(self, listener: PythonListener, output_dir: str = "."):
+    def __init__(self, listener, output_dir: str = "."):
         """
         Initialize the reporter with a listener and output directory.
 
-        Args:
-            listener: Instance of PythonListener to interact with Spark events.
-            output_dir: Directory where benchmark reports will be saved.
+        :param listener: An instance of PythonListener for Spark event monitoring.
+        :param output_dir: Directory where report files will be written.
         """
-        if not isinstance(listener, PythonListener):
-            raise TypeError("listener must be an instance of PythonListener")
+        if not hasattr(listener, 'notify') or not callable(getattr(listener, 'notify')):
+            raise ValueError("Listener must have a 'notify' method.")
+        if not hasattr(listener, 'register') or not callable(getattr(listener, 'register')):
+            raise ValueError("Listener must have a 'register' method.")
+        if not hasattr(listener, 'unregister') or not callable(getattr(listener, 'unregister')):
+            raise ValueError("Listener must have an 'unregister' method.")
+
         self.listener = listener
         self.output_dir = output_dir
-        self.benchmark_data: Dict[str, Any] = {}
         self.start_time: Optional[float] = None
         self.end_time: Optional[float] = None
+        self.report_data: Dict[str, Any] = {}
 
-    def start_benchmark(self) -> None:
+    def start_benchmark(self):
         """
-        Mark the start of the benchmark. Resets any prior state in the listener
-        by re-registering it to ensure clean collection.
+        Mark the start of the benchmark and initialize timing.
         """
-        self._reset_listener_state()
         self.start_time = time.time()
+        logger.info("Benchmark started at %s", self.start_time)
 
-    def _reset_listener_state(self) -> None:
+    def end_benchmark(self):
         """
-        Reset listener state by unregistering and re-registering.
-        This ensures no carryover from previous runs.
+        Mark the end of the benchmark, collect final data, and generate report.
+        """
+        self.end_time = time.time()
+        logger.info("Benchmark ended at %s", self.end_time)
+
+        # Collect final metadata
+        self.report_data.update({
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "duration_seconds": self.end_time - self.start_time if self.start_time else None,
+            "task_failures": self._get_task_failures_fallback(),
+            "final_execution_plan": self._get_final_plan_fallback()
+        })
+
+        self._write_report()
+
+    def _get_task_failures_fallback(self) -> int:
+        """
+        Fallback method to extract task failures.
+        Since PythonListener does not expose get_task_failures(), we infer from internal state if possible.
+        Otherwise, return 0 as default.
+        """
+        try:
+            # Attempt to access internal listener state if available
+            if hasattr(self.listener, '_event_log'):
+                return sum(1 for event in self.listener._event_log if event.get('event') == 'TaskFailed')
+        except Exception as e:
+            logger.warning("Could not extract task failures from listener: %s", str(e))
+        return 0
+
+    def _get_final_plan_fallback(self) -> str:
+        """
+        Fallback method to extract final execution plan.
+        Since PythonListener does not expose get_final_plan(), attempt to retrieve last submitted job plan.
+        Otherwise, return empty string.
+        """
+        try:
+            if hasattr(self.listener, '_last_execution_plan'):
+                return str(self.listener._last_execution_plan)
+            if hasattr(self.listener, '_event_log'):
+                # Search for last SparkListenerJobEnd with plan description
+                for event in reversed(self.listener._event_log):
+                    if event.get('event') == 'SparkListenerJobEnd' and 'planDescription' in event:
+                        return event['planDescription']
+        except Exception as e:
+            logger.warning("Could not extract final execution plan: %s", str(e))
+        return ""
+
+    def reset_listener_state(self):
+        """
+        Reset any internal listener state if supported.
+        Since PythonListener lacks reset(), we manually clear known state fields if present.
+        """
+        try:
+            if hasattr(self.listener, '_event_log'):
+                self.listener._event_log.clear()
+            if hasattr(self.listener, '_last_execution_plan'):
+                self.listener._last_execution_plan = ""
+            logger.debug("Listener state manually reset.")
+        except Exception as e:
+            logger.warning("Could not reset listener state: %s", str(e))
+
+    def _write_report(self):
+        """
+        Write the collected benchmark report to a JSON file in the output directory.
+        """
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
+
+        timestamp = int(self.end_time) if self.end_time else int(time.time())
+        report_path = os.path.join(self.output_dir, f"benchmark_report_{timestamp}.json")
+
+        try:
+            with open(report_path, 'w', encoding='utf-8') as f:
+                json.dump(self.report_data, f, indent=4, sort_keys=True)
+            logger.info("Benchmark report written to %s", report_path)
+        except Exception as e:
+            logger.error("Failed to write benchmark report: %s", str(e))
+            raise
+
+    def cleanup(self):
+        """
+        Perform cleanup actions after benchmark completion.
+        Unregister listeners and reset state where possible.
         """
         try:
             self.listener.unregister_spark_listener()
-        except Exception:
-            # Ignore if unregister fails (e.g., not registered)
-            pass
-        self.listener.register_spark_listener()
-
-    def end_benchmark(self, benchmark_name: str) -> None:
-        """
-        Mark the end of the benchmark and trigger report generation.
-
-        Args:
-            benchmark_name: Name of the benchmark to include in the report.
-        """
-        self.end_time = time.time()
-        self._collect_metrics(benchmark_name)
-        self._write_report(benchmark_name)
-
-    def _collect_metrics(self, benchmark_name: str) -> None:
-        """
-        Collect all relevant metrics into benchmark_data.
-        Since PythonListener only exposes notify/register methods,
-        we assume it internally accumulates data and can be queried via notify.
-
-        We simulate retrieval by triggering a final notification
-        with a 'collect' action to extract accumulated metrics.
-        """
-        duration = self.end_time - self.start_time if self.start_time and self.end_time else 0.0
-
-        # Simulate metric extraction using the only available method: notify
-        task_failures_event = {
-            "action": "get_task_failures",
-            "timestamp": time.time()
-        }
-        task_failures = self.listener.notify(task_failures_event)
-
-        final_plan_event = {
-            "action": "get_final_execution_plan",
-            "timestamp": time.time()
-        }
-        final_plan = self.listener.notify(final_plan_event)
-
-        # Aggregate benchmark data
-        self.benchmark_data = {
-            "benchmark": benchmark_name,
-            "start_time": self.start_time,
-            "end_time": self.end_time,
-            "duration_seconds": duration,
-            "task_failures": task_failures or [],
-            "final_execution_plan": final_plan or {},
-            "metadata": {
-                "report_generated_at": time.time(),
-                "listener_type": type(self.listener).__name__
-            }
-        }
-
-    def _write_report(self, benchmark_name: str) -> None:
-        """
-        Write the collected benchmark data to a JSON file in the output directory.
-
-        Args:
-            benchmark_name: Name of the benchmark used for filename.
-        """
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir, exist_ok=True)
-
-        safe_name = "".join(c for c in benchmark_name if c.isalnum() or c in ('-', '_')).rstrip()
-        filename = os.path.join(self.output_dir, f"{safe_name}_benchmark_report.json")
-
-        try:
-            with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(self.benchmark_data, f, indent=2, default=str)
+            logger.debug("Spark listener unregistered.")
         except Exception as e:
-            # Log error to stderr since we can't raise in reporting path
-            error_msg = f"Failed to write benchmark report to {filename}: {str(e)}\n{traceback.format_exc()}"
-            print(error_msg, file=os.sys.stderr)
+            logger.warning("Failed to unregister Spark listener: %s", str(e))
 
-    def get_report_data(self) -> Dict[str, Any]:
-        """
-        Retrieve the current benchmark data dictionary.
-
-        Returns:
-            A dictionary containing all collected metrics.
-        """
-        return dict(self.benchmark_data)
+        self.reset_listener_state()
