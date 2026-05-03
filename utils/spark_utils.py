@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 #
-# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,84 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# -----
-#
-# Certain portions of the contents of this file are derived from TPC-DS version 3.2.0
-# (retrieved from www.tpc.org/tpc_documents_current_versions/current_specifications5.asp).
-# Such portions are subject to copyrights held by Transaction Processing Performance Council (“TPC”)
-# and licensed under the TPC EULA (a copy of which accompanies this file as “TPC EULA” and is also
-# available at http://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp) (the “TPC EULA”).
-#
-# You may not use this file except in compliance with the TPC EULA.
-# DISCLAIMER: Portions of this file is derived from the TPC-DS Benchmark and as such any results
-# obtained using this file are not comparable to published TPC-DS Benchmark results, as the results
-# obtained from using this file do not comply with the TPC-DS Benchmark.
-#
 
-"""
-Utility functions for Spark benchmarks.
-"""
+from pyspark.sql import SparkSession
+import os
 
 
-def setQueryName(spark_session, query_name):
-    """Set the query name for display in Spark UI SQL tab.
-    
-    Uses duck typing to safely call sparkContext.setJobGroup when available
-    (standard Spark), and falls back to conf-based approach when not available
-    (e.g., Spark Connect).
-    
-    Args:
-        spark_session: The SparkSession instance
-        query_name: The name to display for this query in the Spark UI
+def get_spark_session(app_name: str) -> SparkSession:
     """
-    try:
-        # Try using sparkContext.setJobGroup - this is the preferred method
-        # as it properly shows query names in the Spark UI SQL tab.
-        # This may fail in Spark Connect where sparkContext is not available.
-        sc = getattr(spark_session, 'sparkContext', None)
-        if sc is not None and hasattr(sc, 'setJobGroup'):
-            sc.setJobGroup(query_name, query_name)
-            return
-    except Exception:
-        pass
-    
-    # Fallback to conf-based approach for Spark Connect compatibility
-    # Note: This approach does not show query names in the SQL tab
-    # The 3 configs here are what setJobGroup sets automatically
-    # (interruptOnCancel=false is part of that).
-    try:
-        spark_session.conf.set("spark.job.description", query_name)
-        spark_session.conf.set("spark.jobGroup.id", query_name)
-        spark_session.conf.set("spark.job.interruptOnCancel", "false")
-    except Exception:
-        # If even this fails, just continue silently
-        pass
+    Creates or retrieves a Spark session with standard configurations for benchmarking.
 
-
-def clearQueryName(spark_session):
-    """Clear the query name settings after query execution.
-    
-    Uses duck typing to safely clear job group when sparkContext is available,
-    and clears conf settings as fallback.
-    
-    Args:
-        spark_session: The SparkSession instance
+    :param app_name: Name of the Spark application.
+    :return: Configured SparkSession.
     """
-    try:
-        # Try clearing via sparkContext if available
-        sc = getattr(spark_session, 'sparkContext', None)
-        if sc is not None and hasattr(sc, 'setJobGroup'):
-            # Clear by setting empty values
-            sc.setJobGroup("", "")
-            return
-    except Exception:
-        pass
-    
-    # Fallback: clear conf-based settings
-    try:
-        spark_session.conf.unset("spark.job.description")
-        spark_session.conf.unset("spark.jobGroup.id")
-        spark_session.conf.unset("spark.job.interruptOnCancel")
-    except Exception:
-        # If even this fails, just continue silently
-        pass
+    builder = (
+        SparkSession.builder.appName(app_name)
+        .config("spark.sql.adaptive.enabled", "true")
