@@ -38,110 +38,96 @@ from typing import Callable
 from pyspark.sql import SparkSession
 from python_benchmark_reporter.PythonListener import PythonListener
 
+
 class PysparkBenchReport:
-    """Class to generate json summary report for a benchmark
     """
-    def __init__(self, spark_session: SparkSession, query_name) -> None:
-        self.spark_session = spark_session
-        self.summary = {
-            'env': {
-                'envVars': {},
-                'sparkConf': {},
-                'sparkVersion': None
-            },
-            'queryStatus': [],
-            'exceptions': [],
-            'startTime': None,
-            'queryTimes': [],
-            'query': query_name,
+    A utility class to run a Spark benchmark test and generate a performance report.
+    """
+
+    def __init__(
+        self,
+        app_name: str,
+        query_func: Callable[[SparkSession], None],
+        output_path: str,
+        iterations: int = 1,
+        cleanup_func: Callable[[SparkSession], None] = None,
+    ):
+        """
+        Initializes the benchmark reporter.
+
+        :param app_name: Name of the Spark application.
+        :param query_func: Function that takes a SparkSession and runs the query.
+        :param output_path: Path to save the JSON benchmark report.
+        :param iterations: Number of times to run the query (default: 1).
+        :param cleanup_func: Optional function to clean up state between iterations.
+        """
+        self.app_name = app_name
+        self.query_func = query_func
+        self.output_path = output_path
+        self.iterations = iterations
+        self.cleanup_func = cleanup_func
+        self.spark = None
+        self.listener = None
+
+    def setup_spark(self):
+        """Initializes the Spark session with necessary configurations and attaches the listener."""
+        self.spark = (
+            SparkSession.builder.appName(self.app_name)
+            .config("spark.sql.adaptive.enabled", "true")
+            .config("spark.sql.adaptive.coalescePartitions.enabled", "true")
+            .config("spark.sql.adaptive.skewJoin.enabled", "true")
+            .config("spark.sql.adaptive.join.enabled", "true")
+            .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+            .config("spark.sql.execution.arrow.pyspark.enabled", "true")
+            .getOrCreate()
+        )
+        self.listener = PythonListener()
+        self.spark.sparkContext.addSparkListener(self.listener)
+
+    def run_query_and_collect_metrics(self):
+        """Runs the query function and collects execution metrics from the listener."""
+        start_time = time.time()
+        try:
+            self.query_func(self.spark)
+            query_status = "Completed"
+        except Exception as e:
+            query_status = "Failed"
+            print(f"Query failed with exception: {e}")
+            traceback.print_exc()
+        end_time = time.time()
+
+        # Collect metrics from the listener
+        duration_ms = int((end_time - start_time) * 1000)
+        task_failures = self.listener.get_task_failures()
+        execution_plan = self.listener.get_final_plan()
+        query_status = "CompletedWithTaskFailures" if task_failures > 0 else query_status
+
+        return {
+            "queryStatus": query_status,
+            "durationMs": duration_ms,
+            "taskFailures": task_failures,
+            "finalExecutionPlan": execution_plan,
         }
 
-    def _get_spark_conf(self):
-        try:
-            return self.spark_session.sparkContext._conf.getAll()
-        except Exception:
-            get_all = getattr(self.spark_session.conf, 'getAll', None)
-            return get_all() if callable(get_all) else (get_all or [])
+    def run(self):
+        """Runs the benchmark for the specified number of iterations and saves the report."""
+        self.setup_spark()
+        results = []
 
-    def report_on(self, fn: Callable, warmup_iterations = 0, iterations = 1, *args):
-        """Record a function for its running environment, running status etc. and exclude sentive
-        information like tokens, secret and password Generate summary in dict format for it.
+        for i in range(self.iterations):
+            print(f"Running iteration {i + 1}/{self.iterations}")
+            if self.cleanup_func:
+                self.cleanup_func(self.spark)
+            self.listener.reset()
+            result = self.run_query_and_collect_metrics()
+            result["iteration"] = i + 1
+            result["appId"] = self.spark.sparkContext.applicationId
+            results.append(result)
 
-        Args:
-            fn (Callable): a function to be recorded
-            :param iterations:
-            :param warmup_iterations:
-        Returns:
-            dict: summary of the fn
-        """
-        spark_conf = dict(self._get_spark_conf())
-        env_vars = dict(os.environ)
-        redacted = ["TOKEN", "SECRET", "PASSWORD"]
-        filtered_env_vars = dict((k, env_vars[k]) for k in env_vars.keys() if not (k in redacted))
-        self.summary['env']['envVars'] = filtered_env_vars
-        self.summary['env']['sparkConf'] = spark_conf
-        self.summary['env']['sparkVersion'] = self.spark_session.version
-        listener = None
-        try:
-            listener = PythonListener()
-            listener.register()
-        except Exception as e:
-            print("Not found com.nvidia.spark.rapids.listener.Manager", str(e))
-            listener = None
-        if listener is not None:
-            print("TaskFailureListener is registered.")
-        try:
-            # warmup
-            for i in range(0, warmup_iterations):
-                fn(*args)
-        except Exception as e:
-            print('ERROR WHILE WARMUP BEGIN')
-            print(e)
-            traceback.print_tb(e.__traceback__)
-            print('ERROR WHILE WARMUP END')
+        # Save results to output path
+        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
+        with open(self.output_path, "w") as f:
+            json.dump(results, f, indent=2)
 
-        start_time = int(time.time() * 1000)
-        self.summary['startTime'] = start_time
-        # run the query
-        for i in range(0, iterations):
-            try:
-                start_time = int(time.time() * 1000)
-                fn(*args)
-                end_time = int(time.time() * 1000)
-                if listener and len(listener.failures) != 0:
-                    self.summary['queryStatus'].append("CompletedWithTaskFailures")
-                else:
-                    self.summary['queryStatus'].append("Completed")
-            except Exception as e:
-                # print the exception to ease debugging
-                print('ERROR BEGIN')
-                print(e)
-                traceback.print_tb(e.__traceback__)
-                print('ERROR END')
-                end_time = int(time.time() * 1000)
-                self.summary['queryStatus'].append("Failed")
-                self.summary['exceptions'].append(str(e))
-            finally:
-                self.summary['queryTimes'].append(end_time - start_time)
-        if listener is not None:
-            listener.unregister()
-        return self.summary
-
-    def write_summary(self, prefix=""):
-        """_summary_
-
-        Args:
-            query_name (str): name of the query
-            prefix (str, optional): prefix for the output json summary file. Defaults to "".
-        """
-        # Power BI side is retrieving some information from the summary file name, so keep this file
-        # name format for pipeline compatibility
-        filename = prefix + '-' + self.summary['query'] + '-' +str(self.summary['startTime']) + '.json'
-        self.summary['filename'] = filename
-        with open(filename, "w") as f:
-            json.dump(self.summary, f, indent=2)
-
-    def is_success(self):
-        """Check if the query succeeded, queryStatus == Completed
-        """
-        return self.summary['queryStatus'][0] == 'Completed'
+        print(f"Benchmark report saved to {self.output_path}")
+        self.spark.stop()
