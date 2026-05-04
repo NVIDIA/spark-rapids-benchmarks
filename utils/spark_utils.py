@@ -41,26 +41,54 @@ def get_spark_session(app_name: str, conf: Optional[Dict[str, Any]] = None) -> S
     if conf:
         for key, value in conf.items():
             if not isinstance(key, str):
-                raise TypeError(f"Configuration key must be a string; got {type(key).__name__}")
-            if not isinstance(value, (str, int, float, bool)):
-                raise TypeError(
-                    f"Configuration value for key '{key}' must be a primitive type (str, int, float, bool); "
-                    f"got {type(value).__name__}"
-                )
-            builder = builder.config(key, str(value))
+                raise TypeError("Spark configuration keys must be strings")
+            if not isinstance(value, str):
+                raise TypeError("Spark configuration values must be strings")
+            builder.config(key, value)
 
-    session = builder.getOrCreate()
-    logging.info(f"Spark session created with app name: {app_name}")
-    return session
+    return builder.getOrCreate()
 
 
-def get_spark_context() -> SparkContext:
+def get_python_listener() -> object:
     """
-    Get the active SparkContext, creating it through a default SparkSession if necessary.
+    Get a Python listener instance.
 
-    :return: SparkContext instance
+    :return: Python listener instance
     """
-    spark = SparkSession.getActiveSession()
-    if spark is None:
-        spark = get_spark_session("default_app")
-    return spark.sparkContext
+    from utils.python_benchmark_reporter import PythonListener
+    return PythonListener()
+
+
+def get_task_failures(listener: object) -> Dict[str, Any]:
+    """
+    Get task failures from the given listener.
+
+    :param listener: Python listener instance
+    :return: Dictionary of task failures
+    """
+    if not hasattr(listener, 'notify'):
+        raise TypeError("Listener must have a notify method")
+    return listener.notify()
+
+
+def get_final_plan(listener: object) -> Dict[str, Any]:
+    """
+    Get the final plan from the given listener.
+
+    :param listener: Python listener instance
+    :return: Dictionary of the final plan
+    """
+    if not hasattr(listener, 'notify'):
+        raise TypeError("Listener must have a notify method")
+    return listener.notify()
+
+
+def reset_listener(listener: object) -> None:
+    """
+    Reset the given listener.
+
+    :param listener: Python listener instance
+    """
+    if not hasattr(listener, 'reset'):
+        raise TypeError("Listener must have a reset method")
+    listener.reset()
