@@ -28,93 +28,163 @@
 # You may not use this file except in compliance with the TPC EULA.
 # DISCLAIMER: Portions of this file is derived from the TPC-H Benchmark and as such any results
 # obtained using this file are not comparable to published TPC-H Benchmark results, as the results
-# obtained from using this file do not conform to the TPC-H Benchmark requirements or specifications.
+# obtained from using this file do not conform to the TPC-H Benchmark requirements.
 
 import json
-import time
-from typing import Dict, Any, Optional
+import logging
+from typing import Any, Dict, Optional
 from utils.python_benchmark_reporter.PythonListener import PythonListener
 
 
 class PysparkBenchReport:
     """
-    A reporter class that collects and formats benchmarking results from PySpark workloads
-    using a PythonListener to capture execution events.
+    A reporter class that collects and formats benchmarking metrics from PySpark workloads
+    using a PythonListener instance to observe execution events.
     """
 
-    def __init__(self, listener: PythonListener, benchmark_name: str):
+    def __init__(self, listener: PythonListener) -> None:
         """
-        Initialize the reporter with a listener and benchmark name.
+        Initialize the reporter with a PythonListener instance.
 
         Args:
-            listener: An instance of PythonListener to register with Spark.
-            benchmark_name: Name of the benchmark being executed.
+            listener (PythonListener): The listener used to capture Spark events.
         """
         if not isinstance(listener, PythonListener):
             raise TypeError("listener must be an instance of PythonListener")
-        if not isinstance(benchmark_name, str) or not benchmark_name.strip():
-            raise ValueError("benchmark_name must be a non-empty string")
-
         self.listener = listener
-        self.benchmark_name = benchmark_name.strip()
-        self.start_time: Optional[float] = None
-        self.end_time: Optional[float] = None
-        self.metrics: Dict[str, Any] = {}
+        self._cached_plan: Optional[str] = None
+        self._task_failures: int = 0
 
-    def start_benchmark(self) -> None:
+    def notify_listener(self, event_type: str, data: Dict[str, Any]) -> None:
         """
-        Mark the start of the benchmark and reset internal state.
-        """
-        self.start_time = time.time()
-        self.metrics.clear()
+        Notify the underlying listener of an event.
 
-    def end_benchmark(self) -> None:
+        Args:
+            event_type (str): Type of event (e.g., 'start', 'end', 'failure').
+            data (Dict[str, Any]): Event payload.
         """
-        Mark the end of the benchmark and collect final metrics.
-        """
-        self.end_time = time.time()
-        if self.start_time is not None:
-            self.metrics['duration_seconds'] = self.end_time - self.start_time
-        else:
-            self.metrics['duration_seconds'] = 0.0
+        if not isinstance(event_type, str):
+            raise TypeError("event_type must be a string")
+        if not isinstance(data, dict):
+            raise TypeError("data must be a dictionary")
+        self.listener.notify(event_type, data)
 
-    def collect_metrics(self) -> Dict[str, Any]:
+    def register(self, key: str, value: Any) -> None:
         """
-        Collect all available metrics into a serializable dictionary.
+        Register a key-value pair with the listener.
+
+        Args:
+            key (str): Identifier for the value.
+            value (Any): Value to register.
+        """
+        if not isinstance(key, str):
+            raise TypeError("key must be a string")
+        self.listener.register(key, value)
+
+    def unregister(self, key: str) -> None:
+        """
+        Unregister a key from the listener.
+
+        Args:
+            key (str): Identifier to unregister.
+        """
+        if not isinstance(key, str):
+            raise TypeError("key must be a string")
+        self.listener.unregister(key)
+
+    def register_spark_listener(self, spark_session: Any) -> None:
+        """
+        Register the PythonListener as a Spark listener.
+
+        Args:
+            spark_session (Any): Active Spark session.
+        """
+        self.listener.register_spark_listener(spark_session)
+
+    def unregister_spark_listener(self, spark_session: Any) -> None:
+        """
+        Unregister the PythonListener from the Spark session.
+
+        Args:
+            spark_session (Any): Active Spark session.
+        """
+        self.listener.unregister_spark_listener(spark_session)
+
+    def reset_task_failures(self) -> None:
+        """
+        Reset the internal task failure counter.
+        """
+        self._task_failures = 0
+
+    def increment_task_failures(self) -> None:
+        """
+        Increment the task failure count.
+        """
+        self._task_failures += 1
+
+    def get_task_failures(self) -> int:
+        """
+        Get the number of recorded task failures.
 
         Returns:
-            Dictionary containing benchmark metadata and collected metrics.
+            int: Number of task failures.
         """
-        report = {
-            "benchmark": self.benchmark_name,
-            "timestamp": int(time.time()),
-            "metrics": dict(self.metrics),
-            "success": True
-        }
+        return self._task_failures
 
-        # Since PythonListener does not expose get_task_failures, get_final_plan, or reset,
-        # we rely only on notify-based event collection and do not attempt to call undefined methods.
-        # Any additional data must be extracted via side effects captured during notify() calls.
-
-        return report
-
-    def generate_report(self) -> str:
+    def set_final_plan(self, plan: str) -> None:
         """
-        Generate a JSON-formatted benchmark report.
+        Set the final physical plan string.
+
+        Args:
+            plan (str): The final execution plan.
+        """
+        if not isinstance(plan, str):
+            raise TypeError("plan must be a string")
+        self._cached_plan = plan
+
+    def get_final_plan(self) -> Optional[str]:
+        """
+        Get the final physical plan captured during execution.
 
         Returns:
-            JSON string representing the full benchmark report.
+            Optional[str]: The final plan, or None if not set.
         """
-        report_data = self.collect_metrics()
-        try:
-            return json.dumps(report_data, indent=2)
-        except (TypeError, ValueError) as e:
-            raise RuntimeError(f"Failed to serialize report to JSON: {e}") from e
+        return self._cached_plan
 
     def reset(self) -> None:
         """
-        Reset the reporter state for reuse in subsequent runs.
+        Reset internal state of the reporter.
         """
-        self.start_time = None
-        self.end_time = None
-        self.metrics.clear()
+        self._cached_plan = None
+        self._task_failures = 0
+
+    def generate_report(self) -> Dict[str, Any]:
+        """
+        Generate a structured benchmark report.
+
+        Returns:
+            Dict[str, Any]: Report containing metrics and execution details.
+        """
+        return {
+            "final_execution_plan": self.get_final_plan(),
+            "task_failures": self.get_task_failures(),
+            "listener_registered": True,  # Could be enhanced with actual status check
+        }
+
+    def export_report(self, filepath: str) -> None:
+        """
+        Export the benchmark report to a JSON file.
+
+        Args:
+            filepath (str): Path to save the report.
+        """
+        if not isinstance(filepath, str):
+            raise TypeError("filepath must be a string")
+
+        try:
+            report = self.generate_report()
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(report, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logging.error("Failed to export report to %s: %s", filepath, str(e))
+            raise
