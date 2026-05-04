@@ -32,45 +32,45 @@
 
 import json
 import logging
+from typing import Dict, List
+
 from utils.python_benchmark_reporter import PythonListener
 
 class PysparkBenchReport:
-    def __init__(self, listener):
+    def __init__(self, listener: PythonListener):
         self.listener = listener
 
-    def get_task_failures(self):
+    def get_task_failures(self) -> List[Dict]:
         try:
             return self.listener.get_task_failures()
-        except AttributeError:
-            logging.error("PythonListener does not have get_task_failures method")
+        except AttributeError as e:
+            logging.error(f"Error getting task failures: {e}")
             return []
 
-    def get_final_plan(self):
+    def get_final_plan(self) -> Dict:
         try:
             return self.listener.get_final_plan()
-        except AttributeError:
-            logging.error("PythonListener does not have get_final_plan method")
+        except AttributeError as e:
+            logging.error(f"Error getting final plan: {e}")
             return {}
 
     def reset(self):
         try:
-            return self.listener.reset()
-        except AttributeError:
-            logging.error("PythonListener does not have reset method")
-            return None
+            self.listener.reset()
+        except AttributeError as e:
+            logging.error(f"Error resetting listener: {e}")
 
-    def get_benchmark_report(self):
-        task_failures = self.get_task_failures()
-        final_plan = self.get_final_plan()
-        return {
-            "task_failures": task_failures,
-            "final_plan": final_plan
+    def get_benchmark_report(self) -> Dict:
+        report = {
+            "task_failures": self.get_task_failures(),
+            "final_plan": self.get_final_plan(),
         }
+        return report
 
 def main():
     listener = PythonListener()
     report = PysparkBenchReport(listener)
-    print(json.dumps(report.get_benchmark_report(), indent=4))
+    print(json.dumps(report.get_benchmark_report()))
 
 if __name__ == "__main__":
     main()
