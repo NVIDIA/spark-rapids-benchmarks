@@ -88,6 +88,7 @@ def reset_listener(listener: object) -> None:
     Reset the given listener.
 
     :param listener: Python listener instance
+    :return: None
     """
     if not hasattr(listener, 'reset'):
         raise TypeError("Listener must have a reset method")
