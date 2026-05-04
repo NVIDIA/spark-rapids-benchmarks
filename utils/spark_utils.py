@@ -44,67 +44,6 @@ def get_python_benchmark_reporter(listener: object) -> object:
     Creates a Python benchmark reporter instance.
 
     :param listener: The listener instance.
-    :return: The Python benchmark reporter instance.
+    :return: The listener instance, unmodified, as no transformation or wrapping is required.
     """
-    return PythonBenchmarkReporter(listener)
-
-class PythonBenchmarkReporter:
-    def __init__(self, listener: object):
-        self.listener = listener
-
-    def get_task_failures(self) -> list:
-        """
-        Retrieves task failures from the listener.
-
-        :return: A list of task failures.
-        """
-        return self.listener.get_task_failures()
-
-    def get_final_plan(self) -> dict:
-        """
-        Retrieves the final plan from the listener.
-
-        :return: The final plan.
-        """
-        return self.listener.get_final_plan()
-
-    def reset(self) -> None:
-        """
-        Resets the listener.
-        """
-        self.listener.reset()
-
-def get_spark_benchmark_reporter(listener: object) -> object:
-    """
-    Creates a Spark benchmark reporter instance.
-
-    :param listener: The listener instance.
-    :return: The Spark benchmark reporter instance.
-    """
-    return SparkBenchmarkReporter(listener)
-
-class SparkBenchmarkReporter:
-    def __init__(self, listener: object):
-        self.listener = listener
-
-    def get_task_failures(self) -> list:
-        """
-        Retrieves task failures from the listener.
-
-        :return: A list of task failures.
-        """
-        return self.listener.get_task_failures()
-
-    def get_final_plan(self) -> dict:
-        """
-        Retrieves the final plan from the listener.
-
-        :return: The final plan.
-        """
-        return self.listener.get_final_plan()
-
-    def reset(self) -> None:
-        """
-        Resets the listener.
-        """
-        self.listener.reset()
+    return listener
