@@ -41,67 +41,26 @@ def get_spark_session(app_name: str, conf: Optional[Dict[str, Any]] = None) -> S
     if conf:
         for key, value in conf.items():
             if not isinstance(key, str):
-                raise TypeError(f"Configuration key must be a string, got {type(key)}")
+                raise TypeError(f"Configuration key must be a string; got {type(key).__name__}")
+            if not isinstance(value, (str, int, float, bool)):
+                raise TypeError(
+                    f"Configuration value for key '{key}' must be a primitive type (str, int, float, bool); "
+                    f"got {type(value).__name__}"
+                )
             builder = builder.config(key, str(value))
-    return builder.getOrCreate()
+
+    session = builder.getOrCreate()
+    logging.info(f"Spark session created with app name: {app_name}")
+    return session
 
 
-def get_spark_context(spark: SparkSession) -> SparkContext:
+def get_spark_context() -> SparkContext:
     """
-    Safely extract SparkContext from SparkSession.
+    Get the active SparkContext, creating it through a default SparkSession if necessary.
 
-    :param spark: Active SparkSession
     :return: SparkContext instance
     """
-    if not isinstance(spark, SparkSession):
-        raise TypeError("spark must be a SparkSession instance")
+    spark = SparkSession.getActiveSession()
+    if spark is None:
+        spark = get_spark_session("default_app")
     return spark.sparkContext
-
-
-def stop_spark_session(spark: SparkSession) -> None:
-    """
-    Stop the given Spark session gracefully.
-
-    :param spark: SparkSession to stop
-    """
-    if not isinstance(spark, SparkSession):
-        raise TypeError("spark must be a SparkSession instance")
-    try:
-        spark.stop()
-        logging.info("Spark session stopped successfully.")
-    except Exception as e:
-        logging.error("Failed to stop Spark session: %s", str(e))
-        raise
-
-
-def is_spark_active() -> bool:
-    """
-    Check if there is an active Spark context.
-
-    :return: True if Spark context is active, False otherwise
-    """
-    try:
-        sc = SparkContext.getOrCreate()
-        return sc._jsc.sc() is not None  # pylint: disable=protected-access
-    except Exception:  # pylint: disable=broad-except
-        return False
-
-
-def set_spark_log_level(spark: SparkSession, log_level: str = "WARN") -> None:
-    """
-    Set the log level for Spark drivers and executors.
-
-    :param spark: Active SparkSession
-    :param log_level: Log level to set (e.g., INFO, WARN, ERROR)
-    """
-    if not isinstance(spark, SparkSession):
-        raise TypeError("spark must be a SparkSession instance")
-    if not isinstance(log_level, str):
-        raise TypeError("log_level must be a string")
-    valid_levels = ["ALL", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "OFF"]
-    if log_level not in valid_levels:
-        raise ValueError(f"log_level must be one of {valid_levels}")
-
-    sc = get_spark_context(spark)
-    sc.setLogLevel(log_level)
-    logging.info("Spark log level set to %s", log_level)
