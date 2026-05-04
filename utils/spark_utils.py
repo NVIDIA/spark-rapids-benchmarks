@@ -9,41 +9,4 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-# -----
-#
-import os
-from pyspark.sql import SparkSession
-
-def get_spark_session(app_name: str) -> SparkSession:
-    """
-    Creates or retrieves a Spark session with standard configurations for benchmarking.
-
-    :param app_name: Name of the Spark application.
-    :return: Configured SparkSession.
-    """
-    builder = (
-        SparkSession.builder.appName(app_name)
-        .config("spark.sql.adaptive.enabled", "true")
-        .config("spark.sql.shuffle.partitions", "200")
-        .config("spark.executor.memory", "8g")
-        .config("spark.executor.cores", "4")
-        .config("spark.driver.memory", "8g")
-    )
-    return builder.getOrCreate()
-
-def get_python_benchmark_reporter(listener: object) -> object:
-    """
-    Creates a Python benchmark reporter instance.
-
-    :param listener: The listener instance.
-    :return: The listener instance (no-op wrapper for future extensibility).
-    """
-    return listener
+# http://
