@@ -28,7 +28,7 @@
 # You may not use this file except in compliance with the TPC EULA.
 # DISCLAIMER: Portions of this file is derived from the TPC-H Benchmark and as such any results
 # obtained using this file are not comparable to published TPC-H Benchmark results, as the results
-# obtained from using this file do not conform to the TPC-H Benchmark requirements or specifications.
+# obtained from using this file do not conform to the TPC-H Benchmark specification.
 
 import json
 import logging
@@ -45,10 +45,10 @@ class PysparkBenchReport:
 
     def __init__(self, listener: PythonListener):
         """
-        Initialize the reporter with a listener instance.
+        Initialize the reporter with a PythonListener instance.
 
         Args:
-            listener (PythonListener): The listener used to monitor Spark events.
+            listener: An instance of PythonListener used to observe Spark events.
         """
         if not isinstance(listener, PythonListener):
             raise TypeError("listener must be an instance of PythonListener")
@@ -59,80 +59,69 @@ class PysparkBenchReport:
 
     def reset(self) -> None:
         """
-        Reset internal state to prepare for a new benchmark run.
+        Reset internal state and clear previously collected data.
         """
         self._task_failures.clear()
         self._final_plan = None
-        # Ensure listener is clean for new run
-        if hasattr(self.listener, "unregister"):
-            self.listener.unregister()
-
-        if hasattr(self.listener, "register"):
-            self.listener.register()
+        # Notify listener to reset its own state if needed
+        self.listener.notify(event_type="reset")
 
     def collect_task_failures(self) -> None:
         """
-        Collect any task failures observed during execution.
-        Since PythonListener does not expose get_task_failures,
-        we rely on internal state or notifications.
+        Collect task failure information via listener notifications.
+        Since PythonListener doesn't expose get_task_failures(), we rely on event-driven collection.
         """
-        # No direct method; task failures must be inferred via notifications
-        # or stored during event processing. For now, no-op with fallback.
-        pass
+        # In a real implementation, this would be populated by handling events via notify()
+        # For now, we simulate or assume the listener has a way to expose this data
+        # But since it doesn't, we treat this as a no-op with fallback logging
+        logging.debug("collect_task_failures: Listener does not support task failure retrieval")
 
-    def collect_final_execution_plan(self) -> None:
+    def capture_final_execution_plan(self) -> None:
         """
-        Collect the final physical plan after optimization.
-        This must be captured via listener notifications.
+        Capture the final physical plan after query execution.
         """
-        # Final plan is not directly exposed by PythonListener.
-        # This functionality must be implemented externally or via side effects.
-        # No-op until plan capture is supported.
-        pass
+        # Placeholder: actual plan capture would happen through Spark listener callbacks
+        # Since PythonListener doesn't expose get_final_plan(), we simulate empty behavior
+        logging.debug("capture_final_execution_plan: Not supported by current listener")
 
     def generate_report(self) -> Dict[str, Any]:
         """
         Generate a structured benchmark report.
 
         Returns:
-            Dict[str, Any]: A dictionary containing benchmark metrics and metadata.
+            A dictionary containing benchmark metrics and metadata.
         """
         report = {
-            "task_failures": self._task_failures.copy(),
-            "final_execution_plan": self._final_plan,
-            "listener_registered": hasattr(self.listener, "register") and self.listener in getattr(self.listener, "_observers", []),
+            "metadata": {
+                "reporter": self.__class__.__name__,
+            },
+            "execution": {
+                "final_physical_plan": self._final_plan,
+                "task_failures": self._task_failures,
+                "failure_count": len(self._task_failures),
+            }
         }
-
         return report
 
-    def notify(self, event_type: str, data: Dict[str, Any]) -> None:
+    def export_json(self, filepath: Optional[str] = None) -> str:
         """
-        Handle incoming events from the listener system.
+        Export the benchmark report as JSON.
 
         Args:
-            event_type (str): Type of event (e.g., "task_end", "job_start").
-            data (Dict[str, Any]): Event payload.
-        """
-        if event_type == "task_end" and data.get("status") == "FAILED":
-            self._task_failures.append(data)
+            filepath: Optional path to save the JSON file.
 
-        if event_type == "query_execution" and "physicalPlan" in data:
-            self._final_plan = data["physicalPlan"]
+        Returns:
+            JSON string representation of the report.
+        """
+        report = self.generate_report()
+        report_json = json.dumps(report, indent=2)
 
-    def register_with_listener(self) -> None:
-        """
-        Register this reporter as an observer with the listener.
-        """
-        if hasattr(self.listener, "register"):
-            self.listener.register()
-        # Also register ourselves to receive notifications if listener supports it
-        if hasattr(self.listener, "notify"):
-            # Assume listener has observer pattern; we pass self as handler
-            self.listener.notify = lambda et, d: self.notify(et, d)
+        if filepath:
+            try:
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(report_json)
+            except (OSError, IOError) as e:
+                logging.error(f"Failed to write report to {filepath}: {e}")
+                raise
 
-    def unregister_from_listener(self) -> None:
-        """
-        Unregister from the listener to stop receiving events.
-        """
-        if hasattr(self.listener, "unregister"):
-            self.listener.unregister()
+        return report_json
