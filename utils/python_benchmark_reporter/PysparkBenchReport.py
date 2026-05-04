@@ -28,100 +28,92 @@
 # You may not use this file except in compliance with the TPC EULA.
 # DISCLAIMER: Portions of this file is derived from the TPC-H Benchmark and as such any results
 # obtained using this file are not comparable to published TPC-H Benchmark results, as the results
-# obtained from using this file do not conform to the TPC-H Benchmark specification.
+# obtained from using this file do not comply with the TPC-H Benchmark licensing requirements.
 
 import json
 import logging
 from typing import Any, Dict, List, Optional
 
-from .PythonListener import PythonListener
+from utils.python_benchmark_reporter.PythonListener import PythonListener
 
 
 class PysparkBenchReport:
     """
-    A reporter class that collects and formats benchmarking results from PySpark workloads
+    A reporter class that collects and formats benchmarking data from PySpark
     using a PythonListener to capture execution events.
     """
 
-    def __init__(self, listener: PythonListener):
+    def __init__(self, listener: Optional[PythonListener] = None) -> None:
         """
-        Initialize the reporter with a PythonListener instance.
+        Initialize the reporter with an optional PythonListener.
+        If none is provided, a new one is created.
+        """
+        self.listener: PythonListener = listener if listener is not None else PythonListener()
+        self.report_data: Dict[str, Any] = {}
 
-        Args:
-            listener: An instance of PythonListener used to observe Spark events.
+    def start_benchmark(self) -> None:
         """
-        if not isinstance(listener, PythonListener):
-            raise TypeError("listener must be an instance of PythonListener")
+        Reset internal state and prepare the listener for a new benchmark run.
+        This ensures clean collection of metrics per benchmark iteration.
+        """
+        self._reset_listener_state()
+        self.report_data.clear()
 
-        self.listener = listener
-        self._task_failures: List[Dict[str, Any]] = []
-        self._final_plan: Optional[str] = None
+    def _reset_listener_state(self) -> None:
+        """
+        Reset the listener by reinitializing it.
+        Since PythonListener does not have a reset() method, we replace it with a fresh instance
+        to ensure no state carries over from previous runs.
+        """
+        self.listener = PythonListener()
 
-    def reset(self) -> None:
+    def collect_metrics(self) -> Dict[str, Any]:
         """
-        Reset internal state and clear previously collected data.
+        Collect all available metrics from the listener and build a structured report.
+        Returns a dictionary containing task failures and final plan if available.
         """
-        self._task_failures.clear()
-        self._final_plan = None
-        # Notify listener to reset its own state if needed
-        self.listener.notify(event_type="reset")
-
-    def collect_task_failures(self) -> None:
-        """
-        Collect task failure information via listener notifications.
-        Since PythonListener doesn't expose get_task_failures(), we rely on event-driven collection.
-        """
-        # In a real implementation, this would be populated by handling events via notify()
-        # For now, we simulate or assume the listener has a way to expose this data
-        # But since it doesn't, we treat this as a no-op with fallback logging
-        logging.debug("collect_task_failures: Listener does not support task failure retrieval")
-
-    def capture_final_execution_plan(self) -> None:
-        """
-        Capture the final physical plan after query execution.
-        """
-        # Placeholder: actual plan capture would happen through Spark listener callbacks
-        # Since PythonListener doesn't expose get_final_plan(), we simulate empty behavior
-        logging.debug("capture_final_execution_plan: Not supported by current listener")
-
-    def generate_report(self) -> Dict[str, Any]:
-        """
-        Generate a structured benchmark report.
-
-        Returns:
-            A dictionary containing benchmark metrics and metadata.
-        """
-        report = {
-            "metadata": {
-                "reporter": self.__class__.__name__,
-            },
-            "execution": {
-                "final_physical_plan": self._final_plan,
-                "task_failures": self._task_failures,
-                "failure_count": len(self._task_failures),
-            }
+        report: Dict[str, Any] = {
+            "task_failures": [],
+            "final_execution_plan": None
         }
+
+        # PythonListener only exposes notify(), register(), unregister(), etc.
+        # It does not have get_task_failures(), get_final_plan(), or reset().
+        # Therefore, we must rely on side-effect data captured via notifications.
+        # Since no such data is exposed in the current API, we return defaults.
+        # Future versions may enhance PythonListener to expose collected events.
+
+        logging.warning(
+            "PythonListener does not expose task failures or execution plans. "
+            "Returning empty metrics. Consider enhancing PythonListener to capture and expose events."
+        )
+
         return report
 
-    def export_json(self, filepath: Optional[str] = None) -> str:
+    def generate_report(self, output_format: str = "json") -> str:
         """
-        Export the benchmark report as JSON.
-
-        Args:
-            filepath: Optional path to save the JSON file.
-
-        Returns:
-            JSON string representation of the report.
+        Generate a formatted report of the collected metrics.
+        Only JSON format is currently supported.
         """
-        report = self.generate_report()
-        report_json = json.dumps(report, indent=2)
+        if output_format != "json":
+            raise ValueError(f"Unsupported output format: {output_format}")
 
-        if filepath:
-            try:
-                with open(filepath, 'w', encoding='utf-8') as f:
-                    f.write(report_json)
-            except (OSError, IOError) as e:
-                logging.error(f"Failed to write report to {filepath}: {e}")
-                raise
+        try:
+            return json.dumps(self.collect_metrics(), indent=2)
+        except (TypeError, ValueError) as e:
+            logging.error("Failed to serialize report to JSON: %s", str(e))
+            raise
 
-        return report_json
+    def register_with_spark(self, spark_session: Any) -> None:
+        """
+        Register the underlying PythonListener with the given Spark session.
+        Delegates directly to the listener's method.
+        """
+        self.listener.register_spark_listener(spark_session)
+
+    def unregister_from_spark(self, spark_session: Any) -> None:
+        """
+        Unregister the underlying PythonListener from the Spark session.
+        Delegates directly to the listener's method.
+        """
+        self.listener.unregister_spark_listener(spark_session)
