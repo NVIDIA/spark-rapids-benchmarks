@@ -44,6 +44,6 @@ def get_python_benchmark_reporter(listener: object) -> object:
     Creates a Python benchmark reporter instance.
 
     :param listener: The listener instance.
-    :return: The listener instance, unmodified, as no transformation or wrapping is required.
+    :return: The listener instance (no-op wrapper for future extensibility).
     """
     return listener
