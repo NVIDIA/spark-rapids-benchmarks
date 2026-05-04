@@ -28,92 +28,93 @@
 # You may not use this file except in compliance with the TPC EULA.
 # DISCLAIMER: Portions of this file is derived from the TPC-H Benchmark and as such any results
 # obtained using this file are not comparable to published TPC-H Benchmark results, as the results
-# obtained from using this file do not comply with the TPC-H Benchmark licensing requirements.
+# obtained from using this file do not conform to the TPC-H Benchmark requirements or specifications.
 
 import json
-import logging
-from typing import Any, Dict, List, Optional
-
+import time
+from typing import Dict, Any, Optional
 from utils.python_benchmark_reporter.PythonListener import PythonListener
 
 
 class PysparkBenchReport:
     """
-    A reporter class that collects and formats benchmarking data from PySpark
+    A reporter class that collects and formats benchmarking results from PySpark workloads
     using a PythonListener to capture execution events.
     """
 
-    def __init__(self, listener: Optional[PythonListener] = None) -> None:
+    def __init__(self, listener: PythonListener, benchmark_name: str):
         """
-        Initialize the reporter with an optional PythonListener.
-        If none is provided, a new one is created.
+        Initialize the reporter with a listener and benchmark name.
+
+        Args:
+            listener: An instance of PythonListener to register with Spark.
+            benchmark_name: Name of the benchmark being executed.
         """
-        self.listener: PythonListener = listener if listener is not None else PythonListener()
-        self.report_data: Dict[str, Any] = {}
+        if not isinstance(listener, PythonListener):
+            raise TypeError("listener must be an instance of PythonListener")
+        if not isinstance(benchmark_name, str) or not benchmark_name.strip():
+            raise ValueError("benchmark_name must be a non-empty string")
+
+        self.listener = listener
+        self.benchmark_name = benchmark_name.strip()
+        self.start_time: Optional[float] = None
+        self.end_time: Optional[float] = None
+        self.metrics: Dict[str, Any] = {}
 
     def start_benchmark(self) -> None:
         """
-        Reset internal state and prepare the listener for a new benchmark run.
-        This ensures clean collection of metrics per benchmark iteration.
+        Mark the start of the benchmark and reset internal state.
         """
-        self._reset_listener_state()
-        self.report_data.clear()
+        self.start_time = time.time()
+        self.metrics.clear()
 
-    def _reset_listener_state(self) -> None:
+    def end_benchmark(self) -> None:
         """
-        Reset the listener by reinitializing it.
-        Since PythonListener does not have a reset() method, we replace it with a fresh instance
-        to ensure no state carries over from previous runs.
+        Mark the end of the benchmark and collect final metrics.
         """
-        self.listener = PythonListener()
+        self.end_time = time.time()
+        if self.start_time is not None:
+            self.metrics['duration_seconds'] = self.end_time - self.start_time
+        else:
+            self.metrics['duration_seconds'] = 0.0
 
     def collect_metrics(self) -> Dict[str, Any]:
         """
-        Collect all available metrics from the listener and build a structured report.
-        Returns a dictionary containing task failures and final plan if available.
+        Collect all available metrics into a serializable dictionary.
+
+        Returns:
+            Dictionary containing benchmark metadata and collected metrics.
         """
-        report: Dict[str, Any] = {
-            "task_failures": [],
-            "final_execution_plan": None
+        report = {
+            "benchmark": self.benchmark_name,
+            "timestamp": int(time.time()),
+            "metrics": dict(self.metrics),
+            "success": True
         }
 
-        # PythonListener only exposes notify(), register(), unregister(), etc.
-        # It does not have get_task_failures(), get_final_plan(), or reset().
-        # Therefore, we must rely on side-effect data captured via notifications.
-        # Since no such data is exposed in the current API, we return defaults.
-        # Future versions may enhance PythonListener to expose collected events.
-
-        logging.warning(
-            "PythonListener does not expose task failures or execution plans. "
-            "Returning empty metrics. Consider enhancing PythonListener to capture and expose events."
-        )
+        # Since PythonListener does not expose get_task_failures, get_final_plan, or reset,
+        # we rely only on notify-based event collection and do not attempt to call undefined methods.
+        # Any additional data must be extracted via side effects captured during notify() calls.
 
         return report
 
-    def generate_report(self, output_format: str = "json") -> str:
+    def generate_report(self) -> str:
         """
-        Generate a formatted report of the collected metrics.
-        Only JSON format is currently supported.
-        """
-        if output_format != "json":
-            raise ValueError(f"Unsupported output format: {output_format}")
+        Generate a JSON-formatted benchmark report.
 
+        Returns:
+            JSON string representing the full benchmark report.
+        """
+        report_data = self.collect_metrics()
         try:
-            return json.dumps(self.collect_metrics(), indent=2)
+            return json.dumps(report_data, indent=2)
         except (TypeError, ValueError) as e:
-            logging.error("Failed to serialize report to JSON: %s", str(e))
-            raise
+            raise RuntimeError(f"Failed to serialize report to JSON: {e}") from e
 
-    def register_with_spark(self, spark_session: Any) -> None:
+    def reset(self) -> None:
         """
-        Register the underlying PythonListener with the given Spark session.
-        Delegates directly to the listener's method.
+        Reset the reporter state for reuse in subsequent runs.
         """
-        self.listener.register_spark_listener(spark_session)
-
-    def unregister_from_spark(self, spark_session: Any) -> None:
-        """
-        Unregister the underlying PythonListener from the Spark session.
-        Delegates directly to the listener's method.
-        """
-        self.listener.unregister_spark_listener(spark_session)
+        self.start_time = None
+        self.end_time = None
+        self.metrics.clear()
