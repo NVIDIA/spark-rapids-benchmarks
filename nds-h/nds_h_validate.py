@@ -50,7 +50,7 @@ SKIP_QUERIES = [
     'query15_part3', # drop view query
 ]
 SKIP_COLUMNS = {
-    'query18': ['o_orderkey'], # non-deterministic output: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/198#issuecomment-2403837688
+    'query18': ['o_orderkey'], # non-deterministic output: https://github.com/NVIDIA/cudf-spark-benchmarks/pull/198#issuecomment-2403837688
 }
 
 

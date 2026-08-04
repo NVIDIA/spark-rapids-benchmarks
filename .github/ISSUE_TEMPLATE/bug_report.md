@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Create a bug report to help us improve RAPIDS Accelerator for Apache Spark benchmark repository
+about: Create a bug report to help us improve the NVIDIA cuDF plugin for Apache Spark benchmark repository
 title: "[BUG]"
 labels: "? - Needs Triage, bug"
 assignees: ''

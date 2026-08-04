@@ -1,6 +1,7 @@
-# Spark Rapids Environment Detector
+# NVIDIA cuDF plugin for Apache Spark Environment Detector
 
-A tool for automatically detecting Spark cluster environment configuration, helping to optimize spark-rapids POC testing environments.
+A tool for automatically detecting Spark cluster environment configuration, helping to optimize
+NVIDIA cuDF plugin for Apache Spark POC testing environments.
 
 ## Features
 
@@ -49,7 +50,7 @@ This tool can automatically detect the following environment information:
   - CUDA version
   - cuDNN version
   - NCCL version
-  - spark-rapids plugin version
+  - cudf-spark plugin version
   - nvidia-peermem status
   - libcuda.so presence
   - GPUDirect Storage status
@@ -60,7 +61,7 @@ This tool can automatically detect the following environment information:
 - Shuffle partitions
 - Dynamic allocation status
 - Adaptive execution status
-- RAPIDS plugin status
+- cuDF plugin status
 - Important config items
 - spark-defaults.conf content
 
@@ -177,7 +178,7 @@ spark-submit \
 
 ```
 ================================================================================
-SPARK RAPIDS ENVIRONMENT REPORT
+CUDF PLUGIN ENVIRONMENT REPORT
 ================================================================================
 Generated: 2024-01-15 14:30:25
 

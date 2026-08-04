@@ -635,7 +635,7 @@ if __name__ == "__main__":
     parser.add_argument('--input_format',
                         help='type for input data source, e.g. parquet, orc, json, csv or iceberg, delta. ' +
                         'Certain types are not fully supported by GPU reading, please refer to ' +
-                        'https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md ' +
+                        'https://github.com/NVIDIA/cudf-spark/blob/main/docs/compatibility.md ' +
                         'for more details.',
                         choices=['parquet', 'orc', 'avro', 'csv', 'json', 'iceberg', 'delta'],
                         default='parquet')
