@@ -50,7 +50,7 @@ This tool can automatically detect the following environment information:
   - CUDA version
   - cuDNN version
   - NCCL version
-  - spark-rapids plugin version
+  - cuDF plugin version
   - nvidia-peermem status
   - libcuda.so presence
   - GPUDirect Storage status
@@ -178,7 +178,7 @@ spark-submit \
 
 ```
 ================================================================================
-SPARK RAPIDS ENVIRONMENT REPORT
+CUDF PLUGIN ENVIRONMENT REPORT
 ================================================================================
 Generated: 2024-01-15 14:30:25
 
