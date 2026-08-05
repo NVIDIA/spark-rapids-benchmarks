@@ -25,9 +25,9 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.SparkContext
 
 /**
- * Main entry point for the Spark Rapids Environment Detector.
+ * Main entry point for the NVIDIA cuDF plugin for Apache Spark Environment Detector.
  * This tool automatically detects and reports cluster environment configuration
- * and runs performance benchmarks to help optimize spark-rapids POC testing.
+ * and runs performance benchmarks to help optimize cuDF plugin POC testing.
  * 
  * Usage:
  *   spark-submit --class com.nvidia.sparkrapids.envdetector.EnvDetector \
@@ -55,12 +55,12 @@ object EnvDetector {
     }
 
     val spark = SparkSession.builder()
-      .appName("Spark Rapids Environment Detector")
+      .appName("NVIDIA cuDF plugin for Apache Spark Environment Detector")
       .getOrCreate()
 
     try {
       println("=" * 80)
-      println("Spark Rapids Environment Detector")
+      println("NVIDIA cuDF plugin for Apache Spark Environment Detector")
       println("=" * 80)
       println()
 
@@ -110,11 +110,11 @@ object EnvDetector {
 
   private def printHelp(): Unit = {
     println("""
-Spark Rapids Environment Detector
+NVIDIA cuDF plugin for Apache Spark Environment Detector
 ==================================
 
 A tool to detect cluster environment configuration and run performance benchmarks
-to help diagnose spark-rapids POC testing issues.
+to help diagnose the cuDF plugin POC testing issues.
 
 Usage:
   spark-submit --class com.nvidia.sparkrapids.envdetector.EnvDetector \

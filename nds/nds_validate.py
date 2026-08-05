@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -145,7 +145,7 @@ def collect_results(df: DataFrame,
 
 def check_nth_col_problematic_q78(q78_content: str) -> int:
     """parse the query78 content, return which column is the problematic one.
-    example content: https://github.com/NVIDIA/spark-rapids-benchmarks/issues/101#issuecomment-1217758683
+    example content: https://github.com/NVIDIA/cudf-spark-benchmarks/issues/101#issuecomment-1217758683
     parse logic:
     1. find the content between the last "select" and "from" pair.
     2. split the content by ", " or ",\n"
@@ -167,11 +167,11 @@ def rowEqual(row1, row2, epsilon, is_q78, q78_problematic_col):
     # only simple types in a row for NDS results
     if is_q78:
         # TODO: make the special compare for q78 more common and make it apply to other queries that contain round function
-        # TODO: remove this special case after we resolve https://github.com/NVIDIA/spark-rapids/issues/1573
-        # see example error case: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/7#issue-1247422850
+        # TODO: remove this special case after we resolve https://github.com/NVIDIA/cudf-spark/issues/1573
+        # see example error case: https://github.com/NVIDIA/cudf-spark-benchmarks/pull/7#issue-1247422850
         # Pop the 2nd or 4th column value in q78, compare it alone.
         # It is possible the problematic column are at different positions in different streams,
-        # see example and more details: https://github.com/NVIDIA/spark-rapids-benchmarks/issues/101#issuecomment-1217758683
+        # see example and more details: https://github.com/NVIDIA/cudf-spark-benchmarks/issues/101#issuecomment-1217758683
         if q78_problematic_col != 2 and q78_problematic_col != 4:
             raise Exception(f"q78 problematic column should be 2nd or 4th, but get {q78_problematic_col}")
         # remember to -1 to get the index in python list
@@ -228,10 +228,10 @@ def iterate_queries(spark_session: SparkSession,
     unmatch_queries = []
     for query_name in query_dict.keys():
         if query_name == 'query65':
-            # query65 is skipped due to: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/7#issuecomment-1147077894
+            # query65 is skipped due to: https://github.com/NVIDIA/cudf-spark-benchmarks/pull/7#issuecomment-1147077894
             continue
         if query_name == 'query67' and is_float:
-            # query67 is skipped due to: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/7#issuecomment-1156214630
+            # query67 is skipped due to: https://github.com/NVIDIA/cudf-spark-benchmarks/pull/7#issuecomment-1156214630
             continue
         sub_input1 = input1 + '/' + query_name
         sub_input2 = input2 + '/' + query_name

@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-# Run script for Spark Rapids Environment Detector on a cluster
+# Run script for the NVIDIA cuDF plugin for Apache Spark Environment Detector on a cluster
 
 set -e
 
@@ -93,7 +93,7 @@ DRIVER_MEMORY=${DRIVER_MEMORY:-4g}
 EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16g}
 EXECUTOR_CORES=${EXECUTOR_CORES:-16}
 
-echo "Running Spark Rapids Environment Detector on cluster..."
+echo "Running NVIDIA cuDF plugin for Apache Spark Environment Detector on cluster..."
 echo "Master: $MASTER_URL"
 echo "Driver Memory: $DRIVER_MEMORY"
 echo "Executor Memory: $EXECUTOR_MEMORY"

@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-# Run script for Spark Rapids Environment Detector (local mode)
+# Run script for the NVIDIA cuDF plugin for Apache Spark Environment Detector (local mode)
 
 set -e
 
@@ -43,7 +43,7 @@ fi
 # Output path (optional)
 OUTPUT_PATH="$1"
 
-echo "Running Spark Rapids Environment Detector..."
+echo "Running the NVIDIA cuDF plugin for Apache Spark Environment Detector..."
 echo "=============================================="
 echo
 

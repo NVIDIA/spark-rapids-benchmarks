@@ -1,5 +1,5 @@
 #
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,6 +32,6 @@ export EXECUTOR_MEMORY=${EXECUTOR_MEMORY:-16G}
 
 # The NDS listener jar which is built in jvm_listener directory.
 export NDS_LISTENER_JAR=${NDS_LISTENER_JAR:-../utils/jvm_listener/target/benchmark-listener-1.0-SNAPSHOT.jar}
-# The spark-rapids jar which is required when running on GPU
+# The cuDF plugin jar which is required when running on GPU
 export SPARK_RAPIDS_PLUGIN_JAR=${SPARK_RAPIDS_PLUGIN_JAR:-rapids-4-spark_2.12-24.04.0-cuda11.jar}
 export PYTHONPATH=$SPARK_HOME/python:`echo $SPARK_HOME/python/lib/py4j-*.zip`

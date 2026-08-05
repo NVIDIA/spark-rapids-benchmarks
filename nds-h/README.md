@@ -30,7 +30,7 @@ You may not use NDS-H except in compliance with the Apache License, Version 2.0 
     - Download latest distro from [here](https://spark.apache.org/downloads.html)
     - Preferably >= 3.4
     - Find and note SPARK_HOME ( /DOWNLOAD/LOCATION/spark-<3.4.1>-bin-hadoop3 )
-    - (For local) Follow the steps mentioned [here](https://docs.nvidia.com/spark-rapids/user-guide/latest/getting-started/on-premise.html#local-mode)
+    - (For local) Follow the steps mentioned [here](https://docs.nvidia.com/cudf-spark/latest/getting-started/on-premise.html#local-mode)
       for local setup
     - (For local) Update *_gpu_* --files with the getGpuResources.sh location as mentioned in the link above
     - (For local) Update spark master in shared/base.template with local[*]
@@ -40,9 +40,9 @@ You may not use NDS-H except in compliance with the Apache License, Version 2.0 
     - Update [shared/base.template](../shared/base.template) line 26 with the Spark home location.
 
 5. For GPU run
-    - Download the latest RAPIDS jar from [here](https://oss.sonatype.org/content/repositories/staging/com/nvidia/rapids-4-spark_2.12/)
+    - Download the latest NVIDIA cuDF plugin for Apache Spark jar from [here](https://oss.sonatype.org/content/repositories/staging/com/nvidia/rapids-4-spark_2.12/)
   
-    - Update [shared/base.template](../shared/base.template) line 36 with rapids plugin jar location
+    - Update [shared/base.template](../shared/base.template) line 36 with the cuDF plugin jar location
 
 6. TPC-H Tools
 
@@ -216,7 +216,9 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --input_format {parquet,orc,avro,csv,json,iceberg,delta}
-                        type for input data source, e.g. parquet, orc, json, csv or iceberg, delta. Certain types are not fully supported by GPU reading, please refer to https://github.com/NVIDIA/spark-rapids/blob/branch-24.08/docs/compatibility.md for more details.
+                        type for input data source, e.g. parquet, orc, json, csv or iceberg,
+  delta. Certain types are not fully supported by GPU reading, please refer to
+  https://github.com/NVIDIA/cudf-spark/blob/main/docs/compatibility.md for more details.
   --output_prefix OUTPUT_PREFIX
                         text to prepend to every output file (e.g., "hdfs:///ds-parquet")
   --output_format OUTPUT_FORMAT
@@ -281,7 +283,7 @@ python nds_h_power.py \
 
 Expected smoke-test warnings are the same as for NDS:
 
-- Listener registration may be skipped when the RAPIDS Python listener is unavailable from the
+- Listener registration may be skipped when the cuDF plugin Python listener is unavailable from the
   client runtime.
 - Spark Connect may reject non-updatable Spark configs from client-side property files or defaults.
   One example seen in smoke testing is `spark.locality.wait`.

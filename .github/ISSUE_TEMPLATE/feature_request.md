@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea for RAPIDS Accelerator for Apache Spark benchmarks repository
+about: Suggest an idea for the NVIDIA cuDF plugin for Apache Spark benchmarks repository
 title: "[FEA]"
 labels: "? - Needs Triage, feature request"
 assignees: ''
@@ -8,7 +8,7 @@ assignees: ''
 ---
 
 **Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I wish the RAPIDS Accelerator for Apache Spark benchmark scripts would [...]
+A clear and concise description of what the problem is. Ex. I wish the NVIDIA cuDF plugin for Apache Spark benchmark scripts would [...]
 
 **Describe the solution you'd like**
 A clear and concise description of what you want to happen.

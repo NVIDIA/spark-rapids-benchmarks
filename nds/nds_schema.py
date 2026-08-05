@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -325,7 +325,7 @@ def get_schemas(use_decimal):
         StructField("sr_addr_sk", identifier_int),
         StructField("sr_store_sk", identifier_int),
         StructField("sr_reason_sk", identifier_int),
-        # Use LongType due to https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1138379596
+        # Use LongType due to https://github.com/NVIDIA/cudf-spark-benchmarks/pull/9#issuecomment-1138379596
         # Databricks is using LongType as well in their accepted benchmark reports.
         # See https://www.tpc.org/results/supporting_files/tpcds/databricks~tpcds~100000~databricks_SQL_8.3~sup-1~2021-11-02~v01.zip
         StructField("sr_ticket_number", identifier_long, nullable=False),

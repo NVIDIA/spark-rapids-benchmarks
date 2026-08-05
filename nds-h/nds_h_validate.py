@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,7 +50,7 @@ SKIP_QUERIES = [
     'query15_part3', # drop view query
 ]
 SKIP_COLUMNS = {
-    'query18': ['o_orderkey'], # non-deterministic output: https://github.com/NVIDIA/spark-rapids-benchmarks/pull/198#issuecomment-2403837688
+    'query18': ['o_orderkey'], # non-deterministic output: https://github.com/NVIDIA/cudf-spark-benchmarks/pull/198#issuecomment-2403837688
 }
 
 

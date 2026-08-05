@@ -90,7 +90,7 @@ Note that if your OS's default `gcc` version is 10+ the most recent version of
 TPC-DS Tools 3.2 does not link due to errors such as:
 
 ```text
-/usr/bin/ld: s_purchase.o:/home/gshegalov/gits/NVIDIA/spark-rapids-benchmarks/nds/tpcds-gen/target/tools/s_purchase.c:55: multiple definition of `nItemIndex'; s_catalog_order.o:/home/gshegalov/gits/NVIDIA/spark-rapids-benchmarks/nds/tpcds-gen/target/tools/s_catalog_order.c:56: first defined here
+/usr/bin/ld: s_purchase.o:/home/gshegalov/gits/NVIDIA/cudf-spark-benchmarks/nds/tpcds-gen/target/tools/s_purchase.c:55: multiple definition of `nItemIndex'; s_catalog_order.o:/home/gshegalov/gits/NVIDIA/cudf-spark-benchmarks/nds/tpcds-gen/target/tools/s_catalog_order.c:56: first defined here
 ```
 
 as a result of defaulting to [`-fno-common`](https://gcc.gnu.org/gcc-10/porting_to.html#common).
@@ -229,7 +229,7 @@ User can also use `spark-submit` to submit `nds_transcode.py` directly.
 We provide two basic templates for GPU run(convert_submit_gpu.template) and CPU run(convert_submit_cpu.template).
 To enable GPU run, user needs to download the following jar.
 
-[spark-rapids jar](https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.10.0/rapids-4-spark_2.12-22.10.0.jar)
+[cuDF plugin jar](https://repo1.maven.org/maven2/com/nvidia/rapids-4-spark_2.12/22.10.0/rapids-4-spark_2.12-22.10.0.jar)
 
 After that, please set environment variable `SPARK_RAPIDS_PLUGIN_JAR` to the path where the jars are
 downloaded to in spark submit templates.
@@ -327,7 +327,8 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --input_format {parquet,orc,avro,csv,json,iceberg,delta}
-                        type for input data source, e.g. parquet, orc, json, csv or iceberg, delta. Certain types are not fully supported by GPU reading, please refer to https://github.com/NVIDIA/spark-rapids/blob/branch-22.08/docs/compatibility.md for more details.
+                        type for input data source, e.g. parquet, orc, json, csv or iceberg, delta. Certain types are not fully supported by GPU reading, please refer to
+  https://github.com/NVIDIA/cudf-spark/blob/main/docs/compatibility.md for more details.
   --output_prefix OUTPUT_PREFIX
                         text to prepend to every output file (e.g., "hdfs:///ds-parquet")
   --output_format OUTPUT_FORMAT
@@ -447,7 +448,7 @@ is not available in the Spark Connect environment.
 
 When running over Spark Connect, some warnings are expected during smoke testing:
 
-- Listener registration may be skipped when the RAPIDS Python listener is unavailable from the
+- Listener registration may be skipped when the cuDF plugin Python listener is unavailable from the
   client runtime. This is expected in Spark Connect environments where the classic Py4J listener
   path is not available.
 - Spark Connect may reject non-updatable Spark configs from client-side property files or defaults.
@@ -496,7 +497,7 @@ DELETE queries while `LF_*.sql` are INSERT queries.
 Note: The Delete functions in Data Maintenance cannot run successfully in Spark 3.2.0 and 3.2.1 due
 to a known Spark [issue](https://issues.apache.org/jira/browse/SPARK-39454). User can run it in Spark 3.2.2
 or later. More details including work-around for version 3.2.0 and 3.2.1 could be found in this
-[link](https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1141956487)
+[link](https://github.com/NVIDIA/cudf-spark-benchmarks/pull/9#issuecomment-1141956487)
 
 Arguments supported for data maintenance:
 
@@ -539,7 +540,7 @@ time.csv \
 Note: to make the maintenance query compatible in Spark, we made the following changes:
 
 1. change `CREATE VIEW` to `CREATE TEMP VIEW` in all INSERT queries due to [[SPARK-29630]](https://github.com/apache/spark/pull/26361)
-2. change data type for column `sret_ticket_number` in table `s_store_returns` from `char(20)` to `bigint` due to [known issue](https://github.com/NVIDIA/spark-rapids-benchmarks/pull/9#issuecomment-1138379596)
+2. change data type for column `sret_ticket_number` in table `s_store_returns` from `char(20)` to `bigint` due to [known issue](https://github.com/NVIDIA/cudf-spark-benchmarks/pull/9#issuecomment-1138379596)
 
 ## Data Validation
 

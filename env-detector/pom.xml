@@ -26,8 +26,8 @@
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>Spark Rapids Environment Detector</name>
-    <description>A tool to detect and report Spark cluster environment configuration for spark-rapids POC</description>
+    <name>NVIDIA cuDF plugin for Apache Spark Environment Detector</name>
+    <description>A tool to detect and report Spark cluster environment configuration for a cuDF plugin POC</description>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>

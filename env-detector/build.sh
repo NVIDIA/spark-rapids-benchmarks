@@ -16,11 +16,11 @@
 # limitations under the License.
 #
 
-# Build script for Spark Rapids Environment Detector
+# Build script for the NVIDIA cuDF plugin for Apache Spark Environment Detector
 
 set -e
 
-echo "Building Spark Rapids Environment Detector..."
+echo "Building the NVIDIA cuDF plugin for Apache Spark Environment Detector..."
 echo
 
 # Check if Maven is installed

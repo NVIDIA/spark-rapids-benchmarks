@@ -1,6 +1,6 @@
-# Contributing to Spark RAPIDS Benchmarks
+# Contributing to NVIDIA cuDF plugin for Apache Spark Benchmarks
 
-Contributing to Spark RAPIDS Benchmarks fall into the following three categories.
+Contributing to NVIDIA cuDF plugin for Apache Spark Benchmarks fall into the following three categories.
 
 1. To report a bug, request a new feature, or report a problem with
     documentation, please file an issue
@@ -179,4 +179,4 @@ export PATH="/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
 ```
 
 ## Attribution
-Portions adopted from https://github.com/NVIDIA/spark-rapids/blob/main/CONTRIBUTING.md
+Portions adopted from https://github.com/NVIDIA/cudf-spark/blob/main/CONTRIBUTING.md
