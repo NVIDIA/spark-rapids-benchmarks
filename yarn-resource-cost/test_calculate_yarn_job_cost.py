@@ -150,6 +150,8 @@ class CalculateYarnJobCostTest(unittest.TestCase):
                     str(SCRIPT),
                     "--emr-log-uri",
                     str(root),
+                    "--aws-region",
+                    "us-west-2",
                     "--input-csv",
                     str(input_csv),
                     "--output-csv",
@@ -220,7 +222,13 @@ class CalculateYarnJobCostTest(unittest.TestCase):
             with mock.patch.object(
                 sys,
                 "argv",
-                [str(SCRIPT), "--emr-log-uri", str(root)],
+                [
+                    str(SCRIPT),
+                    "--emr-log-uri",
+                    str(root),
+                    "--aws-region",
+                    "us-west-2",
+                ],
             ), mock.patch.object(
                 MODULE, "current_ondemand_hourly_price", return_value=price
             ), mock.patch.object(
