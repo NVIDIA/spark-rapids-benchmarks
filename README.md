@@ -9,3 +9,9 @@ A repo for Spark related benchmark sets and utilities using the
 
 Please see README in each benchmark set for more details including building instructions and usage
 descriptions.
+
+## Utilities
+
+- [Portable YARN resource cost](./yarn-resource-cost/) attributes Spark
+  application worker consumption from Spark and YARN logs across EMR,
+  Dataproc, and on-premises deployments.
