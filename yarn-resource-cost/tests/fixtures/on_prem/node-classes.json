@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "nodes": {
+    "worker1": "onprem:worker-8"
+  }
+}

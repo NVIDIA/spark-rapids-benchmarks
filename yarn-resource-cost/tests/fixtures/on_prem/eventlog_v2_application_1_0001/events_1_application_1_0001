@@ -1,0 +1,5 @@
+{"Event":"SparkListenerLogStart","Spark Version":"3.5.1"}
+{"Event":"SparkListenerEnvironmentUpdate","Spark Properties":{"spark.executor.cores":"2","spark.task.cpus":"1"}}
+{"Event":"SparkListenerApplicationStart","App Name":"portable-cost-sample","App ID":"application_1_0001","Timestamp":1000}
+{"Event":"SparkListenerExecutorAdded","Executor ID":"1","Executor Info":{"Total Cores":2,"Resource Profile Id":0,"Attributes":{"CONTAINER_ID":"container_1_0001_01_000002"}}}
+{"Event":"SparkListenerApplicationEnd","Timestamp":11000}

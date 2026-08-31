@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "currency": "USD",
+  "effective_at": "2026-01-01T00:00:00Z",
+  "source": "synthetic unit-test rate",
+  "rates": [
+    {
+      "node_class": "onprem:worker-8",
+      "hourly_rate": 3.6
+    }
+  ]
+}
