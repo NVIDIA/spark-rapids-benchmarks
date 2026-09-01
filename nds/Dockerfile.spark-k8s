@@ -1,0 +1,52 @@
+# Standalone Spark + PySpark image for K8s deployment.
+# Builds a complete Spark image from a Spark distribution directory.
+# Build context must be $SPARK_HOME (the unpacked Spark distribution).
+#
+# Usage:
+#   cd $SPARK_HOME
+#   docker build -f <repo>/nds/Dockerfile.spark-k8s -t spark-custom:<tag> .
+#
+# For a simpler setup, use Dockerfile.k8s-test instead, which layers on top
+# of the official pre-built Spark Python image.
+FROM ubuntu:24.04
+
+ARG spark_uid=185
+
+# Install Java 17 + Python 3.12 (default on 24.04)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        openjdk-17-jre-headless \
+        python3 \
+        python3-pip \
+        tini \
+        procps \
+    && rm -rf /var/cache/apt/* /var/lib/apt/lists/*
+
+# Set up Spark directory structure
+ENV SPARK_HOME=/opt/spark
+ENV PATH="${SPARK_HOME}/bin:${PATH}"
+ENV PYTHONPATH="${SPARK_HOME}/python:${SPARK_HOME}/python/lib/py4j-src.zip"
+
+# Copy Spark distribution
+COPY jars ${SPARK_HOME}/jars
+COPY bin ${SPARK_HOME}/bin
+COPY sbin ${SPARK_HOME}/sbin
+COPY python ${SPARK_HOME}/python
+COPY kubernetes/dockerfiles/spark/entrypoint.sh /opt/
+COPY kubernetes/dockerfiles/spark/decom.sh /opt/
+
+RUN chmod +x /opt/entrypoint.sh /opt/decom.sh && \
+    mkdir -p ${SPARK_HOME}/work-dir && \
+    chmod g+w ${SPARK_HOME}/work-dir && \
+    # Create a stable symlink so PYTHONPATH works across py4j versions
+    PY4J_ZIP=$(ls ${SPARK_HOME}/python/lib/py4j-*-src.zip 2>/dev/null | head -1) && \
+    [ -n "$PY4J_ZIP" ] || { echo "ERROR: no py4j-*-src.zip found in ${SPARK_HOME}/python/lib/"; exit 1; } && \
+    ln -sf "$PY4J_ZIP" ${SPARK_HOME}/python/lib/py4j-src.zip && \
+    # Create spark user
+    useradd -u ${spark_uid} -r -g root -d ${SPARK_HOME} -s /sbin/nologin spark
+
+WORKDIR ${SPARK_HOME}/work-dir
+
+ENTRYPOINT [ "/opt/entrypoint.sh" ]
+
+USER ${spark_uid}

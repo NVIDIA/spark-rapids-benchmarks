@@ -1,0 +1,13 @@
+# Base image must be built first from your Spark distribution:
+#   cd $SPARK_HOME && ./bin/docker-image-tool.sh -t <tag> \
+#       -p kubernetes/dockerfiles/spark/bindings/python/Dockerfile build
+# Then update the FROM line below to match your image name and tag.
+ARG BASE_IMAGE=spark-py:spark-3.5.6
+FROM ${BASE_IMAGE}
+
+USER root
+
+COPY nds_gen_data_spark.py /opt/spark/work-dir/
+COPY tpcds-gen/target/lib/dsdgen.tar.gz /opt/spark/work-dir/
+
+USER ${spark_uid}
