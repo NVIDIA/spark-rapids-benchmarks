@@ -26,6 +26,11 @@ from yarn_job_cost_adapters import (
     materialize_hdfs,
     materialize_yarn_logs,
 )
+from yarn_job_cost_api import (  # noqa: F401
+    EmrApplicationUsageRequest,
+    YarnApplicationUsageResult,
+    calculate_emr_application_usage,
+)
 from yarn_job_cost_core import calculator_mode, parse_yarn_logs
 from yarn_job_cost_dataproc import classify_nodes as classify_dataproc_nodes
 from yarn_job_cost_discovery import (
