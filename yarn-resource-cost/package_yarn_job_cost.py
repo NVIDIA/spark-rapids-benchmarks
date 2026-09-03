@@ -22,7 +22,9 @@ from pathlib import Path
 PROJECT_DIR = Path(__file__).resolve().parent
 DEFAULT_LICENSE_FILE = PROJECT_DIR.parent / "LICENSE"
 PACKAGE_SOURCES = {
+    PROJECT_DIR / "pyproject.toml": "pyproject.toml",
     PROJECT_DIR / "yarn_resource_cost.py": "yarn_resource_cost.py",
+    PROJECT_DIR / "yarn_job_cost_api.py": "yarn_job_cost_api.py",
     PROJECT_DIR / "yarn_job_cost_core.py": "yarn_job_cost_core.py",
     PROJECT_DIR / "yarn_job_cost_adapters.py": "yarn_job_cost_adapters.py",
     PROJECT_DIR / "yarn_job_cost_dataproc.py": "yarn_job_cost_dataproc.py",
@@ -36,6 +38,7 @@ PACKAGE_SOURCES = {
     PROJECT_DIR / "test_dataproc_log_normalization.py": "test_dataproc_log_normalization.py",
     PROJECT_DIR / "test_dataproc_adapter.py": "test_dataproc_adapter.py",
     PROJECT_DIR / "test_portable_comparison.py": "test_portable_comparison.py",
+    PROJECT_DIR / "test_yarn_job_cost_api.py": "test_yarn_job_cost_api.py",
     PROJECT_DIR / "RESOURCE_COST_MODEL.md": "RESOURCE_COST_MODEL.md",
     PROJECT_DIR / "tests/fixtures/on_prem/eventlog_v2_application_1_0001/events_1_application_1_0001": "tests/fixtures/on_prem/eventlog_v2_application_1_0001/events_1_application_1_0001",
     PROJECT_DIR / "tests/fixtures/on_prem/yarn/hadoop-yarn-resourcemanager-rm.log": "tests/fixtures/on_prem/yarn/hadoop-yarn-resourcemanager-rm.log",
