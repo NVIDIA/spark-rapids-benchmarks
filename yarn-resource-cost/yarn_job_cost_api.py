@@ -114,7 +114,8 @@ def _materialize_event_log(s3_client: Any, uri: str, destination: Path) -> Path:
         return path
 
     bucket, key = _split_s3_uri(uri)
-    objects = list(_list_s3_objects(s3_client, bucket, key.rstrip("/")))
+    prefix = key.rstrip("/")
+    objects = list(_list_s3_objects(s3_client, bucket, prefix))
     selected = [
         item
         for item in objects
@@ -123,7 +124,11 @@ def _materialize_event_log(s3_client: Any, uri: str, destination: Path) -> Path:
     ]
     if not selected:
         return destination
-    _download_objects(s3_client, bucket, key.rstrip("/"), selected, destination)
+    prefix_name = Path(prefix).name
+    event_destination = (
+        destination / prefix_name if prefix_name.startswith("eventlog_") else destination
+    )
+    _download_objects(s3_client, bucket, prefix, selected, event_destination)
     return destination
 
 
@@ -208,14 +213,17 @@ def calculate_emr_application_usage(
                 retryable=True,
             )
 
-        evidence = parse_yarn_logs(yarn_root)
+        try:
+            evidence = parse_yarn_logs(yarn_root)
+        except ValueError as error:
+            return _empty_result(request, str(error), retryable=False)
         try:
             mode = calculator_mode(evidence.calculator_class)
         except ValueError as error:
             return _empty_result(
                 request,
                 str(error),
-                retryable=False,
+                retryable=not bool(evidence.calculator_class),
                 detected_calculator=evidence.calculator_class,
             )
 

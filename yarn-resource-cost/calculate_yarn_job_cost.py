@@ -759,13 +759,11 @@ def calculate_applications(
             or not coverage_complete
             or nm_start_fallbacks > 0
             or nm_finish_fallbacks > 0
-        )
-        permanent_incomplete_evidence = (
-            unknown_instance_type
+            or unknown_instance_type
             or missing_gpu_capacity
             or bool(resource_capacity_errors)
-            or evidence.accounting_policy_ambiguous
         )
+        permanent_incomplete_evidence = evidence.accounting_policy_ambiguous
         complete = not transient_incomplete_evidence and not permanent_incomplete_evidence
         starts = [container.start_ms for container in containers]
         finishes = [

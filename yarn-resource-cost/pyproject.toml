@@ -20,7 +20,7 @@ classifiers = [
 aws = ["boto3>=1.34"]
 
 [project.scripts]
-yarn-resource-cost = "yarn_resource_cost:main"
+yarn-resource-cost = "yarn_resource_cost:cli_main"
 
 [tool.setuptools]
 py-modules = [

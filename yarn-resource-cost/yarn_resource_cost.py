@@ -438,9 +438,14 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+def cli_main() -> None:
+    """Run the CLI with concise diagnostics for expected input failures."""
     try:
         raise SystemExit(main())
     except (AdapterCommandError, AwsCliError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         raise SystemExit(2) from None
+
+
+if __name__ == "__main__":
+    cli_main()

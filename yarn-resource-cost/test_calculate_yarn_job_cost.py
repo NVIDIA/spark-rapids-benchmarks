@@ -6,7 +6,6 @@
 import ast
 import contextlib
 import csv
-import dataclasses
 import gzip
 import importlib.util
 import io
@@ -332,10 +331,7 @@ class CalculateYarnJobCostTest(unittest.TestCase):
             self.assertTrue(result["retryable"])
             self.assertIn("NodeManager DONE fallback", " | ".join(result["warnings"]))
 
-    def test_permanent_accounting_limitations_are_not_retryable(self):
-        def application_for(evidence, mode):
-            return MODULE.calculate_applications(evidence, mode, {}, False)[0]
-
+    def test_ambiguous_accounting_policy_is_not_retryable(self):
         container = MODULE.Container(
             container_id="container_123_0002_01_000002",
             application_id=APP_ID,
@@ -351,41 +347,18 @@ class CalculateYarnJobCostTest(unittest.TestCase):
         )
         summary = MODULE.ApplicationSummary(APP_ID, "test", "SUCCEEDED", 1)
 
-        ambiguous = MODULE.YarnEvidence(
+        evidence = MODULE.YarnEvidence(
             nodes={"worker": MODULE.Node("worker", "cpu.test", 100, 4, 0)},
             containers={container.container_id: container},
             calculator_class="DefaultResourceCalculator",
             accounting_policy_ambiguous=True,
             application_summaries={APP_ID: summary},
         )
-        missing_instance_type = MODULE.YarnEvidence(
-            nodes={"worker": MODULE.Node("worker", "", 100, 4, 0)},
-            containers={container.container_id: container},
-            calculator_class="DefaultResourceCalculator",
-            application_summaries={APP_ID: summary},
-        )
-        gpu_container = dataclasses.replace(
-            container,
-            gpus=1,
-            resources={"memory-mb": 40, "vcores": 1, "yarn.io/gpu": 1},
-            node_resources={"memory-mb": 100, "vcores": 4},
-        )
-        missing_resource_capacity = MODULE.YarnEvidence(
-            nodes={"worker": MODULE.Node("worker", "gpu.test", 100, 4, 0)},
-            containers={gpu_container.container_id: gpu_container},
-            calculator_class="DominantResourceCalculator",
-            application_summaries={APP_ID: summary},
-        )
 
-        for name, evidence, mode in (
-            ("ambiguous policy", ambiguous, "default"),
-            ("unknown instance type", missing_instance_type, "default"),
-            ("missing resource capacity", missing_resource_capacity, "dominant"),
-        ):
-            with self.subTest(name=name):
-                result = application_for(evidence, mode)
-                self.assertFalse(result["complete"])
-                self.assertFalse(result["retryable"])
+        result = MODULE.calculate_applications(evidence, "default", {}, False)[0]
+
+        self.assertFalse(result["complete"])
+        self.assertFalse(result["retryable"])
 
     def test_emr_log_cache_can_be_refreshed(self):
         with tempfile.TemporaryDirectory() as directory:
