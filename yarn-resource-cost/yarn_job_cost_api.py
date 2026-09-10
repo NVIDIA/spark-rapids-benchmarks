@@ -247,7 +247,7 @@ def calculate_emr_application_usage(
         return YarnApplicationUsageResult(
             application_id=request.application_id,
             complete=bool(application["complete"]),
-            retryable=not bool(application["complete"]),
+            retryable=bool(application["retryable"]),
             resource_calculator=mode,
             detected_resource_calculator_class=evidence.calculator_class,
             vcore_seconds=float(application["vcore_seconds"]),

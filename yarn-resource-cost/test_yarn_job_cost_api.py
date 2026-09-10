@@ -107,6 +107,23 @@ class YarnJobCostApiTest(unittest.TestCase):
         self.assertIsNone(result.vcore_seconds)
         self.assertIn("No archived", result.warnings[0])
 
+    def test_permanent_incomplete_evidence_is_not_retryable(self):
+        log = (FIXTURE / "yarn" / "hadoop-yarn-resourcemanager-rm.log").read_bytes()
+        s3 = FakeS3Client(
+            {
+                "emr-logs/j-TEST/node/i-1/applications/"
+                "hadoop-yarn-resourcemanager-rm.log": log
+            }
+        )
+
+        result = calculate_emr_application_usage(
+            self.request(), emr_client=FakeEmrClient(), s3_client=s3
+        )
+
+        self.assertFalse(result.complete)
+        self.assertFalse(result.retryable)
+        self.assertIn("unknown instance type", " | ".join(result.warnings))
+
     def test_request_rejects_missing_identity(self):
         with self.assertRaisesRegex(ValueError, "application_id is required"):
             EmrApplicationUsageRequest(
