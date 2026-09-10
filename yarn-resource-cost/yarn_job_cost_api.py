@@ -116,6 +116,19 @@ def _materialize_event_log(s3_client: Any, uri: str, destination: Path) -> Path:
     bucket, key = _split_s3_uri(uri)
     prefix = key.rstrip("/")
     objects = list(_list_s3_objects(s3_client, bucket, prefix))
+    exact_object = next(
+        (
+            item
+            for item in objects
+            if str(item.get("Key") or "") == key and not key.endswith("/")
+        ),
+        None,
+    )
+    if exact_object is not None:
+        downloaded = _download_objects(
+            s3_client, bucket, prefix, (exact_object,), destination
+        )
+        return downloaded[0] if downloaded else destination
     selected = [
         item
         for item in objects

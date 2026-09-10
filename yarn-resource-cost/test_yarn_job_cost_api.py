@@ -211,6 +211,32 @@ class YarnJobCostApiTest(unittest.TestCase):
         self.assertEqual(24576.0, result.memory_mb_seconds)
         self.assertEqual({"m5.xlarge": 3.0}, result.instance_seconds_by_type)
 
+    def test_s3_single_file_event_log_is_materialized_as_a_file(self):
+        event_key = "spark-events/application_1_0001"
+        event_log = (
+            FIXTURE
+            / "eventlog_v2_application_1_0001"
+            / "events_1_application_1_0001"
+        ).read_bytes()
+        s3 = FakeS3Client(
+            {
+                event_key: event_log,
+                "emr-logs/j-TEST/node/i-1/applications/"
+                "hadoop-yarn-resourcemanager-rm.log": self.yarn_log_with_instance_type().encode(),
+            }
+        )
+
+        result = calculate_emr_application_usage(
+            self.request(f"s3://test-bucket/{event_key}"),
+            emr_client=FakeEmrClient(),
+            s3_client=s3,
+        )
+
+        self.assertTrue(result.complete)
+        self.assertFalse(result.retryable)
+        self.assertEqual(1, result.container_count)
+        self.assertEqual({"m5.xlarge": 2.0}, result.instance_seconds_by_type)
+
     def test_later_node_registration_completes_missing_capacity(self):
         full_log = self.yarn_log_with_instance_type()
         registration = next(
