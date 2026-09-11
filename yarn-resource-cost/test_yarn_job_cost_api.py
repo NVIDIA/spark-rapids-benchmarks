@@ -267,13 +267,16 @@ class YarnJobCostApiTest(unittest.TestCase):
                 s3_client=FakeS3Client({}),
             )
 
-    def test_later_node_registration_completes_missing_capacity(self):
+    def test_later_node_registration_completes_missing_or_partial_metadata(self):
         full_log = self.yarn_log_with_instance_type()
         registration = next(
             line for line in full_log.splitlines() if "registered with capability" in line
         )
         application_log = "\n".join(
             line for line in full_log.splitlines() if line != registration
+        )
+        partial_registration = registration.replace(
+            " instanceType(STRING)=m5.xlarge", ""
         )
         yarn_key = (
             "emr-logs/j-TEST/node/i-1/applications/"
@@ -291,6 +294,10 @@ class YarnJobCostApiTest(unittest.TestCase):
                 application_log.replace(", max memory:8192", "").replace(
                     ", max vCores:8", ""
                 ),
+            ),
+            (
+                "partial registration missing instance type",
+                full_log.replace(registration, partial_registration),
             ),
         ):
             with self.subTest(name=name):

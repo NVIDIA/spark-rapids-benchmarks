@@ -801,9 +801,9 @@ def calculate_applications(
             "first_container_start_utc": iso_utc(min(starts) if starts else None),
             "last_container_finish_utc": iso_utc(max(finishes) if finishes else None),
             "complete": complete,
-            # More archived RM evidence can resolve missing summaries, allocations,
-            # and terminal transitions. It cannot repair ambiguous policy evidence
-            # or invalid/missing node resource metadata already present in the logs.
+            # A fresh archive snapshot can resolve missing summaries, allocations,
+            # terminal transitions, and incomplete node registration metadata. It
+            # cannot resolve conflicting accounting-policy evidence already present.
             "retryable": not complete and not permanent_incomplete_evidence,
             "warnings": warnings,
         }
