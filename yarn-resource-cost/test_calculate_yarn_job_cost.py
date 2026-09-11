@@ -328,7 +328,37 @@ class CalculateYarnJobCostTest(unittest.TestCase):
             self.assertEqual(10.0, result["container_seconds"])
             self.assertEqual(1, result["nodemanager_finish_fallback_container_count"])
             self.assertFalse(result["complete"])
+            self.assertTrue(result["retryable"])
             self.assertIn("NodeManager DONE fallback", " | ".join(result["warnings"]))
+
+    def test_ambiguous_accounting_policy_is_not_retryable(self):
+        container = MODULE.Container(
+            container_id="container_123_0002_01_000002",
+            application_id=APP_ID,
+            node_id="worker",
+            start_ms=1000,
+            finish_ms=2000,
+            memory_mb=40,
+            node_memory_mb=100,
+            vcores=1,
+            node_vcores=4,
+            source="resourcemanager",
+            finish_source="resourcemanager",
+        )
+        summary = MODULE.ApplicationSummary(APP_ID, "test", "SUCCEEDED", 1)
+
+        evidence = MODULE.YarnEvidence(
+            nodes={"worker": MODULE.Node("worker", "cpu.test", 100, 4, 0)},
+            containers={container.container_id: container},
+            calculator_class="DefaultResourceCalculator",
+            accounting_policy_ambiguous=True,
+            application_summaries={APP_ID: summary},
+        )
+
+        result = MODULE.calculate_applications(evidence, "default", {}, False)[0]
+
+        self.assertFalse(result["complete"])
+        self.assertFalse(result["retryable"])
 
     def test_emr_log_cache_can_be_refreshed(self):
         with tempfile.TemporaryDirectory() as directory:

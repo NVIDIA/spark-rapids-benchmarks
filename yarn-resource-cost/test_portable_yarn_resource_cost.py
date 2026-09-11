@@ -106,6 +106,26 @@ class AdapterTest(unittest.TestCase):
 
 
 class PortableCliTest(unittest.TestCase):
+    def test_entry_point_formats_expected_errors(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import yarn_resource_cost; yarn_resource_cost.cli_main()",
+                "--adapter",
+                "on-prem",
+                "--event-log-root",
+                "/definitely/not/a/yarn/event/log",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(2, completed.returncode)
+        self.assertTrue(completed.stderr.startswith("error: "), completed.stderr)
+        self.assertNotIn("Traceback", completed.stderr)
+
     def test_on_prem_fixture_end_to_end_with_catalog(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "result.json"

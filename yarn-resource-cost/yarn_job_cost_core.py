@@ -158,7 +158,10 @@ def capacity(value: str | None, fallback: int | None, name: str) -> int:
         return int(value)
     if fallback is not None:
         return fallback
-    raise ValueError(f"Could not determine node {name} capacity")
+    # An allocation can be archived before the corresponding node-registration
+    # record. Preserve the container with an unknown capacity so the reporting
+    # layer can return a structured, retryable incomplete result.
+    return 0
 
 
 def open_log(path: Path) -> TextIO:
@@ -357,6 +360,19 @@ def parse_yarn_logs(path: Path) -> YarnEvidence:
                     )
 
     for container_id, container in evidence.containers.items():
+        # Registration evidence may be stored in a later file than the
+        # allocation. Reconcile containers after every archived log was parsed.
+        node = evidence.nodes.get(container.node_id)
+        if node:
+            if container.node_memory_mb <= 0 and node.memory_mb:
+                container.node_memory_mb = node.memory_mb
+            if container.node_vcores <= 0 and node.vcores:
+                container.node_vcores = node.vcores
+            if container.node_gpus <= 0 and node.gpus:
+                container.node_gpus = node.gpus
+            for name, node_capacity in node.resources.items():
+                if container.node_resources.get(name, 0) <= 0:
+                    container.node_resources[name] = node_capacity
         if container_id in rm_finishes:
             container.finish_ms = rm_finishes[container_id]
             container.finish_source = "resourcemanager"
@@ -380,6 +396,11 @@ def calculator_mode(detected_class: str) -> str:
 def container_node_share(container: Container, mode: str) -> float:
     """Return the YARN-scheduled node share without using Spark core counts."""
     if mode == "default":
+        if container.node_memory_mb <= 0:
+            raise ValueError(
+                f"Container {container.container_id} allocates memory-mb but its "
+                "node capacity is missing or zero"
+            )
         return container.memory_mb / container.node_memory_mb
     if mode != "dominant":
         raise ValueError(f"Unsupported detected calculator mode {mode}")

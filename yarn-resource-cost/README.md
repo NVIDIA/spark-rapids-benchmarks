@@ -38,6 +38,50 @@ DominantResourceCalculator:
 NodeEquivalentSeconds = ContainerSeconds * NodeShare
 ```
 
+## Python API
+
+Install the subproject and its optional AWS dependency:
+
+```bash
+python3 -m pip install './yarn-resource-cost[aws]'
+```
+
+The application-scoped API accepts injected boto3 clients and returns resource
+usage without imposing a pricing policy:
+
+```python
+import boto3
+
+from yarn_resource_cost import (
+    EmrApplicationUsageRequest,
+    calculate_emr_application_usage,
+)
+
+session = boto3.Session(region_name="us-west-2")
+usage = calculate_emr_application_usage(
+    EmrApplicationUsageRequest(
+        cluster_id="j-EXAMPLE",
+        application_id="application_123_0001",
+        event_log_uri="s3://example-bucket/spark-events/eventlog_v2_application_123_0001/",
+        region="us-west-2",
+    ),
+    emr_client=session.client("emr"),
+    s3_client=session.client("s3"),
+)
+print(usage.instance_seconds_by_type)
+```
+
+`event_log_uri` accepts an S3 URI, a plain local path, or a local `file://` URI.
+Passing a pre-materialized local file or rolling-event-log directory avoids an
+S3 download; the selected event log is still streamed to extract accounting
+metadata.
+
+Incomplete archived logs return `complete=False` and indicate whether a later
+retry can help. Missing summaries, allocations, terminal transitions, or node
+registration metadata are retryable; contradictory or unsupported accounting
+policies are not. Authentication and transport errors propagate from boto3.
+The caller decides whether and how to translate instance-seconds into currency.
+
 Memory, vcores, `yarn.io/gpu`, and arbitrary numeric custom resources are
 parsed generically. Heterogeneous node classes remain separate in structured
 output and expressions such as:

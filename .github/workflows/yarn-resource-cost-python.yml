@@ -29,5 +29,29 @@ jobs:
         run: python -m py_compile yarn-resource-cost/*.py
       - name: Unit tests
         run: python -m unittest discover -s yarn-resource-cost -p 'test*.py'
+      - name: Installed console error handling
+        run: |
+          python -m pip install ./yarn-resource-cost
+          python - <<'PY'
+          import shutil
+          import subprocess
+
+          command = shutil.which("yarn-resource-cost")
+          assert command is not None
+          completed = subprocess.run(
+              [
+                  command,
+                  "--adapter",
+                  "on-prem",
+                  "--event-log-root",
+                  "/definitely/not/a/yarn/event/log",
+              ],
+              capture_output=True,
+              text=True,
+          )
+          assert completed.returncode == 2, completed
+          assert completed.stderr.startswith("error: "), completed.stderr
+          assert "Traceback" not in completed.stderr, completed.stderr
+          PY
       - name: Standalone bundle smoke test
         run: python yarn-resource-cost/package_yarn_job_cost.py --output-dir /tmp/yarn-resource-cost-dist

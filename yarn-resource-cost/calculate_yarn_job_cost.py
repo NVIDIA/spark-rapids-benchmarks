@@ -754,6 +754,17 @@ def calculate_applications(
         )
         if unknown_instance_type:
             warnings.append("One or more allocated containers have an unknown instance type")
+        transient_incomplete_evidence = (
+            incomplete > 0
+            or not coverage_complete
+            or nm_start_fallbacks > 0
+            or nm_finish_fallbacks > 0
+            or unknown_instance_type
+            or missing_gpu_capacity
+            or bool(resource_capacity_errors)
+        )
+        permanent_incomplete_evidence = evidence.accounting_policy_ambiguous
+        complete = not transient_incomplete_evidence and not permanent_incomplete_evidence
         starts = [container.start_ms for container in containers]
         finishes = [
             container.finish_ms for container in complete_containers if container.finish_ms is not None
@@ -789,16 +800,11 @@ def calculate_applications(
             "cost_expression": expression,
             "first_container_start_utc": iso_utc(min(starts) if starts else None),
             "last_container_finish_utc": iso_utc(max(finishes) if finishes else None),
-            "complete": (
-                incomplete == 0
-                and coverage_complete
-                and nm_start_fallbacks == 0
-                and nm_finish_fallbacks == 0
-                and not unknown_instance_type
-                and not missing_gpu_capacity
-                and not resource_capacity_errors
-                and not evidence.accounting_policy_ambiguous
-            ),
+            "complete": complete,
+            # A fresh archive snapshot can resolve missing summaries, allocations,
+            # terminal transitions, and incomplete node registration metadata. It
+            # cannot resolve conflicting accounting-policy evidence already present.
+            "retryable": not complete and not permanent_incomplete_evidence,
             "warnings": warnings,
         }
         results.append(result)
