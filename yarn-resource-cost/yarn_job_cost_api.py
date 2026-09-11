@@ -11,6 +11,8 @@ import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 
 import calculate_yarn_job_cost as reporting
 from yarn_job_cost_core import calculator_mode, parse_yarn_logs
@@ -108,7 +110,15 @@ def _download_objects(
 
 def _materialize_event_log(s3_client: Any, uri: str, destination: Path) -> Path:
     if not uri.startswith(("s3://", "s3a://", "s3n://")):
-        path = Path(uri).expanduser()
+        if uri.lower().startswith("file:"):
+            parsed = urlparse(uri)
+            if parsed.netloc and parsed.netloc.lower() != "localhost":
+                raise ValueError(f"File URI has a remote authority: {uri}")
+            if not parsed.path or parsed.query or parsed.fragment:
+                raise ValueError(f"Invalid file URI: {uri}")
+            path = Path(url2pathname(parsed.path)).expanduser()
+        else:
+            path = Path(uri).expanduser()
         if not path.exists():
             raise ValueError(f"Event log does not exist: {uri}")
         return path

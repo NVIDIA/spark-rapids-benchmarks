@@ -237,6 +237,36 @@ class YarnJobCostApiTest(unittest.TestCase):
         self.assertEqual(1, result.container_count)
         self.assertEqual({"m5.xlarge": 2.0}, result.instance_seconds_by_type)
 
+    def test_file_uri_event_log_file_and_directory(self):
+        s3 = FakeS3Client(
+            {
+                "emr-logs/j-TEST/node/i-1/applications/"
+                "hadoop-yarn-resourcemanager-rm.log": self.yarn_log_with_instance_type().encode()
+            }
+        )
+        event_log_dir = FIXTURE / "eventlog_v2_application_1_0001"
+        event_log_file = event_log_dir / "events_1_application_1_0001"
+
+        for event_log in (event_log_dir, event_log_file):
+            with self.subTest(event_log=event_log):
+                result = calculate_emr_application_usage(
+                    self.request(event_log.resolve().as_uri()),
+                    emr_client=FakeEmrClient(),
+                    s3_client=s3,
+                )
+
+                self.assertTrue(result.complete)
+                self.assertFalse(result.retryable)
+                self.assertEqual({"m5.xlarge": 2.0}, result.instance_seconds_by_type)
+
+    def test_remote_file_uri_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "remote authority"):
+            calculate_emr_application_usage(
+                self.request("file://remote-host/tmp/events"),
+                emr_client=FakeEmrClient(),
+                s3_client=FakeS3Client({}),
+            )
+
     def test_later_node_registration_completes_missing_capacity(self):
         full_log = self.yarn_log_with_instance_type()
         registration = next(
